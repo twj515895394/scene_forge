@@ -1,6 +1,6 @@
 # scene-design-builder 输出协议
 
-本文件定义 `scene-design-builder` 的输出形态、设定图 prompt 包、全场景资产总参考图、道具状态机、Blocking/Faction 记忆字段和长内容落盘边界。
+本文件定义 `scene-design-builder` 的输出形态、设定图 prompt 包、全场景资产总参考图、道具状态机、Blocking/Faction 记忆字段、v4 表现力扩展设计和长内容落盘边界。
 
 本协议是通用项目记忆协议，不绑定任何具体样例项目。样例项目暴露的问题只能转译为通用字段与执行规则，不得把样例角色、样例台词、样例站位直接固化进协议。
 
@@ -11,7 +11,10 @@
 - `scene-reference-decider`：参考边界、`must_keep`、`must_avoid`
 - `scene-asset-checker`：`character_assets`、`scene_assets`、`prop_assets`、`design_actions`
 - 顶层索引：`production_level`、`performance_style`（若已在后续流程中确认则继承；未确认时仅参考建议）
-- 顶层记忆字段：`context_policy`、`user_confirmations`、既有 `blocking_map` / `faction_layout` / `prop_state_machines`（如有）
+- 顶层记忆字段：`context_policy`、`user_confirmations`、既有 `blocking_map` / `faction_layout` / `prop_state_machines`、既有 `expressive_animation`（如有）
+- v4 执行期资产库（仅在需要定义表现力扩展策略时按需读取）：
+  - `assets/animation-stylization/effect-library.md`
+  - `assets/animation-stylization/contrast-comedy-library.md`
 
 ## 设计输出路径
 
@@ -39,6 +42,7 @@
 - 是否需要全场景资产总参考图
 - 初版 `blocking_map` / `faction_layout` 设计原则
 - 核心道具是否需要 `prop_state_machines`
+- v4 `expressive_animation` 项目级策略：动画风格化档位、轻中度卡通伤害尺度、反差喜剧启用与密度
 - 需要用户确认的问题
 
 用户纠错、补充偏好或指出问题，不等于授权落盘。只有用户明确表达确认、采用、按此生成、落盘或写入时，才能输出正式文件并推进阶段。
@@ -47,7 +51,7 @@
 
 ```yaml
 patch_type: scene-design-builder
-version: 2
+version: 3
 status:
 updated_at:
 summary:
@@ -70,6 +74,62 @@ data:
     color_script:
     environment_stylization:
     prop_exaggeration_rule:
+  expressive_animation_design:
+    enabled: true
+    mode: animated_feature_comedy
+    asset_references:
+      effect_library: assets/animation-stylization/effect-library.md
+      contrast_comedy_library: assets/animation-stylization/contrast-comedy-library.md
+    animation_stylization:
+      level: expressive
+      preset: animated_feature_expressive
+      effect_density: medium
+      density_rule: hero_moment_and_high_risk_translation_only
+      allowed_physics:
+        - squash_stretch
+        - elastic_rebound
+        - smear_motion
+      selective_physics:
+        - impact_flattening
+        - wall_splat
+        - paper_flatten
+      forbidden_physics:
+        - body_horror_deformation
+        - realistic_injury_deformation
+    injury_tone_policy:
+      visible_injury_level: minor_cartoon
+      allowed_minor_injuries:
+        - dust_face
+        - bump_on_head
+        - small_scratch
+        - nosebleed_gag
+        - soot_face
+      forbidden_injuries:
+        - large_blood_loss
+        - graphic_wounds
+        - gore
+        - realistic_weapon_wound
+        - realistic_bullet_wound
+        - prolonged_pain_focus
+      restore_character_integrity_after_gag: true
+    contrast_comedy:
+      enabled: selective
+      contrast_density: low_to_medium
+      core_contrast_types:
+        - size_mismatch
+        - prop_scale_irony
+        - personality_gap
+      max_core_contrasts_per_project: 2
+      max_hero_contrast_per_segment: 1
+      tonal_boundary:
+        preserve_character_consistency: true
+        contrast_must_serve_story_or_character: true
+        avoid_random_meme_stack: true
+    design_notes_for_downstream:
+      script_adapter:
+      performance_director:
+      storyboard_director:
+      video_prompt_builder:
   character_designs:
     - name:
       reference_strength:
@@ -104,6 +164,7 @@ data:
       - key_prop_positions
       - prop_state_matrix
       - physical_safety_notes
+      - expressive_animation_notes
   prop_state_machines:
     - prop_name:
       states:
@@ -132,6 +193,7 @@ data:
     material_anchor_note:
     blocking_anchor_note:
     prop_state_anchor_note:
+    expressive_animation_anchor_note:
   script_adaptation_notes:
   next_action:
 ```
@@ -141,6 +203,11 @@ data:
 - `design_mode`：本次走完整设定还是轻量锁定，建议直接复用顶层 `production_level` 的语义。
 - `design_confirmation`：记录用户是否确认设计方向。正式落盘时应为 `confirmed_by_user: true`。
 - `visual_language`：本次项目的统一视觉语言基线，角色、场景、核心道具都必须继承这组约束。
+- `expressive_animation_design`：v4 表现力扩展设计，定义项目级动画风格化、轻中度卡通伤害尺度和反差喜剧策略。正式落盘后应同步回写或更新顶层 `expressive_animation`。
+- `animation_stylization`：动画物理、VFX、特效密度和高风险动作转译策略。设计阶段只定义允许范围，不写具体镜头。
+- `injury_tone_policy`：动画动作喜剧伤害尺度，允许轻中度卡通伤害，禁止严重写实创伤。
+- `contrast_comedy`：反差喜剧策略，定义是否启用、核心反差类型、密度规则和调性边界。
+- `design_notes_for_downstream`：把 v4 表达策略交给后续剧本、表演、分镜和视频提示词阶段继承。
 - `character_designs`：角色级锁定卡与设定图 prompt 路径。
 - `sheet_requirements`：角色设定图结构要求；默认允许板块标题、编号和说明文字。
 - `scene_designs`：场景级锁定卡与设定图 prompt 路径。
@@ -150,8 +217,27 @@ data:
 - `blocking_map`：通用空间调度图，记录空间轴线、区域、允许/禁止角色。
 - `faction_layout`：通用阵营布局，记录角色属于哪个阵营、默认区域和禁止区域。
 - `visual_consistency`：供后续分镜和视频提示词继承的一致性锚点。
-- `script_adaptation_notes`：剧本阶段需要继承的视觉、动作、站位与道具约束。
+- `script_adaptation_notes`：剧本阶段需要继承的视觉、动作、站位、道具与 v4 表现力约束。
 - `next_action`：下一阶段执行提示。
+
+## v4 表现力扩展设计原则
+
+设计阶段只回答：
+
+```text
+本项目允许什么表达策略？
+不允许什么表达策略？
+哪些表达要留给后续阶段具体化？
+```
+
+设计阶段不要直接写完整动作镜头，但必须给出边界：
+
+1. 本项目默认动画风格化档位：`grounded` / `expressive` / `comedic_push` / `wild_cartoon`。
+2. 是否允许贴墙、纸片化、夸张回弹、星星眩晕等强卡通效果。
+3. 是否允许轻中度卡通伤害，例如灰头土脸、头包、小擦伤、鼻血笑点。
+4. 哪些写实伤害和血腥表达禁止。
+5. 是否启用反差喜剧，以及最多使用几个核心反差母题。
+6. 反差喜剧必须服务人物、故事、情绪转折或视觉 payoff。
 
 ## 角色设定图要求
 
@@ -165,6 +251,7 @@ data:
 - 至少 1 个关键道具交互姿态（如适用）
 - 角色之间的比例对照
 - 物理边界和安全边界说明
+- v4 表现力扩展边界：动画物理、轻中度卡通伤害尺度、反差喜剧角色边界
 - 服装、配件、材质与剪影锚点
 
 只有用户明确要求时，才额外输出无文字干净参考图 prompt。
@@ -180,6 +267,7 @@ data:
 - 核心道具位置
 - 核心道具状态矩阵
 - 镜头动线和安全边界
+- v4 表现力扩展边界：允许的卡通物理、轻伤尺度和反差道具关系
 - 后续故事板 / 视频提示词引用方式
 
 ## 黑板摘要建议
@@ -189,6 +277,7 @@ data:
 - 本次走的是完整设定还是轻量锁定卡
 - 用户是否已经确认设计方向
 - 本次统一视觉语言基线是什么
+- v4 `expressive_animation` 是否启用、默认档位、伤害尺度和反差喜剧密度
 - 角色参考强度和场景参考强度
 - 哪些内容来自资产复用，哪些内容是新建
 - 锁定卡写入了哪些 `details/` 文件
@@ -246,3 +335,4 @@ data:
 10. 道具要角色化，而不是普通产品图。
 11. 色彩要统一，不要杂乱堆叠。
 12. 灯光和材质服务电影感。
+13. v4 表现力扩展必须服务角色、故事、情绪或画面 payoff，不随机加特效或梗。
