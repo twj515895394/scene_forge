@@ -18,6 +18,7 @@ performance_style:
 target_total_duration_seconds:
 segment_duration_seconds:
 context_policy:
+reference_policy:
 user_confirmations:
 segment_strategy:
 hero_moments:
@@ -53,6 +54,15 @@ context_policy:
   token_budget:
     default_stage_budget: compact
     require_reason_for_extra_reads: true
+
+reference_policy:
+  templates_are_reference_only: true
+  examples_are_reference_only: true
+  enums_are_open_by_default: true
+  strict_enum_only_when_explicit: true
+  allow_adapted_reference: true
+  allow_custom_generated_option: true
+  require_reason_for_custom_option: true
 
 user_confirmations:
   duration_strategy_confirmed: false
@@ -113,6 +123,7 @@ faction_layout:
 说明：
 
 - `context_policy` 控制执行阶段读取边界和 Token 预算。
+- `reference_policy` 说明模板、示例、枚举和资产库 pattern 默认是参考锚点，不是封闭集合。
 - `user_confirmations` 记录关键创作决策是否已经由用户确认。
 - `segment_strategy` 记录整片目标时长、单段视频生成时长和分段策略。
 - `hero_moments` 记录必须强化的看点镜头。
@@ -121,6 +132,28 @@ faction_layout:
 - `blocking_map` 与 `faction_layout` 记录角色站位、阵营和禁止区域，降低视频分段中的空间漂移。
 - `expressive_animation` 记录 v4 动画电影级表现力扩展策略，供设计、剧本、表演、分镜、声音和视频提示词阶段继承。
 - `storyboard_director_v5` 记录 v5 专业分镜导演增强策略，供分镜阶段与视频提示词阶段继承。
+
+## 开放参考原则：`reference_policy`
+
+`reference_policy` 是全局解释字段，用于说明 SOP 中的模板、示例、枚举、资产库 pattern 和 prompt fragment 如何被使用。
+
+规则：
+
+1. 模板用于提供结构，不用于限制创作。
+2. 示例用于说明一种可能性，不代表必须照搬。
+3. 除非字段明确写明 `strict_enum: true`，否则枚举默认开放。
+4. 资产库 pattern 是可选参考，不是强制模板。
+5. 如果没有合适参考项，Agent 应根据当前项目的剧情、角色、情绪、动作、镜头或声音功能生成更合适方案，并说明原因。
+
+推荐选择字段：
+
+```yaml
+selection_mode: reference | adapted_reference | custom_generated
+source_reference:
+reason:
+```
+
+开放参考不改变确认闸门、运行时读取边界、阶段输出协议和安全边界。
 
 ## v4 表现力扩展字段：`expressive_animation`
 
