@@ -8,6 +8,7 @@
 2. 黑板只保存顶层索引、跨阶段摘要、确认状态和文件路径，不塞长正文。
 3. 运行时仍禁止读取 `docs/`、`.handoff/`、历史项目输出和其他无关项目目录。
 4. v4 起，默认包含 `expressive_animation`，但具体启用强度必须在 `scene-design-builder` 阶段预览并由用户确认。
+5. v5 起，默认包含 `storyboard_director_v5`，但具体分镜方案仍必须在 `scene-storyboard-director` 阶段预览并由用户确认。
 
 ---
 
@@ -36,6 +37,9 @@ context_policy:
   allowed_runtime_asset_paths:
     - assets/animation-stylization/effect-library.md
     - assets/animation-stylization/contrast-comedy-library.md
+    - assets/cinematic-language/shot-language-library.md
+    - assets/cinematic-language/animation-film-shot-patterns.md
+    - assets/cinematic-language/animation-comedy-action-patterns.md
   forbidden_runtime_paths:
     - docs/
     - .handoff/
@@ -122,6 +126,21 @@ expressive_animation:
       - emotional_turn
       - visual_payoff
 
+storyboard_director_v5:
+  enabled: true
+  confirmation_status: pending_storyboard_plan_confirmation
+  assets:
+    shot_language_library: assets/cinematic-language/shot-language-library.md
+    animation_film_patterns: assets/cinematic-language/animation-film-shot-patterns.md
+    animation_comedy_action_patterns: assets/cinematic-language/animation-comedy-action-patterns.md
+  default_policy:
+    require_storyboard_content_breakdown: true
+    require_cinematic_language_plan: true
+    require_visual_motivation: true
+    avoid_template_stack: true
+    require_pattern_reason: true
+    do_not_reference_specific_films_in_runtime_output: true
+
 created_at:
 updated_at:
 
@@ -144,30 +163,46 @@ confirmation_status: pending_design_confirmation | confirmed | disabled
 - `confirmed`：用户已在设计方向确认中接受项目级 v4 表现力策略。
 - `disabled`：用户明确要求不使用动画物理、轻伤尺度或反差喜剧扩展。
 
+### `storyboard_director_v5.confirmation_status`
+
+```yaml
+confirmation_status: pending_storyboard_plan_confirmation | confirmed | disabled
+```
+
+含义：
+
+- `pending_storyboard_plan_confirmation`：模板默认值。表示项目可使用 v5 专业分镜导演能力，但具体分镜方案仍需分镜阶段预览并由用户确认。
+- `confirmed`：用户已确认分镜方案，允许正式落盘 `storyboard_content_breakdown` 与 `cinematic_language_plan`。
+- `disabled`：用户明确要求不使用 v5 分镜增强，只按旧分镜结构执行。
+
 ### `enabled: true` 的含义
 
-模板默认 `enabled: true` 不代表自动强行使用强特效或反差喜剧。
+模板默认 `enabled: true` 不代表自动强行使用强特效、反差喜剧或复杂镜头模板。
 
 它只表示：
 
 ```text
-本项目允许后续阶段在确认后的边界内使用 v4 表现力扩展。
+本项目允许后续阶段在确认后的边界内使用对应扩展能力。
 ```
 
 实际执行仍必须遵守：
 
-1. `scene-design-builder` 先输出设计方向预览。
-2. 用户确认后才能把 `confirmation_status` 改为 `confirmed`。
-3. 后续阶段只能在当前项目已确认的范围内继承。
-4. 反差喜剧和强特效不能每个镜头乱用。
+1. `scene-design-builder` 先输出 v4 设计方向预览。
+2. `scene-storyboard-director` 先输出 v5 分镜方案预览。
+3. 用户确认后才能把对应 `confirmation_status` 改为 `confirmed`。
+4. 后续阶段只能在当前项目已确认的范围内继承。
+5. 反差喜剧、强特效和镜头 pattern 不能每个镜头乱用。
 
 ### `allowed_runtime_asset_paths`
 
-该字段只允许以下执行期资产：
+该字段允许以下执行期资产：
 
 ```text
 assets/animation-stylization/effect-library.md
 assets/animation-stylization/contrast-comedy-library.md
+assets/cinematic-language/shot-language-library.md
+assets/cinematic-language/animation-film-shot-patterns.md
+assets/cinematic-language/animation-comedy-action-patterns.md
 ```
 
 它不改变 `docs/` 与 `.handoff/` 的禁止读取规则。
@@ -207,8 +242,11 @@ lifecycle_flag: active
 ```yaml
 user_confirmations:
   expressive_animation_confirmed: false
+  storyboard_plan_confirmed: false
 expressive_animation:
   confirmation_status: pending_design_confirmation
+storyboard_director_v5:
+  confirmation_status: pending_storyboard_plan_confirmation
 ```
 
 ---
@@ -237,6 +275,27 @@ expressive_animation:
   confirmation_status: disabled
 ```
 
+### scene-storyboard-director
+
+确认分镜方案后，可写入：
+
+```yaml
+user_confirmations:
+  storyboard_plan_confirmed: true
+storyboard_director_v5:
+  confirmation_status: confirmed
+```
+
+如果用户明确不要 v5 分镜增强：
+
+```yaml
+user_confirmations:
+  storyboard_plan_confirmed: true
+storyboard_director_v5:
+  enabled: false
+  confirmation_status: disabled
+```
+
 ### scene-script-adapter 及后续阶段
 
-后续阶段只能继承已确认策略，并在自己的阶段补丁中写摘要，不应重写整个 `expressive_animation` 顶层字段，除非用户明确调整项目级策略。
+后续阶段只能继承已确认策略，并在自己的阶段补丁中写摘要，不应重写整个顶层字段，除非用户明确调整项目级策略。
