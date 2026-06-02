@@ -26,11 +26,12 @@ prop_state_machines:
 blocking_map:
 faction_layout:
 expressive_animation:
+storyboard_director_v5:
 created_at:
 updated_at:
 ```
 
-## v3 新增字段说明
+## v3+ 顶层字段说明
 
 ```yaml
 context_policy:
@@ -40,6 +41,9 @@ context_policy:
   allowed_runtime_asset_paths:
     - assets/animation-stylization/effect-library.md
     - assets/animation-stylization/contrast-comedy-library.md
+    - assets/cinematic-language/shot-language-library.md
+    - assets/cinematic-language/animation-film-shot-patterns.md
+    - assets/cinematic-language/animation-comedy-action-patterns.md
   forbidden_runtime_paths:
     - docs/
     - .handoff/
@@ -116,6 +120,7 @@ faction_layout:
 - `prop_state_machines` 记录核心道具状态变化，供分镜和视频提示词继承。
 - `blocking_map` 与 `faction_layout` 记录角色站位、阵营和禁止区域，降低视频分段中的空间漂移。
 - `expressive_animation` 记录 v4 动画电影级表现力扩展策略，供设计、剧本、表演、分镜、声音和视频提示词阶段继承。
+- `storyboard_director_v5` 记录 v5 专业分镜导演增强策略，供分镜阶段与视频提示词阶段继承。
 
 ## v4 表现力扩展字段：`expressive_animation`
 
@@ -195,6 +200,49 @@ expressive_animation:
 8. 视频提示词阶段负责写入最终 Segment Prompt。
 9. 强特效、明显轻伤和核心反差母题必须服务 Hero Moment、情绪转折、喜剧 payoff 或安全转译，不能随机堆叠。
 
+## v5 分镜导演增强字段：`storyboard_director_v5`
+
+`storyboard_director_v5` 是 v5 新增顶层项目记忆字段，用于记录专业分镜导演增强策略。
+
+默认结构：
+
+```yaml
+storyboard_director_v5:
+  enabled: true
+  confirmation_status: pending_storyboard_plan_confirmation
+  assets:
+    shot_language_library: assets/cinematic-language/shot-language-library.md
+    animation_film_patterns: assets/cinematic-language/animation-film-shot-patterns.md
+    animation_comedy_action_patterns: assets/cinematic-language/animation-comedy-action-patterns.md
+  default_policy:
+    require_storyboard_content_breakdown: true
+    require_cinematic_language_plan: true
+    require_visual_motivation: true
+    avoid_template_stack: true
+    require_pattern_reason: true
+    do_not_reference_specific_films_in_runtime_output: true
+```
+
+字段说明：
+
+- `enabled`：表示项目允许在分镜阶段使用 v5 专业分镜导演能力。
+- `confirmation_status`：分镜方案确认状态，枚举为 `pending_storyboard_plan_confirmation`、`confirmed`、`disabled`。
+- `assets`：执行期允许 `scene-storyboard-director` 按需读取的镜头语言资产库路径。
+- `default_policy.require_storyboard_content_breakdown`：分镜阶段必须先把 Story Beat 拆成可拍内容单元。
+- `default_policy.require_cinematic_language_plan`：分镜阶段必须把内容单元转成专业镜头语言。
+- `default_policy.require_visual_motivation`：关键镜头必须说明为什么这样拍。
+- `default_policy.avoid_template_stack`：避免每个镜头都机械套 pattern。
+- `default_policy.require_pattern_reason`：使用资产库 pattern 时必须说明原因。
+- `default_policy.do_not_reference_specific_films_in_runtime_output`：运行时输出不得写“模仿某电影镜头”。
+
+使用规则：
+
+1. 新项目初始化时 `confirmation_status` 默认为 `pending_storyboard_plan_confirmation`，不得伪造用户确认。
+2. 分镜阶段负责输出 v5 分镜方案预览，并在用户确认后将 `confirmation_status` 改为 `confirmed`。
+3. 如果用户明确不要 v5 分镜增强，将 `enabled` 改为 `false`，并将 `confirmation_status` 改为 `disabled`。
+4. v5 回答“这个内容应该怎么拍”，不替代 v4 的动画表现力策略。
+5. 分镜阶段可按需读取 `assets/cinematic-language/*`，但不得全仓库扫描。
+
 ## 主流程阶段
 
 - `draft`
@@ -254,8 +302,8 @@ data:
 
 - `scene-script-adapter`：时长分段策略、剧本方案、Story Beat 方向、v4 表现力机会点
 - `scene-design-builder`：角色方向、场景道具清单、视觉语言方向、参考强度、`expressive_animation` 表达策略
-- `scene-storyboard-director`：分镜结构、Hero Shot、Bridge Shot、Segment Plan、Blocking Map、v4 表达镜头策略
-- `scene-video-prompt-builder`：分段提示词结构、参考图使用方案、连续性策略、v4 表达写入方案
+- `scene-storyboard-director`：分镜结构、Hero Shot、Bridge Shot、Segment Plan、Blocking Map、v4 表达镜头策略、v5 内容拆分与镜头语言方案
+- `scene-video-prompt-builder`：分段提示词结构、参考图使用方案、连续性策略、v4 表达写入方案、v5 镜头语言继承方案
 
 用户纠错、补充偏好、指出问题或提出比较方向，不等于授权落盘。只有用户明确表达“确认 / 采用 / 按这个生成 / 落盘 / 写入 / 继续执行该阶段”时，才能推进。
 
@@ -271,6 +319,9 @@ context_policy:
   allowed_runtime_asset_paths:
     - assets/animation-stylization/effect-library.md
     - assets/animation-stylization/contrast-comedy-library.md
+    - assets/cinematic-language/shot-language-library.md
+    - assets/cinematic-language/animation-film-shot-patterns.md
+    - assets/cinematic-language/animation-comedy-action-patterns.md
 ```
 
 默认读取：
@@ -282,17 +333,20 @@ projects/<project>/PROJECT_BOARD.md
 当前阶段明确依赖的输入文件
 ```
 
-按需允许读取的 v4 执行期资产：
+按需允许读取的执行期资产：
 
 ```text
 assets/animation-stylization/effect-library.md
 assets/animation-stylization/contrast-comedy-library.md
+assets/cinematic-language/shot-language-library.md
+assets/cinematic-language/animation-film-shot-patterns.md
+assets/cinematic-language/animation-comedy-action-patterns.md
 ```
 
 读取条件：
 
-- 当前阶段需要选择动画物理、VFX、轻中度卡通伤害尺度或反差喜剧模板。
-- `PROJECT_BOARD.md` 中 `expressive_animation.enabled` 为 `true` 或当前阶段正在定义该字段。
+- 当前阶段需要选择动画物理、VFX、轻中度卡通伤害尺度、反差喜剧模板、镜头语言或分镜 pattern。
+- `PROJECT_BOARD.md` 中对应扩展字段 `enabled` 为 `true`，或当前阶段正在定义该字段。
 - 读取目的必须服务当前阶段输出，不得全仓库扫描。
 
 运行时禁止任何 Skill 或 Agent 访问：
@@ -310,12 +364,13 @@ docs/
 - `docs/` 只作为人类阅读的说明文档，不作为任何 Skill 或 Agent 的运行时上下文来源。
 - `.handoff/` 只用于人工交接和复盘，不作为阶段执行上下文来源。
 - `assets/animation-stylization/*` 是 v4 明确允许的执行期资产库，但只能按需读取。
+- `assets/cinematic-language/*` 是 v5 明确允许的执行期资产库，但主要供分镜与视频提示词阶段按需读取。
 - 即使用户要求“看 docs / 读 docs / 扫文档”，SceneForge 执行链路也不得读取 `docs/` 来推进项目。
 - 如果需要修改协议，应直接修改 `.agents/skills/**/SKILL.md` 或 `.agents/skills/**/references/*.md`；`docs/` 不参与运行时仲裁。
 
 预算等级：
 
-- `compact`：只读黑板、当前 Skill、当前输出协议和必要输入文件；如当前阶段需要 v4 表现力扩展，可按需读取 1 个明确 asset。
+- `compact`：只读黑板、当前 Skill、当前输出协议和必要输入文件；如当前阶段需要扩展能力，可按需读取 1 个明确 asset。
 - `standard`：允许读取 1-3 个明确依赖文件和必要 asset，但不得包含 forbidden runtime paths。
 - `deep`：仅用于人工复盘或协议改造说明，不用于项目阶段执行；即使 deep，也不得读取 forbidden runtime paths 作为 Skill 上下文。
 
@@ -330,6 +385,7 @@ docs/
 - 项目状态：选题已评分（`topic_scored`）
 - 演绎风格：鬼畜离谱化（`absurd_chaotic`）
 - 表现力扩展：动画电影喜剧（`animated_feature_comedy`）
+- 分镜增强：专业分镜导演（`storyboard_director_v5`）
 
 ## 总控路由原则
 
@@ -339,3 +395,4 @@ docs/
 4. 合并阶段补丁后再更新顶层索引
 5. 若补丁与旧文档冲突，以当前 Skill 的 `references/` 协议为准，不读取 `docs/` 仲裁
 6. 若项目启用 `expressive_animation`，总控只负责传递顶层字段和允许当前 Skill 按需读取 asset；不得代替子 Skill 设计具体镜头、表演或 prompt
+7. 若项目启用 `storyboard_director_v5`，总控只负责传递顶层字段和允许分镜 / 视频提示词阶段按需读取 cinematic-language asset；不得代替分镜导演生成具体镜头语言
