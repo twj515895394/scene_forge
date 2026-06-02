@@ -32,18 +32,19 @@ SceneForge 当前只负责输出提示词、制作说明、结构化方案和项
 
 ## 执行步骤
 
-1. 判断用户意图是否已对应到某个现有项目；如果没有现有项目但用户表达了制作意图，应进入新项目初始化或 `scene-topic-gate`。
-2. 读取目标项目的 `PROJECT_BOARD.md`；如果用户没有指定项目且无法从上下文判断，先确认目标项目目录或为新项目生成候选目录名。
-3. 读取 `references/board-protocol.md`，确认顶层索引字段、阶段补丁壳、主状态机、上下文读取边界和确认闸门规则。
-4. 如果项目包含或即将定义 `expressive_animation`，读取 `references/expressive-animation-protocol.md`，只理解顶层字段、阶段分工、资产读取白名单和负向边界；总控不得代替子 Skill 设计具体镜头、表演或 prompt。
-5. 根据 `project_status`、`next_stage`、`lifecycle_flag` 判断当前阶段和是否存在阻塞。
-6. 只选择 `PROJECT_BOARD.md` 中 `next_stage` 指向的一个子 Skill；不得跳过、推断替换或同时展开多个阶段。
-7. 如果用户只说“继续”，只能解释为执行当前 `next_stage`；不得一口气连跑多个阶段。
-8. 要求子 Skill 只产出该阶段的 YAML 补丁块，不要重写整份黑板。
-9. 阶段涉及剧本、角色/场景道具、故事板、视频提示词或 `expressive_animation` 等核心创作决策时，必须先输出方案预览或候选方向，并等待用户明确确认后再落盘正式文件。
-10. 用户纠错、补充偏好或指出问题，不等于授权落盘；只有用户明确表达“确认/采用/按这个生成/落盘/写入”时，才可以写入正式文件或推进状态。
-11. 将子 Skill 结果合并回 `PROJECT_BOARD.md`，并同步更新顶层索引字段。
-12. 在阶段完成后推进 `project_status` 和 `next_stage`；如果存在真实阻塞，再写 `blocker_note`。
+1. 判断用户意图是否已对应到某个现有项目。
+2. 如果没有现有项目但用户表达了制作意图，应进入新项目初始化或 `scene-topic-gate`。新项目初始化时读取 `references/project-board-template.md`，复制模板到 `projects/<project>/PROJECT_BOARD.md`，写入 `project_name`、`created_at`、`updated_at`，不得伪造用户确认。
+3. 读取目标项目的 `PROJECT_BOARD.md`；如果用户没有指定项目且无法从上下文判断，先确认目标项目目录或为新项目生成候选目录名。
+4. 读取 `references/board-protocol.md`，确认顶层索引字段、阶段补丁壳、主状态机、上下文读取边界和确认闸门规则。
+5. 如果项目包含或即将定义 `expressive_animation`，读取 `references/expressive-animation-protocol.md`，只理解顶层字段、阶段分工、资产读取白名单和负向边界；总控不得代替子 Skill 设计具体镜头、表演或 prompt。
+6. 根据 `project_status`、`next_stage`、`lifecycle_flag` 判断当前阶段和是否存在阻塞。
+7. 只选择 `PROJECT_BOARD.md` 中 `next_stage` 指向的一个子 Skill；不得跳过、推断替换或同时展开多个阶段。
+8. 如果用户只说“继续”，只能解释为执行当前 `next_stage`；不得一口气连跑多个阶段。
+9. 要求子 Skill 只产出该阶段的 YAML 补丁块，不要重写整份黑板。
+10. 阶段涉及剧本、角色/场景道具、故事板、视频提示词或 `expressive_animation` 等核心创作决策时，必须先输出方案预览或候选方向，并等待用户明确确认后再落盘正式文件。
+11. 用户纠错、补充偏好或指出问题，不等于授权落盘；只有用户明确表达“确认/采用/按这个生成/落盘/写入”时，才可以写入正式文件或推进状态。
+12. 将子 Skill 结果合并回 `PROJECT_BOARD.md`，并同步更新顶层索引字段。
+13. 在阶段完成后推进 `project_status` 和 `next_stage`；如果存在真实阻塞，再写 `blocker_note`。
 
 ## 编排顺序
 
@@ -81,6 +82,7 @@ projects/<project>/PROJECT_BOARD.md
 .agents/skills/scene-forge/references/board-protocol.md
 .agents/skills/scene-forge/references/display-conventions.md
 .agents/skills/scene-forge/references/expressive-animation-protocol.md
+.agents/skills/scene-forge/references/project-board-template.md
 ```
 
 当当前阶段确实需要 v4 表现力扩展时，子 Skill 可按需读取以下执行期资产库：
@@ -142,6 +144,7 @@ expressive_animation:
 - 只执行 `PROJECT_BOARD.md` 中的 `next_stage`
 - 用户说“继续”不得连跑多个阶段
 - 用户纠错默认不落盘，确认后才落盘
+- 新项目初始化必须使用 `references/project-board-template.md`，不得伪造任何用户确认
 - 子 Skill 只输出单阶段补丁，不直接重写完整项目黑板
 - `project_status` 只表达主流程阶段，不混入异常态
 - `blocker_note` 只在真实阻塞时写入
@@ -153,5 +156,6 @@ expressive_animation:
 ## 参考资料
 
 - `references/board-protocol.md`：黑板顶层字段、补丁结构、状态推进规则、上下文读取边界和确认闸门
+- `references/project-board-template.md`：新建 `projects/<project>/PROJECT_BOARD.md` 的初始化模板
 - `references/display-conventions.md`：中文显示名与英文参数值的统一表达规范
 - `references/expressive-animation-protocol.md`：v4 表现力扩展字段、资产读取白名单、阶段分工和负向边界
