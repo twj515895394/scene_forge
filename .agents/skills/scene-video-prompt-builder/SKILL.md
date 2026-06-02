@@ -25,7 +25,7 @@ SceneForge 当前只输出视频生成提示词和制作说明，不生成视频
 ## 执行步骤
 
 1. 读取项目 `PROJECT_BOARD.md`，确认 `project_status` 已到 `audio_ready`，且总控路由的 `next_stage` 为 `scene-video-prompt-builder`。
-2. 采用 `compact` 上下文预算：只读取 `PROJECT_BOARD.md`、本 Skill、`references/output-contract.md`、完整分镜、表演表、声音方案、设计摘要、参考边界和必要的 Blocking/道具状态输入；默认不扫描 `docs/`、`.handoff/` 或历史项目。
+2. 采用 `compact` 上下文预算：只读取 `PROJECT_BOARD.md`、本 Skill、`references/output-contract.md`、完整分镜、表演表、声音方案、设计摘要、参考边界和必要的 Blocking/道具状态输入；运行时禁止读取 `docs/`、`.handoff/`、历史项目输出或其他无关项目目录。
 3. 读取 `references/output-contract.md`，确认输出物分类、Segment Prompt 结构和目录落点。
 4. 继承分镜阶段已经确认的 `segment_duration_seconds`、`target_total_duration_seconds`、`segments`、`hero_moments`、`bridge_shots`、`blocking_map`、`faction_layout` 和 `prop_state_machines`。
 5. 在正式生成视频提示词文件前，先输出“视频提示词方案预览”，至少包含分段提示词结构、每段参考图使用计划、continuity_in / continuity_out、blocking_continuity、prop_state_continuity、声音连续性和需要用户确认的问题。
@@ -48,6 +48,7 @@ SceneForge 当前只输出视频生成提示词和制作说明，不生成视频
 - 黑板只记录摘要和文件路径，不直接塞完整提示词正文。
 - 本阶段不得声称已经生成视频，只能说明“已生成用于外部平台制作视频的分段提示词”。
 - 必须诚实说明连续性、Blocking 和参考图策略只能降低抽卡成本，不能保证视频模型一次生成完全稳定。
+- 运行时禁止读取 `docs/`、`.handoff/`、历史项目输出或其他无关项目目录。
 
 ## 参考资料
 
