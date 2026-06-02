@@ -1,6 +1,5 @@
 ---
 name: scene-forge
-manual_copy_target: .agents/skills/scene-forge/SKILL.md
 description: 当用户想用 SceneForge 制作、改编、推进或管理某个片段/桥段/短视频项目时应使用此技能，包括从一句自然语言创作意图开始建项、判断当前阶段、或编排 SceneForge 子 Skill。
 ---
 
