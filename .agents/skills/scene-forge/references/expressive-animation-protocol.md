@@ -13,6 +13,7 @@ v4 新增顶层项目记忆字段：
 ```yaml
 expressive_animation:
   enabled: true
+  confirmation_status: pending_design_confirmation
   mode: animated_feature_comedy
   assets:
     effect_library: assets/animation-stylization/effect-library.md
@@ -59,6 +60,20 @@ expressive_animation:
       - emotional_turn
       - visual_payoff
 ```
+
+### 1.1 确认状态
+
+```yaml
+confirmation_status: pending_design_confirmation | confirmed | disabled
+```
+
+含义：
+
+- `pending_design_confirmation`：新项目默认值。表示项目可使用 v4 表现力扩展，但具体强度仍需设计阶段预览并由用户确认。
+- `confirmed`：用户已在设计方向确认中接受项目级 v4 表现力策略。
+- `disabled`：用户明确要求不使用动画物理、轻伤尺度或反差喜剧扩展。
+
+模板默认 `enabled: true` 不代表自动强行使用强特效或反差喜剧，只表示后续阶段可以在确认后的边界内使用该能力。
 
 ---
 
@@ -189,6 +204,7 @@ scene-design-builder:
     - 选择 animation_stylization 档位
     - 选择 injury_tone_policy 尺度
     - 判断 contrast_comedy 是否启用
+    - 用户确认后将 confirmation_status 改为 confirmed，或在用户禁用时改为 disabled
 
 scene-script-adapter:
   responsibility:
