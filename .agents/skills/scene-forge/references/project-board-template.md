@@ -9,6 +9,7 @@
 3. 运行时仍禁止读取 `docs/`、`.handoff/`、历史项目输出和其他无关项目目录。
 4. v4 起，默认包含 `expressive_animation`，但具体启用强度必须在 `scene-design-builder` 阶段预览并由用户确认。
 5. v5 起，默认包含 `storyboard_director_v5`，但具体分镜方案仍必须在 `scene-storyboard-director` 阶段预览并由用户确认。
+6. 所有模板、示例、枚举和资产库 pattern 都是参考锚点，不是封闭集合。
 
 ---
 
@@ -49,6 +50,16 @@ context_policy:
   token_budget:
     default_stage_budget: compact
     require_reason_for_extra_reads: true
+
+reference_policy:
+  templates_are_reference_only: true
+  examples_are_reference_only: true
+  enums_are_open_by_default: true
+  strict_enum_only_when_explicit: true
+  allow_adapted_reference: true
+  allow_custom_generated_option: true
+  require_reason_for_custom_option: true
+  note: 模板、示例、枚举和 pattern 是创作起点，不是创作上限；找不到合适参考项时，Agent 应根据项目语境生成更合适方案并说明原因。
 
 user_confirmations:
   duration_strategy_confirmed: false
@@ -150,6 +161,31 @@ stage_patches: {}
 ---
 
 ## 字段使用说明
+
+### `reference_policy`
+
+`reference_policy` 统一解释 SOP 中的模板、示例、枚举和资产库 pattern。
+
+核心规则：
+
+```text
+模板、示例、枚举和 pattern 都是参考锚点，不是封闭集合。
+```
+
+使用方式：
+
+- 如果参考项高度匹配，使用 `selection_mode: reference`。
+- 如果参考项只部分匹配，使用 `selection_mode: adapted_reference`，并写明改写原因。
+- 如果没有合适参考项，使用 `selection_mode: custom_generated`，并写明为什么更适合当前项目。
+- 除非字段明确写明 `strict_enum: true`，否则枚举默认开放。
+
+建议字段：
+
+```yaml
+selection_mode: reference | adapted_reference | custom_generated
+source_reference:
+custom_reason:
+```
 
 ### `expressive_animation.confirmation_status`
 
