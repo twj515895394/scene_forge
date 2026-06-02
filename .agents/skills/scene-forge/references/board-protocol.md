@@ -36,11 +36,12 @@ context_policy:
   mode: minimal
   allow_docs_scan: false
   active_protocol_docs: []
-  forbidden_by_default:
+  forbidden_runtime_paths:
     - docs/
     - .handoff/
     - 会话记录_*.md
     - 历史项目输出
+    - 其他无关项目目录
   token_budget:
     default_stage_budget: compact
     require_reason_for_extra_reads: true
@@ -194,7 +195,7 @@ projects/<project>/PROJECT_BOARD.md
 当前阶段明确依赖的输入文件
 ```
 
-默认不读取：
+运行时禁止任何 Skill 或 Agent 访问：
 
 ```text
 docs/
@@ -204,17 +205,17 @@ docs/
 其他无关项目目录
 ```
 
-如果需要超出默认读取范围，必须满足至少一个条件：
+说明：
 
-1. 用户明确要求分析、复盘、重构协议或读取相关文档。
-2. `PROJECT_BOARD.md` 的 `context_policy.active_protocol_docs` 明确列出该文档。
-3. 当前阶段无法用最小上下文完成，且回复中说明额外读取原因。
+- `docs/` 只作为人类阅读的说明文档，不作为任何 Skill 或 Agent 的运行时上下文来源。
+- 即使用户要求“看 docs / 读 docs / 扫文档”，SceneForge 执行链路也不得读取 `docs/` 来推进项目。
+- 如果需要修改协议，应直接修改 `.agents/skills/**/SKILL.md` 或 `.agents/skills/**/references/*.md`；`docs/` 不参与运行时仲裁。
 
 预算等级：
 
 - `compact`：只读黑板、当前 Skill、当前输出协议和必要输入文件。
-- `standard`：允许读取 1-3 个明确依赖文件。
-- `deep`：仅用于复盘、协议改造、全链路分析或用户明确要求的深度读取。
+- `standard`：允许读取 1-3 个明确依赖文件，但不得包含 forbidden runtime paths。
+- `deep`：仅用于人工复盘或协议改造说明，不用于项目阶段执行；即使 deep，也不得读取 forbidden runtime paths 作为 Skill 上下文。
 
 ## 显示规范
 
@@ -233,4 +234,4 @@ docs/
 2. 再定位当前阶段分区补丁
 3. 只调度 `next_stage` 指向的一个当前必需子 Skill
 4. 合并阶段补丁后再更新顶层索引
-5. 若补丁与旧文档冲突，以最新协议为准
+5. 若补丁与旧文档冲突，以当前 Skill 的 `references/` 协议为准，不读取 `docs/` 仲裁
