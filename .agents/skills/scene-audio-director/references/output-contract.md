@@ -1,6 +1,10 @@
 # scene-audio-director 输出协议
 
-本文件定义 `scene-audio-director` 的输出形态、声音方案字段、黑板摘要边界和长内容落盘方式。
+本文件定义 `scene-audio-director` 的输出形态、声音方案字段、Bridge/Blocking/道具状态声音连续性、黑板摘要边界和长内容落盘方式。
+
+本协议是通用项目记忆协议，不绑定任何具体样例项目。样例项目暴露的问题只能转译为通用字段与执行规则，不得把样例角色、样例台词、样例站位直接固化进协议。
+
+本阶段只输出声音制作说明、音乐 prompt、拟音 prompt 和混音计划，不生成最终音频。
 
 ## 阶段定位
 
@@ -27,10 +31,10 @@ scene-storyboard-director
 本阶段默认消费以下结果：
 
 - `scene-reference-decider`：参考边界、`must_keep`、`must_avoid`
-- `scene-design-builder`：角色、场景、道具设定
-- `scene-performance-director`：`performance_sheet_path`、角色表演锚点、停顿与反应节奏
-- `scene-storyboard-director`：`segments`、`shot_highlights`、`continuity_rules`、`prompt_hints`、`shotlist_file`
-- 顶层索引：`performance_style`、`segment_duration_seconds`
+- `scene-design-builder`：角色、场景、道具设定、全场景资产总参考图、`blocking_map`、`faction_layout`、`prop_state_machines`
+- `scene-performance-director`：`performance_sheet_path`、角色表演锚点、停顿与反应节奏、Bridge 表演钩子、Blocking / 道具交互连续性
+- `scene-storyboard-director`：`segments`、`shot_highlights`、`hero_moments`、`bridge_shots`、`continuity_rules`、`prompt_hints`、`shotlist_file`、`blocking_map`、`faction_layout`、`prop_state_machines`
+- 顶层索引：`performance_style`、`segment_duration_seconds`、`target_total_duration_seconds`、`segment_strategy`
 
 ---
 
@@ -58,7 +62,7 @@ outputs/audio/audio_mix_plan_v*.md
 
 ```yaml
 patch_type: scene-audio-director
-version: 1
+version: 2
 status:
 updated_at:
 summary:
@@ -111,13 +115,18 @@ data:
         sound:
         timing:
         purpose:
+        related_prop_state:
+        related_blocking:
   ambience_design:
     location_bed:
     emotional_ambience:
     transition_ambience:
+    blocking_ambience_note:
   segment_audio_plan:
     - segment_id:
       covered_shots:
+      related_hero_moments:
+      related_bridge_shots:
       voice_focus:
       music_focus:
       foley_focus:
@@ -125,11 +134,17 @@ data:
       silence_or_pause:
       continuity_in:
       continuity_out:
+      bridge_audio_hook:
+      blocking_audio_continuity:
+      prop_state_audio_continuity:
   video_prompt_handoff:
     must_include_audio_notes:
     music_prompt_usage:
     foley_prompt_usage:
     mix_notes:
+    bridge_audio_usage:
+    blocking_audio_usage:
+    prop_state_audio_usage:
   risk_notes:
   next_action:
 ```
@@ -138,88 +153,22 @@ data:
 
 # 五、字段说明
 
-## `audio_plan_version`
-
-本次声音方案版本号。
-
-示例：
-
-```yaml
-audio_plan_version: v1
-```
-
-## `audio_plan_path`
-
-完整声音导演方案路径。
-
-示例：
-
-```yaml
-audio_plan_path: details/audio_plan_v1.md
-```
-
-## `voice_direction`
-
-配音方向。
-
-必须覆盖：
-
-- 语言
-- 总体语气
-- 语速
-- 气口
-- 情绪递进
-- 角色级声音设计
-
-## `music_design`
-
-配乐设计。
-
-必须说明：
-
-- 主情绪主题
-- 是否使用 leitmotif
-- 乐器方向
-- 速度范围
-- 情绪曲线
-- 音乐密度
-- 静默点
-
-## `foley_design`
-
-拟音设计。
-
-必须服务：
-
-- 动作
-- 表情
-- 道具
-- 喜剧节奏
-- 情绪停顿
-
-## `ambience_design`
-
-环境音设计。
-
-环境音不是随机背景噪声，而是场景情绪的一部分。
-
-## `segment_audio_plan`
-
-按视频生成 Segment 输出声音计划。
-
-必须确保每个 Segment 都有：
-
-- voice_focus
-- music_focus
-- foley_focus
-- ambience_focus
-- silence_or_pause
-- continuity_in
-- continuity_out
-
-## `video_prompt_handoff`
-
-交给 `scene-video-prompt-builder` 的整合说明。
+- `audio_plan_version`：本次声音方案版本号。
+- `audio_plan_path`：完整声音导演方案路径。
+- `voice_direction`：配音方向，必须覆盖语言、总体语气、语速、气口、情绪递进和角色级声音设计。
+- `music_design`：配乐设计，必须说明主情绪主题、乐器方向、速度范围、情绪曲线、音乐密度和静默点。
+- `foley_design`：拟音设计，必须服务动作、表情、道具、喜剧节奏、情绪停顿和道具状态变化。
+- `related_prop_state`：该拟音是否支撑某个道具状态变化。
+- `related_blocking`：该拟音是否支撑角色站位、移动或空间关系变化。
+- `ambience_design`：环境音设计。环境音不是随机背景噪声，而是场景情绪和空间关系的一部分。
+- `blocking_ambience_note`：角色空间距离、遮挡或区域变化是否通过环境声体现。
+- `segment_audio_plan`：按视频生成 Segment 输出声音计划。
+- `related_hero_moments`：本段音频是否支撑看点镜头。
+- `related_bridge_shots`：本段音频是否支撑桥接分镜。
+- `bridge_audio_hook`：交给下一段的动作余音、环境底噪、台词气口或音乐尾音。
+- `blocking_audio_continuity`：角色空间变化如何通过声音保持连续。
+- `prop_state_audio_continuity`：道具状态变化如何通过拟音或环境声保持连续。
+- `video_prompt_handoff`：交给 `scene-video-prompt-builder` 的整合说明。
 
 最终视频 Prompt 必须把声音要求整合进每段 Prompt 正文，而不是只给一个独立音频文件名。
 
@@ -238,12 +187,12 @@ audio_plan_path: details/audio_plan_v1.md
 要写：
 
 ```text
-音乐在角色误解解除前保持轻微拨弦和低音铺底，误解解除后加入温暖木管主题，形成情绪释放。
+音乐在误解解除前保持轻微拨弦和低音铺底，误解解除后加入温暖木管主题，形成情绪释放。
 ```
 
 ## 2. 静默必须被设计
 
-Pixar-like 动画电影经常用短暂停顿制造情绪和喜剧。
+动画电影化表达经常用短暂停顿制造情绪和喜剧。
 
 要明确：
 
@@ -256,8 +205,6 @@ silence_points:
 ## 3. 拟音要角色化
 
 同样是脚步声，不同角色应有不同声音质感。
-
-示例：
 
 ```text
 紧张角色的脚步轻而碎，权威角色的脚步低频更重。
@@ -288,6 +235,16 @@ silence_points:
 某个作曲家的可识别旋律
 ```
 
+## 6. 声音要服务桥接和连续性
+
+Segment 之间如果存在动作、视线、空间或道具状态衔接，声音应提供钩子：
+
+- 动作余音
+- 环境底噪延续
+- 台词气口
+- 音乐尾音
+- 道具拟音的状态延续
+
 ---
 
 # 七、黑板摘要建议
@@ -301,6 +258,10 @@ silence_points:
 - 混音计划路径
 - 配音方向摘要
 - 每个 Segment 的声音重点
+- Hero Shot 的声音强化
+- Bridge Shot 的声音钩子
+- Blocking / Faction 的声音连续性
+- 道具状态的声音连续性
 - 静默点设计
 - 视频提示词阶段必须继承的音频要求
 
@@ -325,76 +286,87 @@ silence_points:
 
 ```yaml
 patch_type: scene-audio-director
-version: 1
+version: 2
 status: completed
 updated_at: 2026-06-02
-summary: 声音导演已完成，按 3 个 10 秒 Segment 设计了配音气口、拟音重点、环境音、音乐主题和静默点。
+summary: 声音导演已完成，已为 3 个 Segment 设计配音气口、拟音、环境音、音乐曲线、Bridge 声音钩子和道具状态声音连续性。
 data:
   audio_plan_version: v1
   audio_plan_path: details/audio_plan_v1.md
   music_prompt_path: outputs/audio/music_prompt_v1.md
   foley_prompt_path: outputs/audio/foley_prompt_v1.md
   audio_mix_plan_path: outputs/audio/audio_mix_plan_v1.md
-  audio_summary: 本次声音方案以轻喜剧误会升级为核心，音乐保持温暖木管和轻弦乐，误会爆点前短暂抽空音乐，用拟音放大角色反应。
+  audio_summary: 本次声音以环境底噪、动作余音和短暂停顿支撑段落拼接，音乐只在情绪释放点抬升。
   voice_direction:
     language: zh-CN
-    overall_tone: 温暖、轻喜剧、角色驱动
-    pacing: 前半段轻快，误会升级时短促，情绪释放时放慢
-    breath_control: 关键误会前保留半秒吸气或卡壳
-    emotional_delivery: 角色努力维持体面，但情绪会从气口和尾音泄露
+    overall_tone: 夸张但不失真实气口。
+    pacing: 前段克制，中段加速，爆点前短暂停顿。
+    breath_control: 关键台词前保留半秒吸气。
+    emotional_delivery: 情绪递进从试探到压迫，再到释放。
     character_voice_notes:
       - character_id: hero
         character_name: 主角
-        voice_age: young_adult
-        voice_texture: warm_but_nervous
-        emotional_tone: 想显得镇定但压不住焦急
-        pacing: 开始偏快，解释失败后出现短暂停顿
-        pause_pattern: 关键解释前半秒吸气
-        delivery_notes: 不要播音腔，要像角色真实在压住情绪。
+        voice_age: adult
+        voice_texture: 声音偏低，带轻微压迫感。
+        emotional_tone: 冷静外壳下有逐渐显露的怒气。
+        pacing: 慢起，中段压低，爆点前停顿。
+        pause_pattern: 关键反问前停顿 0.4 秒。
+        delivery_notes: 不要大喊，用气口和重音制造压力。
   music_design:
-    main_theme: 温暖而轻巧的角色主题
-    leitmotif: 主角每次被误解时出现 2-3 个音的短动机
-    instrumentation: 木管、拨弦、轻弦乐、少量马林巴
-    tempo_range: 92-112 BPM
-    emotional_curve: 从轻松观察到误会升级，再到温暖释放
-    music_density: medium
+    main_theme: 低频拨弦和轻木管组成的喜剧压迫主题。
+    leitmotif: 关键道具出现时短促重复一次。
+    instrumentation: 低音拨弦、木管、轻打击。
+    tempo_range: 90-110 BPM
+    emotional_curve: 前段克制，中段收窄，爆点释放。
+    music_density: 爆点前减少音乐，让台词和拟音突出。
     silence_points:
       - beat_id: B02
         shot_id: SH006
-        purpose: 在误会爆点前抽空音乐，突出角色尴尬停顿和观众预期。
+        purpose: 给反应停顿和观众预判空间。
   foley_design:
-    density: medium_high
+    density: medium
     key_foley_moments:
-      - shot_id: SH004
-        segment_id: SEG01
-        sound: 手指收紧衣袖的细小摩擦声
-        timing: 角色准备解释但被打断前
-        purpose: 放大紧张和压抑感。
+      - shot_id: SH006
+        segment_id: SEG02
+        sound: 关键道具被触碰的轻微金属声。
+        timing: 台词停顿后 0.2 秒。
+        purpose: 暗示道具状态即将变化。
+        related_prop_state: prop_state_02
+        related_blocking: 角色仍保持在默认区域内伸手触碰道具。
   ambience_design:
-    location_bed: 柔和室内空气感，远处轻微人声，不抢角色台词
-    emotional_ambience: 误会升级时环境声略微降低，突出角色反应
-    transition_ambience: 每段结尾保留同一环境底噪，帮助 Segment 拼接连续
+    location_bed: 稳定环境底噪，段落之间不断裂。
+    emotional_ambience: 冲突升级时轻微压低环境声。
+    transition_ambience: 每段结尾保留 0.5 秒环境尾音。
+    blocking_ambience_note: 角色距离变化通过脚步声和空间反射轻微体现。
   segment_audio_plan:
     - segment_id: SEG01
       covered_shots:
         - SH001
         - SH002
-        - SH003
-      voice_focus: 建立角色语气和轻微紧张感
-      music_focus: 轻巧主题进入但不抢戏
-      foley_focus: 衣料、脚步、轻微道具声
-      ambience_focus: 稳定场景环境音
-      silence_or_pause: 结尾前保留 0.4 秒停顿
-      continuity_in: 从自然环境底噪进入
-      continuity_out: 保留同一环境底噪进入 SEG02
+      related_hero_moments: []
+      related_bridge_shots:
+        - BR01
+      voice_focus: 建立角色语气和气口。
+      music_focus: 轻微铺底，不抢台词。
+      foley_focus: 保留脚步、衣料和道具轻响。
+      ambience_focus: 环境底噪稳定。
+      silence_or_pause: 段尾保留短暂停顿。
+      continuity_in: 从自然环境声进入。
+      continuity_out: 以动作余音和环境底噪交给 SEG02。
+      bridge_audio_hook: 保留 0.5 秒动作余音。
+      blocking_audio_continuity: 角色没有无动机跨区，脚步声保持同一空间方向。
+      prop_state_audio_continuity: 道具仍处于初始状态，仅有轻微预告声。
   video_prompt_handoff:
-    must_include_audio_notes: 每段视频 Prompt 必须写入台词气口、拟音、音乐情绪和静默点。
-    music_prompt_usage: 使用 music_prompt_v1.md 生成或指导配乐，不复刻具体电影旋律。
-    foley_prompt_usage: 使用 foley_prompt_v1.md 指导后期或多模态音频生成。
-    mix_notes: 台词优先级最高，拟音用于强调动作和喜剧点，音乐在爆点前可短暂抽空。
+    must_include_audio_notes: 每段视频 prompt 必须包含台词气口、拟音、音乐、环境音和静默点。
+    music_prompt_usage: 使用 music_prompt_v1.md 作为原创配乐方向。
+    foley_prompt_usage: 使用 foley_prompt_v1.md 作为关键动作拟音方向。
+    mix_notes: 台词优先，拟音服务动作，音乐不压过表演停顿。
+    bridge_audio_usage: Segment 之间保留动作余音或环境底噪。
+    blocking_audio_usage: 空间移动需要有脚步、距离感或环境反射支撑。
+    prop_state_audio_usage: 道具状态变化必须有相应拟音证据。
   risk_notes:
-    - 不引用具体动画电影主题曲或可识别旋律。
-  next_action: 进入 scene-video-prompt-builder，整合 audio_plan_v1.md 到每段视频 Prompt。
+    - 不复刻具体电影配乐或可识别旋律。
+  next_action: 进入 scene-video-prompt-builder，整合声音方案和分镜生成分段视频提示词。
 ```
 
 ---
