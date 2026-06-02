@@ -15,6 +15,7 @@ production_level:
 reference_type:
 adaptation_level:
 performance_style:
+segment_duration_seconds:
 created_at:
 updated_at:
 ```
@@ -47,6 +48,7 @@ updated_at:
 - `blocker_note` 只在真实阻塞时填写
 - `next_stage` 显式保留，不完全依赖推导
 - `performance_style` 由 `scene-script-adapter` 最终确认写入顶层
+- `segment_duration_seconds` 默认写 `10`，由 `scene-storyboard-director` 在分镜阶段确认；若分镜密度过高，可在用户确认后改为 `15`
 
 ## 阶段补丁壳
 

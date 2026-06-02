@@ -9,6 +9,7 @@ production_level:
 reference_type:
 adaptation_level:
 performance_style:
+segment_duration_seconds: 10
 created_at: YYYY-MM-DD
 updated_at: YYYY-MM-DD
 ---
@@ -26,6 +27,7 @@ updated_at: YYYY-MM-DD
 - 参考对象类型：待定
 - 改编档位：待定
 - 演绎风格：待定
+- 分段时长：10 秒（`10`）
 
 ## 1. 选题评分区
 

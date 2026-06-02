@@ -1,53 +1,50 @@
-# 《华强卖瓜》皮克斯/小黄人风格 3D 视频生成分段提示词 (v1.0)
+# 《华强卖瓜》分段视频 Prompt 包 (v1.0)
 
-本提示词专为 **Sora / Luma Dream Machine / Runway Gen-3 Alpha** 等高品质视频生成模型设计，强调**动态物理解析**、**镜头动势（Camerawork）** 与 **Slapstick（物理形变）** 时间轴衔接。
+使用顺序建议：
 
----
+1. 先生成角色设定图：`outputs/design_prompts/character_prompts_v1.0.md`
+2. 再生成场景/道具设定图：`outputs/design_prompts/scene_prompts_v1.0.md`
+3. 再生成故事板图：`outputs/storyboard_prompts/storyboard_prompt_v1.0.md`
+4. 最后把角色设定图 + 当前段对应故事板图 + 当前段视频 prompt 一起输入视频生成平台
 
-## 🎬 镜头级视频生成提示词 (Video Prompts)
+## SEG01
 
-### 🎥 S01: 华强登场 (Huaqiang's Scooter Drift)
-> **Prompt**:
-> 3D animated video sequence. A rounded, high-gloss red scooter motorcycle drifts smoothly onto a sunny red brick street and slides to a halt in front of a blue-and-white striped awning fruit stall. The tires emit squeaky rubber sounds and slight cartoon smoke. The rider, a chubby Chinese man in a highly reflective glossy black leather jacket, swings his head elegantly, pulls up his helmet's visor, and smiles with large, sparkling innocent round eyes. Pixar and Illumination animation style, high-saturation, warm golden afternoon lighting, smooth camera pan following the scooter, fluid organic motion --video-model runway-gen3
+- 时长：10s
+- 覆盖镜头：S01-S04
+- 段落目标：完成登场、问瓜、保熟冲突和秤上博弈
 
----
+**Prompt**：
 
-### 🎥 S02: 嚣张老板 (The Arrogant Vendor)
-> **Prompt**:
-> 3D animated video sequence. A colossal, muscular bald man in a clean white sleeveless tank top sits up abruptly from a creaking bamboo lounge chair, causing his gold chain necklace to bounce comically on his chest. His massive bald head is polished and glossy, reflecting the sunset. He arches one eyebrow high, smirks arrogantly, and spits a watermelon seed towards the camera with a comical pop. Pixar and Illumination animation style, clean glossy plastic textures, highly saturated colors, snappy character animation, camera pushes in slowly --video-model runway-gen3
+> 生成一个 10 秒的 3D 动画电影质感视频片段。使用已经生成好的华强角色参考图、摊主角色参考图、水果摊场景参考图，以及故事板镜头 S01-S04 作为视觉锚点。
+> 分段结构：
+> 0.0-2.2 秒：华强骑摩托来到水果摊前停下，摘下头盔，平静地问“老板，这瓜多少钱一斤？”
+> 2.2-4.5 秒：摊主带着明显不耐烦和对抗感回话。
+> 4.5-7.2 秒：华强走向西瓜堆，轻敲一个西瓜，问“这瓜保熟吗？”，摊主情绪进一步上来。
+> 7.2-10.0 秒：西瓜被放到电子秤上，秤体出现明确受力反馈，华强察觉不对劲，说“20斤？你这秤不够数啊。”
+> 运镜要求：先用中景建立场景，再进入中近景对峙，最后给西瓜和电子秤一个更明确的近景。
+> 表演要求：华强始终冷静克制，摊主的烦躁和敌意逐步升级。
+> 声音要求：加入摩托刹停声、街边环境声、敲瓜声、秤体受力声和自然对白。
+> 节奏要求：前半段平稳清晰，后半段略微加快，为下一段做铺垫。
+> 视觉要求：高品质 3D 动画电影质感，街边环境落地可信，道具运动可读，不出现任何品牌风格名。
+> 负向约束：不要复刻真人演员脸，不要玩具化比例，不要血腥，不要随机跳机位，不要场景位置漂移。
 
----
+## SEG02
 
-### 🎥 S03: 华强敲瓜 (Watermelon Tapping)
-> **Prompt**:
-> 3D animated video sequence, camera zooms in close. A chubby Chinese man in a glossy leather jacket leans over a blue table, tapping a perfectly oval, shiny green watermelon. His eyes instantly squint into tiny black dots of cartoon focus. The tapping causes a hollow cartoon vibration sound. The dark-green watermelon surface reflects a bright green glow onto his face. Pixar and Illumination style, warm golden rim light on the background pyramid of watermelons, high-contrast, smooth textures --video-model runway-gen3
+- 时长：10s
+- 覆盖镜头：S05-S08
+- 段落目标：完成揭穿、去害化高潮和离场收束
 
----
+**Prompt**：
 
-### 🎥 🎬 S04: 砸瓜上秤 (Slamming Melon on Scale)
-> **Prompt**:
-> 3D animated video sequence, high dynamic action. A colossal bald Chinese man slams a glossy green watermelon onto a bright yellow plastic electronic scale on a shiny blue table. The yellow scale body immediately squashes down flat by 30% under the impact, then comically jumps and bounces up vertically with elastic squash-and-stretch physics. The large round dial needle of the scale spins in a wild blur like a helicopter rotor, finally stopping with a "ding" sound. The man grins widely with perfectly white teeth. Pixar and Illumination style, vibrant saturated colors, snappy cartoon motion blur --video-model runway-gen3
-
----
-
-### 🎥 S05: 揭穿吸铁石 (Pointing the Magnet)
-> **Prompt**:
-> 3D animated video sequence. Close-up on a blue table. A chubby Chinese man uses a rounded, smooth finger to tilt the yellow electronic scale, revealing a black rectangular magnet stuck underneath. The camera focuses sharply on the magnet as it falls off with a magnetic clink. The man blinks his large, sparkling round eyes in a deadpan, innocent expression, tilting his head comically. Pixar and Illumination style, warm afternoon sun, high-contrast crisp shadows, glossy plastic surface rendering --video-model runway-gen3
-
----
-
-### 🎥 🎬 S06: 慢动作拔刀 (Zero-Gravity Slow-Mo Knife Draw)
-> **Prompt**:
-> 3D animated video sequence. Extreme slow-motion, time slows to 1/10000th of a second. A chubby Chinese man's hand reaches under the scale to grab a small classic metal fruit knife. Dust particles and black watermelon seeds float in zero-gravity around him. The camera performs a rapid, dramatic 360-degree orbit around his silhouette. As he draws the knife, a massive golden four-point star lens flare ✨ bursts blindingly from the blade with a heavy lightsaber hum. Pixar and Illumination style, dramatic cinematic backlighting, warm golden sunset glow, epic action framing --video-model runway-gen3
-
----
-
-### 🎥 🎬 S07: 浆汁火山爆发 (The Watermelon Juice Volcano)
-> **Prompt**:
-> 3D animated video sequence, extreme slapstick climax. The fruit knife strikes the green watermelon. The watermelon instantly squashes inward like rubbery jelly, expands into a huge sphere, and explodes into a giant geyser fountain of translucent, sparkling red watermelon juice. A circular cartoon shockwave sweeps across the blue table, blowing back a colossal bald man's cheeks in a wave-like wind-tunnel deformation, his eyes swirling in dizzy spirals. The steel scale plate is blown flying into the sky like a spinning UFO. Pixar and Illumination style, gorgeous translucent fluid simulation, no blood, extreme squash-and-stretch, highly saturated candy colors --video-model runway-gen3
-
----
-
-### 🎥 S08: 华强谢幕 (Comical Scooter Departure)
-> **Prompt**:
-> 3D animated video sequence. Amidst the drifting red watermelon juice mist, a chubby Chinese man in a shiny leather jacket wipes his hands gracefully, smiles with clean deadpan innocent eyes, and hops onto a red Q-version scooter. He twists the throttle, causing the bike to shoot out a round pink exhaust cloud, accelerating out of the frame on the red brick street. The sunset golden light shines beautifully through the settling mist. Pixar and Illumination style, cozy high-contrast lighting, high-saturation, lighthearted cartoon outro music vibe --video-model runway-gen3
+> 生成一个 10 秒的 3D 动画电影质感视频片段。继续沿用华强参考图、摊主参考图、水果摊参考图、电子秤参考图，以及故事板镜头 S05-S08 作为视觉锚点，并直接承接上一段结束时的角色状态和场景状态。
+> 分段结构：
+> 10.0-12.6 秒：华强指出电子秤底下的问题，摊主一下僵住，紧张感上来。台词提示：“你瞧瞧，这秤底下……”
+> 12.6-15.8 秒：在高潮前做一个明显停顿，华强和摊主继续对峙，电子秤和西瓜成为画面中心。
+> 15.8-18.2 秒：围绕电子秤和西瓜做全年龄友好的夸张搞笑爆发，道具反馈要清晰，摊主承担主要反应，保持非写实、非暴力。
+> 18.2-20.0 秒：华强平静骑车离开，说“萨日朗！”，摊主留在余波中完成收束。
+> 运镜要求：先用近景揭示问题，再在高潮时拉到更开阔的画面，结尾轻微后拉形成反差式离场。
+> 表演要求：华强在高潮中也保持克制，摊主承担最大幅度的面部和身体反应。
+> 声音要求：整合揭穿时的停顿、爆发时的道具和环境反馈、摊主反应声、摩托启动声和最后一句台词。
+> 节奏要求：停顿 -> 爆发 -> 余波 -> 干净离场。
+> 视觉要求：高品质 3D 动画电影质感，道具驱动动作清楚，动作阶段明确，不出现任何品牌风格名。
+> 负向约束：不要血腥，不要写实捅刺动作，不要角色脸漂移，不要场景布局漂移，不要服装突然变化。

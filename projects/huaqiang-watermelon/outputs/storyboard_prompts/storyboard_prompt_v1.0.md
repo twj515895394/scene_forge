@@ -1,63 +1,63 @@
-# 《华强卖瓜》皮克斯/小黄人风格 3D 故事板静态图提示词 (v1.0)
+# 《华强卖瓜》故事板图 Prompt 包 (v1.0)
 
-本提示词专为 **Midjourney / DALL-E 3** 故事板静帧生成设计，完美继承了**高饱和度、高反光光滑 3D 动画风格（小黄人/皮克斯风格）**以及角色和场景的高锚点复刻特征。
+使用方法：
 
----
+1. 先使用角色设定图和场景设定图作为参考图。
+2. 再逐镜头生成故事板图。
+3. 每张故事板图都要保留镜头编号，方便和视频分段对应。
 
-## 📌 全局角色一致性提示词 (Global Character Anchors)
+## S01
 
-* **Liu Huaqiang (华强)**:
-  > A chubby Chinese man, 3D animated character, Pixar and Illumination style. Large expressive round eyes with sparkling crystal highlights, deadpan innocent smile, smooth pear-shaped head with very short shaved hair (clean plastic-like texture), light blue-shaved stubble. Wearing a highly reflective, glossy black leather jacket with extreme smooth latex shine, reflecting golden rim light, a bright blue t-shirt underneath. Five-head proportion, cute and comical.
+- 时间轴：0.0-2.2s
+- 用途：华强登场，建立人物与场景
+- Prompt：
+  > 故事板单帧，白天路边水果摊场景，摩托车停在摊位前，华强下车摘头盔，背景能看到摊主和水果摊整体布局。高品质 3D 动画电影质感，中景构图，画面关系清晰，适合作为开场建立镜头。
 
-* **Sheng Bing (西瓜摊老板/盛兵)**:
-  > A colossal, muscular bald Chinese man, 3D animated character, Pixar and Illumination style. Massive round bald head reflecting sunset light like a polished plastic ball, very large downward-sloping expressive eyes, thick round lips. Wearing a clean white sleeveless tank top, a thick shiny gold chain necklace bouncing on his chest, olive-green shorts. Comical big-toe rubber slippers. Huge upper body, short legs, comical action-movie villain look.
+## S02
 
----
+- 时间轴：2.2-4.5s
+- 用途：摊主回话，对视建立
+- Prompt：
+  > 故事板单帧，壮实的水果摊老板带着不耐烦表情回话，华强正面看向他，两人之间隔着水果摊桌面。中近景，对话对峙感明确，高品质 3D 动画电影质感。
 
-## 🎬 镜头级故事板提示词 (Shot-by-Shot Prompts)
+## S03
 
-### 📸 S01: 华强登场 (Huaqiang's Arrival)
-> **Prompt**:
-> A chubby Chinese man in a highly reflective shiny black leather jacket, riding a rounded, cute red Q-version scooter motorcycle, doing a comical drift stop in front of a sun-drenched street fruit stall. The street has clean warm red brick walls under a bright blue sky. The man is swinging his head, pulling up the visor of his shiny white motorcycle helmet, showing a deadpan innocent smile with large, sparkling round eyes. 3D animation, Pixar style, Illumination style, vibrant saturated colors, warm golden afternoon sun, high-contrast dramatic rim light on the jacket edges, extremely smooth and glossy textures, cinematic CGI, octanerender --ar 16:9 --style raw
+- 时间轴：4.5-7.2s
+- 用途：问瓜保熟吗
+- Prompt：
+  > 故事板单帧，华强靠近西瓜堆轻敲一个西瓜，表情带怀疑和试探，摊主情绪进一步上来。近景里西瓜和电子秤都要可见，高品质 3D 动画电影质感。
 
----
+## S04
 
-### 📸 S02: 嚣张老板 (Arrogant Vendor)
-> **Prompt**:
-> Close-up shot of a colossal muscular bald Chinese man in a clean white tank top and a thick shiny gold chain, sitting up arrogantly from a smooth bamboo lounge chair. His massive bald dome head is reflecting the hot afternoon sun like a polished yellow sphere. He has large downward-sloping expressive eyes, one eyebrow comically arched higher than the other, chewing watermelon seeds. 3D animation, Pixar style, Illumination style, highly saturated primary colors, sun glinting off glossy surfaces, comical cartoon villain expression, cinematic lighting --ar 16:9
+- 时间轴：7.2-10.0s
+- 用途：上秤与第一轮冲突
+- Prompt：
+  > 故事板单帧，西瓜被放到老式电子秤上，秤体出现明确受力反馈，两人情绪紧绷。中近景，冲突升级前的关键镜头，高品质 3D 动画电影质感。
 
----
+## S05
 
-### 📸 S03: 华强敲瓜 (The Melon Tapping)
-> **Prompt**:
-> Close-up shot, low-angle. A chubby Chinese man in a shiny leather jacket leans over a fruit stall table, using a round finger to gently tap a glossy, dark-green watermelon. The watermelons are perfectly oval and smooth, stacked in a golden pyramid. The man's eyes are squinched into tiny black dots of intense cartoon focus, a subtle knowing smirk on his face. 3D animation, Pixar style, Illumination style, glowing green reflection on his face from the watermelon, warm sunset rim light, hyper-detailed smooth plastic textures --ar 16:9
+- 时间轴：10.0-12.6s
+- 用途：揭穿猫腻
+- Prompt：
+  > 故事板单帧，华强用手指向电子秤底部的问题位置，摊主僵住。特写镜头，叙事信息要非常清楚，高品质 3D 动画电影质感。
 
----
+## S06
 
-### 📸 S04: 扔瓜砸秤 (Watermelon on Scale)
-> **Prompt**:
-> Action shot. A colossal bald Chinese man slamming a glossy green watermelon onto a bright yellow toy-like electronic scale on a shiny blue plastic table. The yellow scale is comically squashed flat by 30% under the impact, with its large circular dial needle spinning in a blur like a helicopter rotor. The man has a wide, toothy white grin showing perfectly clean teeth. 3D animation, Pixar style, Illumination style, extreme squash and stretch physics, vibrant high-saturation colors, glossy stainless steel plate reflecting green watermelon, dynamic motion blur, cartoon mechanical deformation --ar 16:9
+- 时间轴：12.6-15.8s
+- 用途：高潮前摇
+- Prompt：
+  > 故事板单帧，高潮前的停顿时刻，华强和摊主保持对峙，电子秤和西瓜位于画面中心。镜头要传达明显的“前摇”和即将爆发的感觉，高品质 3D 动画电影质感。
 
----
+## S07
 
-### 📸 S05: 揭穿磁铁 (Revealing the Magnet)
-> **Prompt**:
-> Extreme close-up shot. A chubby Chinese man's round hand with a smooth finger pointing under a yellow toy scale, revealing a black rectangular magnet stuck to the bottom. The man has wide, innocent, sparkling round eyes and a deadpan comical look. The background is a blue plastic table top. 3D animation, Pixar style, Illumination style, high contrast, warm golden afternoon light, clean glossy plastic textures, sharp focus, cinematic composition --ar 16:9
+- 时间轴：15.8-18.2s
+- 用途：去害化高潮爆发
+- Prompt：
+  > 故事板单帧，围绕西瓜和电子秤产生夸张搞笑的去害化爆发，道具反馈清晰，摊主被冲击反应压住。广角到中景，动作阶段清楚，可读性强，高品质 3D 动画电影质感，全年龄友好。
 
----
+## S08
 
-### 📸 S06: 慢动作拔刀 (Epic Zero-Gravity Draw)
-> **Prompt**:
-> Epic low-angle shot, 360-degree dramatic camera rotation. A chubby Chinese man in a dark-jacket silhouette against a bright sunset back-light. His hand draws a small classic metal fruit knife from the bottom of the scale. Time is frozen, dust particles and round black watermelon seeds are floating in zero-gravity around him. The small fruit knife has a colossal golden four-point star lens flare gleam shining blindingly. 3D animation, Pixar style, Illumination style, dramatic cinematic backlighting, high-contrast shadows, warm golden glow, epic movie poster style --ar 16:9
-
----
-
-### 📸 S07: 浆汁火山大爆发 (Watermelon Juice Volcano)
-> **Prompt**:
-> Wide shot, explosive climax. A glossy green watermelon exploding into a colossal geyser fountain of translucent, sparkling red watermelon juice, behaving like jelly low-gravity fluid. A circular cartoon shockwave sweeps across the table, blowing back a colossal bald man's cheeks like a wind-tunnel波浪 wave, his eyes swirling in dizzy circles. A silver scale plate is blown flying into the sky like a UFO, hitting a wavy cartoon telephone pole in the background. 3D animation, Pixar style, Illumination style, glossy glass fluid simulation, translucent red splash, vibrant colors, extreme cartoon physical deformation, slapstick physics, no blood, family friendly --ar 16:9
-
----
-
-### 📸 S08: 滑稽谢幕 (Comical Departure)
-> **Prompt**:
-> Medium shot. A chubby Chinese man in a shiny leather jacket, smiling with a clean deadpan innocent look, wiping his hands in the red watermelon mist. He then hops onto a rounded red scooter motorcycle, accelerating away, leaving a round, pink cartoon exhaust cloud trailing behind him on a warm brick street. The sunset golden light shines through the fruit stall. 3D animation, Pixar style, Illumination style, high-saturation, warm cozy lighting, cinematic exit --ar 16:9
+- 时间轴：18.2-20.0s
+- 用途：平静离场
+- Prompt：
+  > 故事板单帧，高潮过后华强平静骑车离开，摊主留在余波里。中景，结尾要有反差感和一点安静的讽刺意味，高品质 3D 动画电影质感。
