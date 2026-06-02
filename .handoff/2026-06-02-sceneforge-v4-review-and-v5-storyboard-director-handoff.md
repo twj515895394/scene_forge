@@ -8,8 +8,8 @@
 
 1. v4 `Expressive Animation Extension` 当前已完成状态。
 2. `PROJECT_BOARD.md` 初始化模板与全面 review 已完成。
-3. 下个阶段 v5 的重点方向：增强 `scene-storyboard-director` 的分镜导演能力。
-4. v5 需要新增的分镜镜头语言资产库与研究任务。
+3. v5 分镜导演增强的研究框架、镜头语言研究和实施计划已落库。
+4. 下一阶段可直接按 v5 实施计划开始资产库和协议改造。
 
 ---
 
@@ -54,7 +54,7 @@ docs/
 
 ## 3. v4 已完成文件清单
 
-### 3.1 设计与计划文档
+### 3.1 设计、计划与 review 文档
 
 ```text
 docs/SceneForge-v4-Animation-Stylization-System.md
@@ -132,44 +132,19 @@ docs/.handoff 禁止读取边界：仍保持
 
 ---
 
-## 5. v4 测试前注意事项
+## 5. v5 研究与计划当前状态
 
-建议测试用一个 20-30 秒轻喜剧动作片段，包含：
+v5 方向已从“想法”整理为三份文档。
 
-```text
-1 个角色反差设定
-1 个动画物理动作
-1 个轻中度卡通伤害后果
-1 个声音反差
-2-3 个 Story Beat
-```
+### 5.1 v5 分镜导演研究框架
 
-重点观察：
-
-1. 新建项目黑板是否正确包含 `expressive_animation`。
-2. `scene-design-builder` 是否先输出 v4 表现力策略预览，而不是直接落盘。
-3. 用户确认后，`confirmation_status` 是否从 `pending_design_confirmation` 变为 `confirmed`。
-4. 剧本阶段是否只识别少量机会点，而不是每个 Beat 都加特效。
-5. 表演阶段是否写出完整动作节奏。
-6. 分镜阶段是否能镜头化 reveal / impact / hold。
-7. 声音阶段是否避免写实伤害声。
-8. 视频 prompt 是否包含正向表达和负向边界。
-
----
-
-## 6. v5 方向：增强分镜导演能力
-
-用户提出的 v5 方向：
+已新增：
 
 ```text
-分镜导演应该具备两部分，或者更准确地说三层能力：
-
-1. 先把剧本拆分成分镜内容，也就是把剧本内容转成可拍的分镜叙事单元。
-2. 再根据分镜内容转换成专业影视级镜头语言。
-3. 研究皮克斯热门、有特色的动画电影，在镜头语言方面提炼可复用资产，加入资产库供分镜导演采纳。
+docs/SceneForge-v5-Storyboard-Director-Research-Framework.md
 ```
 
-这意味着 v5 不只是继续给 `scene-storyboard-director` 加字段，而是要把它拆成更明确的内部能力链：
+核心定义：
 
 ```text
 script_to_storyboard_content
@@ -177,234 +152,78 @@ script_to_storyboard_content
 -> cinematic_language_asset_selection
 ```
 
----
-
-## 7. v5 对 scene-storyboard-director 的核心改造方向
-
-### 7.1 第一层：剧本内容拆分能力
-
-当前 `scene-storyboard-director` 已经消费 `story_beats` 和表演表，但还需要更明确地把剧本内容转成“分镜内容”。
-
-建议新增能力：
-
-```yaml
-storyboard_content_breakdown:
-  input:
-    - story_beats
-    - performance_sheet
-    - script_file
-  output:
-    - storyboard_units
-    - action_units
-    - reaction_units
-    - reveal_units
-    - transition_units
-```
-
-要解决的问题：
-
-- 一个 Story Beat 可能太大，不能直接变成镜头。
-- 一个 Beat 内部可能包含动作、反应、情绪变化、道具状态、空间变化。
-- 分镜导演需要先拆成“可拍的内容单元”，再选择镜头。
-
-建议新增分镜内容单元：
-
-```yaml
-storyboard_units:
-  - unit_id:
-    source_beat_id:
-    unit_type: action | reaction | emotion_shift | reveal | transition | insert | environment_response
-    story_content:
-    character_focus:
-    action_focus:
-    emotional_function:
-    required_visual_information:
-    required_continuity:
-    suggested_duration_seconds:
-```
-
-### 7.2 第二层：影视级镜头语言转换能力
-
-将 `storyboard_units` 转为镜头语言。
-
-建议新增能力：
-
-```yaml
-cinematic_shot_language:
-  shot_scale:
-  camera_angle:
-  composition:
-  lens_feel:
-  camera_movement:
-  staging_depth:
-  lighting_intent:
-  color_intent:
-  edit_rhythm:
-  visual_motivation:
-```
-
-要解决的问题：
-
-- 不能只写“中景、推镜、角色做动作”。
-- 要说明为什么用这个景别、机位、运动和构图。
-- 要把镜头语言与情绪、角色关系、喜剧节奏、动作安全和 v4 表现力结合。
-
-建议镜头语言字段：
-
-```yaml
-shot_language:
-  shot_scale: extreme_wide | wide | full | medium | medium_close | close_up | extreme_close_up | insert
-  camera_angle: eye_level | low_angle | high_angle | overhead | dutch | over_shoulder | pov
-  composition: centered | rule_of_thirds | symmetrical | asymmetrical | deep_staging | foreground_frame | silhouette | negative_space
-  lens_feel: wide_comic_space | normal_observational | telephoto_isolation | macro_miniature | imax_scale
-  camera_movement: locked | pan | tilt | push_in | pull_out | tracking | orbit | handheld_feel | crane | whip_pan
-  staging_depth: flat_graphic | layered_depth | foreground_midground_background | crowd_depth | scale_contrast_depth
-  edit_rhythm: slow_hold | reaction_pause | quick_cut | match_cut | reveal_cut | action_continuity | montage
-  visual_motivation:
-```
-
-### 7.3 第三层：镜头语言资产选择能力
-
-新增执行期资产库，用于分镜导演按需读取：
+也就是：
 
 ```text
-assets/cinematic-language/shot-language-library.md
-assets/cinematic-language/animation-film-shot-patterns.md
+剧本内容拆分能力
++ 影视镜头语言转换能力
++ 动画电影镜头资产选择能力
 ```
 
-职责：
+### 5.2 v5 动画电影镜头语言研究
 
-- 通用镜头语言枚举。
-- 动画电影分镜模式。
-- 皮克斯式或动画长片常见镜头策略的抽象化模式。
-- 不能直接写“模仿某部电影镜头”，要写可迁移的镜头原则。
-
----
-
-## 8. v5 候选资产库内容
-
-### 8.1 通用镜头语言库
-
-建议文件：
+已新增：
 
 ```text
-assets/cinematic-language/shot-language-library.md
+docs/SceneForge-v5-Animation-Film-Shot-Language-Study.md
 ```
 
-可包含：
-
-```yaml
-shot_scale_library:
-  extreme_wide:
-  wide:
-  full:
-  medium:
-  medium_close:
-  close_up:
-  extreme_close_up:
-  insert:
-
-camera_angle_library:
-  eye_level:
-  low_angle:
-  high_angle:
-  overhead:
-  dutch:
-  over_shoulder:
-  pov:
-
-composition_library:
-  centered:
-  rule_of_thirds:
-  symmetrical:
-  asymmetrical:
-  negative_space:
-  foreground_frame:
-  silhouette:
-  deep_staging:
-
-movement_library:
-  locked:
-  push_in:
-  pull_out:
-  pan:
-  tilt:
-  tracking:
-  orbit:
-  crane:
-  whip_pan:
-
-edit_rhythm_library:
-  slow_hold:
-  reaction_pause:
-  reveal_cut:
-  action_continuity:
-  quick_cut:
-  match_cut:
-  montage:
-```
-
-### 8.2 动画电影镜头模式库
-
-建议文件：
+参考方向包括：
 
 ```text
-assets/cinematic-language/animation-film-shot-patterns.md
+Despicable Me / 神偷奶爸系列
+Minions / 小黄人系列
+The Incredibles / 超能总动员系列
+Zootopia / 疯狂动物城
+Toy Story
+A Bug's Life
+Finding Nemo
+WALL·E
+Up
+Inside Out
+Coco
+Lightyear
 ```
 
-可包含：
-
-```yaml
-animation_shot_patterns:
-  character_reveal:
-  emotional_closeup:
-  comedy_reaction_hold:
-  physical_comedy_impact:
-  scale_contrast_reveal:
-  prop_insert_payoff:
-  environment_reaction:
-  chase_spatial_continuity:
-  silent_visual_storytelling:
-  montage_emotional_progression:
-```
-
----
-
-## 9. v5 皮克斯镜头语言研究方向
-
-需要研究皮克斯热门、有特色的动画电影，但必须注意：
+研究原则：
 
 ```text
-不要把某部电影的具体镜头、角色或受版权保护表达复制进资产库；
+不复制具体电影镜头、角色或受版权保护表达；
 只提炼可迁移的镜头语言原则。
 ```
 
-建议研究样本：
+### 5.3 v5 分镜导演实施计划
 
-1. `Toy Story`：玩具尺度、低机位、儿童房空间、物体 POV。
-2. `A Bug's Life`：昆虫视角、草丛微观世界、低机位和遮挡形成的微观空间感。
-3. `Finding Nemo`：水下空间、流动环境、深度层次和环境运动。
-4. `The Incredibles`：动作片镜头、家庭戏与超级英雄动作之间的节奏切换。
-5. `Ratatouille`：厨房调度、主观感官表达、食物与空间节奏。
-6. `WALL·E`：少对白视觉叙事、沉默表演、孤独空间与机械角色情绪表达。
-7. `Up`：情绪蒙太奇、物体承载记忆、冒险空间与角色关系变化。
-8. `Inside Out`：抽象心理空间、情绪角色与现实世界交叉剪辑。
-9. `Coco`：舞台化表演、音乐空间、色彩和纵深人群调度。
-10. `Lightyear`：更电影化的科幻规格、大画幅感、飞行与宇宙空间镜头。
+已新增：
 
-初步公开资料提示：
+```text
+docs/SceneForge-v5-Storyboard-Director-Implementation-Plan.md
+```
 
-- `A Bug's Life` 制作中曾使用类似 “Bugcam” 的低视角参考，帮助团队理解昆虫视角下草叶、花瓣形成的微观空间和半透明遮蔽感。
-- `WALL·E` 以少对白、视觉叙事、声音设计和浪漫场面被广泛评价。
-- `Lightyear` 的制作资料中提到更电影化、厚重的科幻视觉方向，并使用虚拟 IMAX 摄影机流程。
+v5 目标：
 
-这些只能作为 v5 研究起点，不能直接变成最终资产库结论。v5 需要进一步整理成可执行的抽象模式。
+```text
+让分镜导演先懂“要拍什么”，再懂“怎么拍”，最后把专业镜头语言稳定传递到故事板和视频提示词阶段。
+```
 
 ---
 
-## 10. v5 分镜导演输出协议建议
+## 6. v5 核心改造方向
 
-建议在 `scene-storyboard-director/references/output-contract.md` 中新增：
+v5 不只是继续给 `scene-storyboard-director` 加字段，而是要把它升级为“专业分镜导演”。
+
+核心能力链：
+
+```text
+script_to_storyboard_content
+-> storyboard_content_to_cinematic_language
+-> cinematic_language_asset_selection
+-> storyboard_prompt_and_video_prompt_handoff
+```
+
+### 6.1 第一层：剧本内容拆分
+
+建议新增：
 
 ```yaml
 storyboard_content_breakdown:
@@ -415,10 +234,25 @@ storyboard_content_breakdown:
     character_focus:
     action_focus:
     emotional_function:
+    comedic_function:
     required_visual_information:
+    required_audio_information:
     required_continuity:
     suggested_duration_seconds:
+    downstream_priority:
+```
 
+目的：
+
+```text
+先把 Story Beat 拆成 action / reaction / emotion_shift / reveal / transition / insert / environment_response / contrast_payoff 等可拍内容单元。
+```
+
+### 6.2 第二层：影视镜头语言转换
+
+建议新增：
+
+```yaml
 cinematic_language_plan:
   - unit_id:
     shot_id:
@@ -428,6 +262,7 @@ cinematic_language_plan:
     lens_feel:
     camera_movement:
     staging_depth:
+    blocking_intent:
     lighting_intent:
     color_intent:
     edit_rhythm:
@@ -435,53 +270,84 @@ cinematic_language_plan:
     selected_shot_pattern:
 ```
 
-现有 `shot_highlights` 可以保留，但应接收 `cinematic_language_plan` 的结果。
+目的：
+
+```text
+不能只写“中景、推镜、角色做动作”，而要说明为什么这样拍。
+```
+
+### 6.3 第三层：镜头语言资产选择
+
+建议新增执行期资产库：
+
+```text
+assets/cinematic-language/shot-language-library.md
+assets/cinematic-language/animation-film-shot-patterns.md
+assets/cinematic-language/animation-comedy-action-patterns.md
+```
+
+这些资产库应按镜头功能组织，而不是按电影名组织。
 
 ---
 
-## 11. v5 实施计划建议
+## 7. v5 实施计划摘要
 
-### Phase 1：v5 设计文档
-
-新增：
+完整计划见：
 
 ```text
-docs/SceneForge-v5-Storyboard-Director-System.md
+docs/SceneForge-v5-Storyboard-Director-Implementation-Plan.md
 ```
 
-内容：
+推荐实施顺序：
 
-- 分镜导演双层/三层能力模型。
-- 剧本内容拆分协议。
-- 镜头语言转换协议。
-- 动画电影镜头资产库规划。
+```text
+1. 新增 assets/cinematic-language/*
+2. 修改 board protocol / project-board-template / scene-forge/SKILL.md
+3. 修改 scene-storyboard-director
+4. 修改 scene-video-prompt-builder
+5. 更新 README 和 handoff
+6. 新增 v5 Protocol Review
+7. 做最小项目测试
+```
 
-### Phase 2：新增镜头语言资产库
+### Phase 1：资产库落地
 
 新增：
 
 ```text
 assets/cinematic-language/shot-language-library.md
 assets/cinematic-language/animation-film-shot-patterns.md
+assets/cinematic-language/animation-comedy-action-patterns.md
 ```
 
-### Phase 3：修改 board protocol 与总控白名单
+### Phase 2：总控与黑板协议改造
 
-允许按需读取：
+改造：
 
 ```text
-assets/cinematic-language/shot-language-library.md
-assets/cinematic-language/animation-film-shot-patterns.md
+.agents/skills/scene-forge/SKILL.md
+.agents/skills/scene-forge/references/board-protocol.md
+.agents/skills/scene-forge/references/project-board-template.md
 ```
 
-仍禁止读取：
+新增轻量字段建议：
 
-```text
-docs/
-.handoff/
+```yaml
+storyboard_director_v5:
+  enabled: true
+  confirmation_status: pending_storyboard_plan_confirmation
+  assets:
+    shot_language_library: assets/cinematic-language/shot-language-library.md
+    animation_film_patterns: assets/cinematic-language/animation-film-shot-patterns.md
+    animation_comedy_action_patterns: assets/cinematic-language/animation-comedy-action-patterns.md
+  default_policy:
+    require_storyboard_content_breakdown: true
+    require_cinematic_language_plan: true
+    require_visual_motivation: true
+    avoid_template_stack: true
 ```
 
-### Phase 4：修改 scene-storyboard-director
+### Phase 3：分镜导演协议改造
 
 改造：
 
@@ -490,31 +356,58 @@ docs/
 .agents/skills/scene-storyboard-director/references/output-contract.md
 ```
 
-增加：
+新增：
 
 ```yaml
 storyboard_content_breakdown:
 cinematic_language_plan:
-shot_language:
 selected_shot_pattern:
-```
-
-### Phase 5：修改 scene-video-prompt-builder
-
-让最终视频 prompt 继承分镜阶段的专业镜头语言：
-
-```yaml
-camera_language:
-composition:
-lens_feel:
-camera_movement:
-edit_rhythm:
 visual_motivation:
 ```
 
-### Phase 6：Review 与最小测试
+### Phase 4：视频提示词协议改造
 
-测试目标：
+改造：
+
+```text
+.agents/skills/scene-video-prompt-builder/SKILL.md
+.agents/skills/scene-video-prompt-builder/references/output-contract.md
+```
+
+让 Segment Prompt 继承：
+
+```yaml
+camera_language:
+  shot_scale:
+  camera_angle:
+  composition:
+  lens_feel:
+  camera_movement:
+  edit_rhythm:
+  visual_motivation:
+  selected_shot_pattern:
+```
+
+### Phase 5：README 与 handoff 更新
+
+更新：
+
+```text
+README.md
+.handoff/*
+```
+
+### Phase 6：v5 Protocol Review
+
+新增：
+
+```text
+docs/SceneForge-v5-Protocol-Review.md
+```
+
+### Phase 7：最小项目测试
+
+测试重点：
 
 ```text
 同一个 Story Beat 能否先拆成分镜内容单元，
@@ -524,30 +417,124 @@ visual_motivation:
 
 ---
 
-## 12. v5 关键设计原则
+## 8. v5 参考片单与资产化原则
 
-1. 分镜不是直接把剧本句子改成镜头。
-2. 分镜导演必须先理解“这个 Beat 内部有哪些可拍内容单元”。
-3. 镜头语言必须服务叙事功能、情绪功能和视觉信息传递。
-4. 动画电影分镜可以更强调角色表演、视觉反差、环境反应和情绪节奏。
-5. 皮克斯/动画电影研究只抽象镜头原则，不复制具体电影表达。
-6. 镜头语言资产库应该是执行期可读资产，放 `assets/`，不是 `docs/`。
-7. `scene-storyboard-director` 应该成为“内容拆分 + 镜头语言转换”的专业导演，而不是普通 shot list 生成器。
+参考片单不是为了模仿具体电影，而是为了提炼可迁移镜头模式。
+
+重点研究组：
+
+```text
+动作喜剧 + 家庭反差：Despicable Me / Minions / The Incredibles
+世界观尺度 + 类型片结构：Zootopia / A Bug's Life / Toy Story / Finding Nemo
+少对白视觉叙事 + 情绪镜头：WALL·E / Up / Inside Out / Coco
+更电影化动作规格：Lightyear / The Incredibles 2
+```
+
+可资产化模式示例：
+
+```yaml
+villain_softening_reveal:
+tiny_prop_contrast_insert:
+silent_body_comedy:
+action_comedy_chase:
+power_specific_camera:
+clear_action_geography:
+family_action_crosscut:
+superhero_pose_then_release:
+multi_scale_world_reveal:
+buddy_spatial_dialogue:
+district_transition:
+investigation_visual_chain:
+silent_visual_storytelling:
+emotional_montage_memory_object:
+cinematic_scifi_scale:
+```
+
+资产化原则：
+
+```text
+按镜头功能组织，不按电影名组织。
+每个 pattern 必须说明 purpose / best_for / structure / shot_language / avoid。
+使用时必须写 selected_shot_pattern 和 reason。
+```
 
 ---
 
-## 13. 下一步建议
+## 9. v5 风险与控制
 
-下个阶段建议直接开始：
+### 9.1 模板堆叠风险
 
-```text
-v5 Phase 1：生成 docs/SceneForge-v5-Storyboard-Director-System.md
+风险：为了专业感，每个镜头都套 pattern。
+
+控制：
+
+```yaml
+storyboard_director_v5:
+  default_policy:
+    avoid_template_stack: true
 ```
 
-然后再开始：
+并要求每个 `selected_shot_pattern` 必须写 `reason`。
+
+### 9.2 电影模仿风险
+
+风险：资产库变成“模仿某部电影”。
+
+控制：
 
 ```text
-v5 Phase 2：生成 assets/cinematic-language/* 镜头语言资产库
+资产库按镜头功能组织，不按电影名组织。
+不在执行期输出中写“模仿某电影镜头”。
 ```
 
-在真正改 `scene-storyboard-director` 之前，建议先完成皮克斯/动画电影镜头语言研究，把可迁移原则转成资产库结构，避免直接在 Skill 协议里堆零散经验。
+### 9.3 分镜表膨胀风险
+
+风险：`storyboard_content_breakdown` 和 `cinematic_language_plan` 增加信息量。
+
+控制：
+
+```text
+完整内容落 details/shotlist_v*.md，黑板只保留摘要和路径。
+```
+
+### 9.4 v4 / v5 字段混乱风险
+
+控制：
+
+```text
+v4 回答“可以用什么动画表现”。
+v5 回答“这个表现应该怎么拍”。
+```
+
+---
+
+## 10. 下一步建议
+
+下一步可以直接开始 v5 实施：
+
+```text
+v5 Phase 1：新增 assets/cinematic-language/* 镜头语言资产库
+```
+
+然后继续：
+
+```text
+v5 Phase 2：修改 board protocol / project-board-template / scene-forge/SKILL.md
+v5 Phase 3：修改 scene-storyboard-director
+v5 Phase 4：修改 scene-video-prompt-builder
+v5 Phase 5：更新 README 和 handoff
+v5 Phase 6：生成 v5 Protocol Review
+v5 Phase 7：最小项目测试
+```
+
+当前不建议直接测试，因为 v5 的执行期资产库和协议改造还没完成。v4 可测试，v5 还处在“研究与实施计划已完成、待执行实施”的状态。
+
+---
+
+## 11. 一句话总结
+
+```text
+v4 已完成动画表现力协议；
+v5 已完成分镜导演研究框架、镜头语言研究和实施计划；
+下一步应从 assets/cinematic-language/* 资产库落地开始执行 v5。
+```
