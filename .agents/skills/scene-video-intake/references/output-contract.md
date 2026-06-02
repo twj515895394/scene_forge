@@ -1,6 +1,6 @@
 # scene-video-intake 输出协议
 
-本文件定义 `scene-video-intake` 的阶段补丁、长解析文件、source intake 黑板摘要、topic gate handoff、内容优先级分层和资产化候选判断。
+本文件定义 `scene-video-intake` 的阶段补丁、长解析文件、source intake 黑板摘要、topic gate handoff、内容优先级分层、v6.1 改写方向候选和资产化候选判断。
 
 ## 阶段补丁壳
 
@@ -117,6 +117,23 @@ data:
     suitable_performance_style:
     production_level_hint:
     transformation_notes:
+  adaptation_ideas:
+    version: v1
+    source_pattern_summary:
+      core_patterns:
+      must_preserve:
+      replaceable_slots:
+    ideas:
+      - idea_id: idea_01
+        title:
+        seed_type:
+        selection_mode: reference | adapted_reference | custom_generated
+        summary:
+        why_it_works:
+        recommended_for:
+        user_choice_required: true
+    recommendation_note:
+    user_selection_required: true
   safe_adaptation_notes:
     keep_as_abstract_structure:
     replace_required:
@@ -140,6 +157,7 @@ data:
     highlights_to_consider:
     optional_to_compress:
     safe_replacement_notes:
+    adaptation_ideas_summary:
     risks_or_limits:
     scoring_hints:
     assetization_recommendation:
@@ -151,9 +169,10 @@ data:
     audio:
     camera:
     priority_map:
+    adaptation_ideas:
     topic_gate_handoff:
   read_policy:
-    default_read: topic_gate_handoff + priority_map_summary
+    default_read: topic_gate_handoff + priority_map_summary + adaptation_ideas_summary
     read_full_analysis_only_when_needed: true
     downstream_must_not_load_all_by_default: true
     source_intake_read_budget:
@@ -162,9 +181,11 @@ data:
           - PROJECT_BOARD.md source_intake summary
           - topic_gate_handoff_v1.md
           - source_video_priority_map_v1.md
+          - adaptation_ideas_v1.md summary
       standard:
         read:
           - source_intake_index_v1.md
+          - adaptation_ideas_v1.md
           - 当前阶段相关专用文件
       deep:
         read:
@@ -189,6 +210,7 @@ data:
 inputs/source_intake/source_video_analysis_v1.md
 inputs/source_intake/source_video_timeline_v1.md
 inputs/source_intake/source_video_priority_map_v1.md
+inputs/source_intake/adaptation_ideas_v1.md
 inputs/source_intake/topic_gate_handoff_v1.md
 inputs/source_intake/source_intake_index_v1.md
 ```
@@ -233,11 +255,16 @@ source_intake_index:
     pass_or_compress:
     safe_to_replace:
     avoid_copying:
+  adaptation_ideas_summary:
+    idea_count:
+    recommended_ideas:
+    user_selection_required: true
   read_policy:
     default_stage_budget: compact
     recommended_first_read:
       - topic_gate_handoff_v1.md
       - source_video_priority_map_v1.md
+      - adaptation_ideas_v1.md summary
     avoid_default_full_read:
       - source_video_analysis_v1.md
       - source_video_timeline_v1.md
@@ -264,6 +291,51 @@ content_priority_map:
 - `safe_to_replace`：可以替换人物、场景、道具、台词或表层表达的内容。
 - `avoid_copying`：不应照搬的具体表达、镜头、台词、人物身份、品牌或受保护元素。
 
+## `adaptation_ideas_v1.md` 必须包含
+
+`adaptation_ideas_v1.md` 是 v6.1 的轻量改写方向候选文件。它不是剧本、不是分镜、不是最终 prompt。
+
+```yaml
+adaptation_ideas:
+  version: v1
+  source_pattern_summary:
+    core_patterns:
+      - pattern_id:
+        selection_mode: reference | adapted_reference | custom_generated
+        reason:
+    must_preserve:
+    replaceable_slots:
+  ideas:
+    - idea_id: idea_01
+      title:
+      seed_type:
+      selection_mode: reference | adapted_reference | custom_generated
+      summary:
+      why_it_works:
+      recommended_for:
+      user_choice_required: true
+  recommendation_note:
+  user_selection_required: true
+```
+
+要求：
+
+- 生成 5-10 个候选改写方向。
+- 每个方向只写 `title`、`summary`、`why_it_works`、`recommended_for` 等轻量信息。
+- 不生成完整剧本、完整分镜或视频 prompt。
+- 必须明确 `user_selection_required: true`。
+- 用户未选择方向前，后续阶段不得正式生成改写剧本。
+
+可按需读取以下资产：
+
+```text
+assets/adaptation/narrative-pattern-library.md
+assets/adaptation/replaceable-slot-library.md
+assets/adaptation/adaptation-idea-seed-library.md
+```
+
+这些资产是开放参考，不是封闭枚举。
+
 ## 给 `PROJECT_BOARD.md` 的顶层摘要补丁
 
 `scene-video-intake` 合并后应更新或建议更新：
@@ -285,6 +357,7 @@ source_intake:
     audio: inputs/source_intake/source_video_audio_v1.md
     camera: inputs/source_intake/source_video_camera_v1.md
     priority_map: inputs/source_intake/source_video_priority_map_v1.md
+    adaptation_ideas: inputs/source_intake/adaptation_ideas_v1.md
     topic_gate_handoff: inputs/source_intake/topic_gate_handoff_v1.md
   topic_gate_handoff_summary:
     candidate_topic:
@@ -292,7 +365,17 @@ source_intake:
     highlights_to_consider:
     optional_to_compress:
     safe_replacement_notes:
+    adaptation_ideas_summary:
     risks_or_limits:
+  adaptation_ideas_summary:
+    idea_count:
+    recommended_ideas:
+    user_selection_required: true
+  adaptation_selection:
+    status: pending | selected
+    selected_idea_id:
+    selected_title:
+    selection_note:
   assetization:
     candidate_for_assetization: true | false | uncertain
     reason:
@@ -304,12 +387,12 @@ source_intake:
     asset_path:
     reuse_mode: direct_reference | adapted_reference | structure_only
   read_policy:
-    default_read: topic_gate_handoff + priority_map_summary
+    default_read: topic_gate_handoff + priority_map_summary + adaptation_ideas_summary
     read_full_analysis_only_when_needed: true
     downstream_must_not_load_all_by_default: true
 ```
 
-黑板不得保存完整长解析、完整逐镜头时间轴或完整台词表。
+黑板不得保存完整长解析、完整逐镜头时间轴、完整台词表或完整 adaptation ideas 正文。
 
 ## 状态推进建议
 
@@ -320,6 +403,8 @@ project_status: draft
 next_stage: scene-topic-gate
 lifecycle_flag: active
 ```
+
+如果用户目标明确要求“先选择改写方向再继续”，或 `adaptation_selection.status: pending` 且后续阶段需要正式改写，则应先展示 `adaptation_ideas_v1.md` 的候选摘要，等待用户选择。
 
 如果解析失败：
 
