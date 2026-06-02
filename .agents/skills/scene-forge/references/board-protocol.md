@@ -126,6 +126,7 @@ faction_layout:
 ```yaml
 expressive_animation:
   enabled: true
+  confirmation_status: pending_design_confirmation
   mode: animated_feature_comedy
   assets:
     effect_library: assets/animation-stylization/effect-library.md
@@ -175,6 +176,8 @@ expressive_animation:
 
 字段说明：
 
+- `enabled`：表示项目允许在确认后的边界内使用 v4 表现力扩展。模板默认 `true` 不等于自动强行使用强特效或反差喜剧。
+- `confirmation_status`：项目级 v4 表现力策略确认状态，枚举为 `pending_design_confirmation`、`confirmed`、`disabled`。
 - `animation_stylization`：动画电影级夸张物理、VFX、喜剧冲击和动作安全转译策略。
 - `injury_tone_policy`：允许轻中度卡通受伤，禁止严重写实创伤。
 - `contrast_comedy`：反差喜剧策略，例如体型反差、道具反差、性格反差、画面语境反差。
@@ -182,13 +185,15 @@ expressive_animation:
 
 使用规则：
 
-1. 设计阶段负责定义项目级默认值。
-2. 剧本阶段负责识别 Story Beat 机会点。
-3. 表演阶段负责把机会点转成可拍表演。
-4. 分镜阶段负责镜头化 setup / reveal / impact / hold / recovery。
-5. 声音阶段负责卡通动作声、轻伤喜剧声和声音反差。
-6. 视频提示词阶段负责写入最终 Segment Prompt。
-7. 强特效、明显轻伤和核心反差母题必须服务 Hero Moment、情绪转折、喜剧 payoff 或安全转译，不能随机堆叠。
+1. 新项目初始化时 `confirmation_status` 默认为 `pending_design_confirmation`，不得伪造用户确认。
+2. 设计阶段负责定义项目级默认值，并在用户确认后将 `confirmation_status` 改为 `confirmed`。
+3. 如果用户明确不要 v4 表现力扩展，将 `enabled` 改为 `false`，并将 `confirmation_status` 改为 `disabled`。
+4. 剧本阶段负责识别 Story Beat 机会点。
+5. 表演阶段负责把机会点转成可拍表演。
+6. 分镜阶段负责镜头化 setup / reveal / impact / hold / recovery。
+7. 声音阶段负责卡通动作声、轻伤喜剧声和声音反差。
+8. 视频提示词阶段负责写入最终 Segment Prompt。
+9. 强特效、明显轻伤和核心反差母题必须服务 Hero Moment、情绪转折、喜剧 payoff 或安全转译，不能随机堆叠。
 
 ## 主流程阶段
 
