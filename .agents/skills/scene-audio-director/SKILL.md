@@ -1,0 +1,74 @@
+---
+name: scene-audio-director
+description: 当用户要把 SceneForge 的分镜和表演设计转化为动画电影级声音方案，包括配音方向、拟音、环境音、静默点、配乐主题和音频混合计划时应使用此技能。
+---
+
+# scene-audio-director
+
+负责把分镜、表演和情绪节拍转化为可执行的声音导演方案。
+
+本技能解决的问题不是“顺便加点音乐”，而是把声音作为动画电影叙事的一部分来设计。
+
+它重点补齐 Pixar-like 动画电影路线中的声音层：
+
+- 配音方向
+- 台词气口
+- 拟音设计
+- 环境音叙事
+- 情绪静默
+- 配乐主题
+- 音乐情绪曲线
+- Segment 级声音连续性
+
+## 何时使用
+
+在以下场景使用此技能：
+
+- 总控 Skill 发现项目 `next_stage` 为 `scene-audio-director`
+- `scene-storyboard-director` 已完成，项目状态为 `storyboard_ready`
+- 已有完整分镜、Segment Plan 和关键镜头声音提示
+- 需要在生成最终视频 Prompt 前，先统一规划配音、拟音、环境音、音乐和静默点
+
+如果分镜尚未完成，或缺少 Segment Plan，不要优先使用本技能。
+
+## 上游输入
+
+本技能默认读取：
+
+1. 项目 `PROJECT_BOARD.md`
+2. `scene-reference-decider` 的参考边界和规避项
+3. `scene-design-builder` 的场景与角色设定
+4. `scene-performance-director` 的表演表和停顿设计
+5. `scene-storyboard-director` 的完整分镜、`segments`、`shot_highlights`、`continuity_rules` 和 `prompt_hints`
+6. `references/output-contract.md` 中定义的输出协议
+
+## 执行步骤
+
+1. 读取项目 `PROJECT_BOARD.md`，确认 `project_status` 为 `storyboard_ready`。
+2. 读取完整分镜和 Segment Plan，确认每个 Segment 覆盖的镜头和 Story Beat。
+3. 读取表演表，提取台词气口、停顿、反应节奏和关键动作。
+4. 为主要角色设计 `voice_direction`，包括语速、情绪递进、停顿、气口和表达质感。
+5. 为每个关键镜头设计 Foley 拟音，确保动作、表情和喜剧节奏有声音支撑。
+6. 为场景设计环境音床，避免背景音随机或与情绪脱节。
+7. 设计音乐主题、情绪曲线和静默点，避免音乐全程铺满。
+8. 生成音频计划并写入 `details/audio_plan_v*.md`。
+9. 生成独立音乐提示词、拟音提示词和混音计划，写入 `outputs/audio/`。
+10. 黑板只记录摘要、版本、路径、关键声音策略和后续视频提示词需要继承的内容。
+11. 输出单个 YAML 补丁块，并将状态推进到 `audio_ready`，下一阶段为 `scene-video-prompt-builder`。
+
+## 关键规则
+
+- 音乐不是背景填充，而是情绪叙事工具。
+- 拟音必须服务动作、表情、角色性格和喜剧节奏。
+- 静默必须被设计，而不是缺省。
+- 配音必须写清语速、气口、停顿和情绪递进。
+- 每个 Segment 都应有声音连续性说明。
+- 不复刻具体电影配乐、主题旋律或可识别音频表达。
+- 输出要能被 `scene-video-prompt-builder` 直接整合进每段视频 Prompt。
+
+## 参考资料
+
+- `references/output-contract.md`：声音导演输出协议、黑板摘要字段和长正文落盘方式
+- `docs/SceneForge-v2-Protocol-Upgrade-Design.md`：v2 协议升级设计
+- `docs/皮克斯电影风格路线实施计划.md`：当前 pixar_like 路线实施计划
+- `docs/风险与版权边界.md`：参考边界与规避规则
