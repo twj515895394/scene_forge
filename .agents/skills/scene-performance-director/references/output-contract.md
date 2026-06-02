@@ -1,6 +1,8 @@
 # scene-performance-director 输出协议
 
-本文件定义 `scene-performance-director` 的输出形态、表演表字段、黑板摘要边界和长内容落盘方式。
+本文件定义 `scene-performance-director` 的输出形态、表演表字段、Hero/Bridge/Blocking/道具状态承接、黑板摘要边界和长内容落盘方式。
+
+本协议是通用项目记忆协议，不绑定任何具体样例项目。样例项目暴露的问题只能转译为通用字段与执行规则，不得把样例角色、样例台词、样例站位直接固化进协议。
 
 ## 阶段定位
 
@@ -27,9 +29,9 @@ scene-script-adapter
 本阶段默认消费以下结果：
 
 - `scene-reference-decider`：参考边界、`must_keep`、`must_avoid`
-- `scene-design-builder`：角色设定、视觉语言、角色轮廓和表情系统
-- `scene-script-adapter`：`adaptation_level`、`performance_style`、`story_beats`、`script_file`、`storyboard_hints`
-- 顶层索引：`performance_style`、`production_level`
+- `scene-design-builder`：角色设定、视觉语言、角色轮廓、表情系统、`blocking_map`、`faction_layout`、`prop_state_machines`
+- `scene-script-adapter`：`adaptation_level`、`performance_style`、`story_beats`、`script_file`、`storyboard_hints`、`segment_strategy`、`hero_moment_candidates`
+- 顶层索引：`performance_style`、`production_level`、`target_total_duration_seconds`、`segment_duration_seconds`、`segment_strategy`
 
 ---
 
@@ -49,7 +51,7 @@ details/performance_sheet_v*.md
 
 ```yaml
 patch_type: scene-performance-director
-version: 1
+version: 2
 status:
 updated_at:
 summary:
@@ -78,6 +80,8 @@ data:
       signature_gesture:
       emotional_leak:
       comedy_reaction_rule:
+      blocking_behavior:
+      prop_interaction_behavior:
   beat_performance_notes:
     - beat_id:
       emotional_goal:
@@ -90,15 +94,25 @@ data:
       secondary_action:
       reaction_timing:
       transition_to_next_beat:
+      potential_hero_support:
+      bridge_performance_hook:
+      blocking_note:
+      prop_state_note:
   continuity_rules:
     character_performance_consistency:
     emotional_progression:
     gesture_continuity:
+    blocking_continuity:
+    prop_interaction_continuity:
   storyboard_handoff:
     camera_focus_suggestions:
     closeup_priority:
     reaction_shot_priority:
     timing_notes:
+    hero_moment_support:
+    bridge_shot_support:
+    blocking_support:
+    prop_state_support:
   risk_notes:
   next_action:
 ```
@@ -107,40 +121,21 @@ data:
 
 # 五、字段说明
 
-## `performance_version`
-
-本次表演设计版本号。
-
-示例：
-
-```yaml
-performance_version: v1
-```
-
-## `performance_style`
-
-继承并细化顶层 `performance_style`。
-
-可选：
-
-- `cinematic_serious`
-- `cinematic_comedy`
-- `exaggerated_comedy`
-- `absurd_chaotic`
-
-## `performance_sheet_path`
-
-完整表演表路径。
-
-示例：
-
-```yaml
-performance_sheet_path: details/performance_sheet_v1.md
-```
-
-## `character_performance_profiles`
-
-角色级表演档案。
+- `performance_version`：本次表演设计版本号。
+- `performance_style`：继承并细化顶层 `performance_style`。
+- `performance_sheet_path`：完整表演表路径。
+- `character_performance_profiles`：角色级表演档案。
+- `blocking_behavior`：角色在空间调度中的行为习惯，例如是否主动逼近、保持阵营侧、回避某个区域。
+- `prop_interaction_behavior`：角色与关键道具交互时的表演动作和安全边界。
+- `beat_performance_notes`：按 Story Beat 输出表演设计。
+- `potential_hero_support`：该 Beat 是否需要表演层强化，以支持后续 Hero Shot。
+- `bridge_performance_hook`：该 Beat 交给下一 Beat 或 Segment 的表演钩子，例如视线、停顿、动作余势。
+- `blocking_note`：该 Beat 中角色站位和移动边界。
+- `prop_state_note`：该 Beat 中关键道具状态与表演交互。
+- `continuity_rules`：表演、手势、情绪、站位和道具交互的连续性约束。
+- `storyboard_handoff`：交给 `scene-storyboard-director` 的镜头提示。
+- `risk_notes`：风险提示列表。
+- `next_action`：下一阶段执行提示。
 
 每个主要角色至少需要覆盖：
 
@@ -152,10 +147,8 @@ performance_sheet_path: details/performance_sheet_v1.md
 - 标志性动作
 - 情绪泄露方式
 - 喜剧反应规则
-
-## `beat_performance_notes`
-
-按 Story Beat 输出表演设计。
+- 空间调度行为
+- 关键道具交互行为（如适用）
 
 每个关键 Beat 至少需要说明：
 
@@ -169,17 +162,9 @@ performance_sheet_path: details/performance_sheet_v1.md
 - 次级动作
 - 反应时间点
 - 如何过渡到下一个 Beat
-
-## `storyboard_handoff`
-
-交给 `scene-storyboard-director` 的镜头提示。
-
-必须能帮助分镜阶段判断：
-
-- 哪些地方需要特写
-- 哪些地方需要反应镜头
-- 哪些动作需要保留完整过程
-- 哪些停顿不能被剪掉
+- 是否支持 Hero Moment
+- 是否提供 Bridge Shot 的表演钩子
+- 是否涉及 Blocking 或道具状态变化
 
 ---
 
@@ -210,11 +195,13 @@ performance_sheet_path: details/performance_sheet_v1.md
 手部
 停顿
 次级动作
+空间位置
+道具交互
 ```
 
-## 3. Pixar-like 表演不是大喊大叫
+## 3. 动画电影化表演不是大喊大叫
 
-Pixar-like 动画电影表演强调：
+动画电影化表演强调：
 
 - 情绪泄露
 - 反应停顿
@@ -245,13 +232,15 @@ reaction_timing:
 
 每个主要角色建议有一个稳定的动作锚点。
 
-示例：
-
 ```yaml
 signature_gesture: 紧张时下意识扶帽檐，想掩饰真实情绪。
 ```
 
 后续分镜和视频提示词都要继承。
+
+## 6. 表演要服务空间和道具连续性
+
+多角色项目中，表演设计不能只写表情和动作，还应说明角色是否保持默认区域、是否跨越冲突线、是否触碰关键道具，以及这些行为如何进入下一段。
 
 ---
 
@@ -265,7 +254,10 @@ signature_gesture: 紧张时下意识扶帽檐，想掩饰真实情绪。
 - 每个主要角色的表演锚点
 - 每个关键 Beat 的表演重点
 - 分镜阶段必须保留的停顿、特写和反应镜头
-- 表演连续性规则
+- Hero Moment 的表演支撑
+- Bridge Shot 的表演钩子
+- Blocking / Faction 的表演连续性
+- 道具交互连续性规则
 
 ---
 
@@ -287,15 +279,15 @@ signature_gesture: 紧张时下意识扶帽檐，想掩饰真实情绪。
 
 ```yaml
 patch_type: scene-performance-director
-version: 1
+version: 2
 status: completed
 updated_at: 2026-06-02
-summary: 表演导演已完成，按夸张搞笑化（`exaggerated_comedy`）路线为 3 个 Story Beat 设计了眼神、微表情、停顿和反应节奏。
+summary: 表演导演已完成，按夸张搞笑化（`exaggerated_comedy`）路线为 3 个 Story Beat 设计了眼神、微表情、停顿、反应节奏和空间/道具连续性。
 data:
   performance_version: v1
   performance_style: exaggerated_comedy
   performance_sheet_path: details/performance_sheet_v1.md
-  performance_summary: 本次表演以“误会升级前的停顿”和“角色反应差异”为核心，强化主角的克制、配角的错愕和群体反应的喜剧波浪。
+  performance_summary: 本次表演以“误会升级前的停顿”和“角色反应差异”为核心，强化主角克制、配角错愕和群体反应的喜剧波浪。
   character_performance_profiles:
     - character_id: hero
       character_name: 主角
@@ -308,6 +300,8 @@ data:
       signature_gesture: 每次判断正确但没人相信时，都会短暂抿嘴并侧头吸气。
       emotional_leak: 想保持镇定，但眉头和嘴角先泄露焦急。
       comedy_reaction_rule: 反应比配角慢半拍，形成“他早就知道但说不出来”的喜剧压抑感。
+      blocking_behavior: 保持在自己的默认区域，只在剧情需要时短暂前压。
+      prop_interaction_behavior: 触碰关键道具前有清晰预备动作，避免突然跳变。
   beat_performance_notes:
     - beat_id: B01
       emotional_goal: 建立主角警觉和旁人迟钝之间的反差。
@@ -320,15 +314,25 @@ data:
       secondary_action: 背景角色还在轻松吃东西或聊天。
       reaction_timing: 主角先反应，其他角色晚 1 秒才注意到他的异常。
       transition_to_next_beat: 停顿被打断，误会开始升级。
+      potential_hero_support: false
+      bridge_performance_hook: 用视线方向和身体前倾交给下一段。
+      blocking_note: 角色保持在默认区域，不无动机跨区。
+      prop_state_note: 关键道具仍处于初始状态。
   continuity_rules:
     character_performance_consistency: 主角始终保持先观察再压制情绪的表演逻辑。
     emotional_progression: 从警觉到焦急，再到无奈爆发。
     gesture_continuity: 抿嘴侧头吸气作为主角被误解时的重复动作锚点。
+    blocking_continuity: 角色空间变化必须由动作和剧情触发。
+    prop_interaction_continuity: 道具状态变化必须有可见表演动作支撑。
   storyboard_handoff:
     camera_focus_suggestions: B01 必须给主角眼神特写，B02 必须给群体反应宽镜头。
     closeup_priority: 主角微表情、配角错愕反应。
     reaction_shot_priority: 每次误会升级后必须有 1 个反应镜头。
     timing_notes: 喜剧停顿不能被剪掉，尤其是出手前半秒。
+    hero_moment_support: 候选 Hero Moment 需要保留表演停顿和反应镜头。
+    bridge_shot_support: 段落之间用视线、动作余势或停顿承接。
+    blocking_support: 分镜需继承角色默认区域和禁止区域。
+    prop_state_support: 分镜需让关键道具状态变化可见。
   risk_notes:
     - 不模仿具体影视演员的表情或动作习惯。
   next_action: 进入 scene-storyboard-director，基于 performance_sheet_v1.md 设计镜头和反应节奏。
