@@ -1,233 +1,229 @@
-# SceneForge v6.1 Intelligent Adaptation Layer 实施计划
+# SceneForge v6.1 Adaptation Ideas Generator 实施计划
 
-## Phase 1 — 协议层（优先级：P0）
+## 0. 收敛后的 v6.1 范围
 
-目标：先建立协议，不改执行逻辑。
+v6.1 不做重型改写 SOP，不做复杂评分矩阵，不新增独立审批系统。
 
-### 1.1 更新 scene-video-intake 输出协议
-
-文件：
+v6.1 只补一个轻量但关键的能力：
 
 ```text
-.agents/skills/scene-video-intake/references/output-contract.md
+source_intake
+-> pattern diagnosis
+-> replaceable slots
+-> 5-10 adaptation ideas
+-> user selection required
+-> downstream execution
 ```
 
-新增：
-
-```yaml
-adaptation_recommendations:
-```
-
-新增文件：
+核心原则：
 
 ```text
-inputs/source_intake/adaptation_recommendations_v1.md
+AI 负责理解、抽象、发散和推荐。
+用户负责选择改写方向。
+后续 Agent 只基于用户确认后的方向继续执行。
 ```
-
-要求：
-
-- 保持向后兼容。
-- 不影响现有 source_intake 读取策略。
-- adaptation 文件默认作为 compact read 的补充资料。
-
-验收：
-
-- 协议通过。
-- README 同步。
-- PROJECT_BOARD 顶层摘要增加 adaptation 索引入口。
 
 ---
 
-## Phase 2 — 资产库层（优先级：P0）
+## Phase 1 — 资产库层（P0，已完成）
 
-目标：建立开放参考型改写资产库。
+目标：建立少而精的开放参考资产库。
 
-新增目录：
-
-```text
-assets/adaptation/
-```
-
-新增文件：
+已新增：
 
 ```text
 assets/adaptation/narrative-pattern-library.md
 assets/adaptation/replaceable-slot-library.md
-assets/adaptation/upgrade-pattern-library.md
-assets/adaptation/ai-generation-risk-library.md
+assets/adaptation/adaptation-idea-seed-library.md
 ```
 
-设计要求：
+三件套职责：
 
-- 参考锚点，不是封闭枚举。
-- 所有 pattern 支持：
+```text
+narrative-pattern-library
+回答：这个案例为什么好看？
+
+replaceable-slot-library
+回答：哪些结构槽位可以替换？
+
+adaptation-idea-seed-library
+回答：可以往哪些方向改？
+```
+
+验收状态：
 
 ```yaml
-pattern_id:
-selection_mode:
-applicable_when:
-creative_value:
-misuse_risk:
+narrative_patterns: completed
+replaceable_slots: completed
+idea_seeds: completed
 ```
-
-验收：
-
-- 至少覆盖 20+ narrative patterns。
-- 至少覆盖 30+ replaceable slot examples。
-- 至少覆盖短视频、动画电影、喜剧、情绪增强方向。
 
 ---
 
-## Phase 3 — scene-video-intake 增强（优先级：P1）
+## Phase 2 — 协议层（P0）
 
-目标：从视频理解升级到视频理解 + 改写诊断。
+目标：让 `scene-video-intake` 能正式输出轻量改写方向文件。
 
-新增输出：
+需要更新：
+
+```text
+.agents/skills/scene-video-intake/references/output-contract.md
+.agents/skills/scene-video-intake/SKILL.md
+.agents/skills/scene-forge/references/project-board-template.md
+README.md
+```
+
+新增 source intake 输出文件：
+
+```text
+inputs/source_intake/adaptation_ideas_v1.md
+```
+
+推荐结构：
 
 ```yaml
-pattern_diagnosis:
-must_preserve:
-replaceable_slots:
-upgrade_opportunities:
-variant_direction_candidates:
-ai_generation_adaptation:
+adaptation_ideas:
+  version: v1
+  source_pattern_summary:
+    core_patterns:
+    must_preserve:
+    replaceable_slots:
+  ideas:
+    - idea_id: idea_01
+      title:
+      seed_type:
+      selection_mode: reference | adapted_reference | custom_generated
+      summary:
+      why_it_works:
+      recommended_for:
+      user_choice_required: true
+  recommendation_note:
+  user_selection_required: true
 ```
 
-原则：
+验收标准：
 
-- 不输出最终创意。
-- 只输出结构化建议。
-- 不要求命中资产库。
-
-验收：
-
-- 任意源视频都能生成 adaptation_recommendations。
-- 不依赖具体题材。
+- 协议中出现 `adaptation_ideas_v1.md`。
+- `read_policy.compact` 包含 adaptation ideas summary。
+- `PROJECT_BOARD.md` 只保存 adaptation ideas 摘要和文件路径，不保存完整候选正文。
+- 明确：用户未选择前，不得进入正式改写剧本生成。
 
 ---
 
-## Phase 4 — 下游消费层（优先级：P1）
+## Phase 3 — scene-video-intake 生成能力（P1）
 
-目标：让改写建议真正影响创作。
+目标：在完成 source video analysis 与 priority map 后，额外生成 5-10 个改写方向。
 
-### scene-topic-gate
-
-新增读取：
+生成依据：
 
 ```text
-adaptation_recommendations.summary
+source_video_analysis_v1.md
+source_video_priority_map_v1.md
+assets/adaptation/narrative-pattern-library.md
+assets/adaptation/replaceable-slot-library.md
+assets/adaptation/adaptation-idea-seed-library.md
 ```
 
-用途：
+输出要求：
 
-- 选题价值判断。
-- 传播潜力判断。
+- 生成 5-10 个方向。
+- 每个方向只包含：`title`、`summary`、`why_it_works`、`recommended_for`。
+- 不生成完整剧本。
+- 不生成分镜。
+- 不生成 prompt。
+- 明确提示用户选择。
 
-### scene-reference-decider
-
-新增读取：
-
-```text
-narrative_patterns
-replaceable_slots
-```
-
-用途：
-
-- 参考方案选择。
-- 避免照搬。
-
-### scene-script-adapter
-
-新增读取：
-
-```text
-must_preserve
-replaceable_slots
-variant_direction_candidates
-```
-
-用途：
-
-- 剧本改编。
-
-### scene-storyboard-director
-
-新增读取：
-
-```text
-animation_upgrade
-hero_moment_upgrade
-visual_upgrade
-```
-
-用途：
-
-- 镜头强化。
-
-### scene-video-prompt-builder
-
-新增读取：
-
-```text
-ai_generation_adaptation
-```
-
-用途：
-
-- 降低生成失败率。
-
----
-
-## Phase 5 — 质量评估层（优先级：P2）
-
-新增评估维度：
+验收标准：
 
 ```yaml
-adaptation_quality:
-  abstraction_quality:
-  replacement_quality:
-  creativity_quality:
-  animation_quality:
-  virality_quality:
-  generation_feasibility:
+adaptation_ideas_generated: true
+idea_count: 5-10
+user_selection_required: true
+next_stage_behavior: wait_for_user_selection_or_scene-topic-gate
 ```
-
-用于后续审计。
 
 ---
 
-## Phase 6 — 长期扩展（优先级：P3）
+## Phase 4 — 用户选择与下游消费（P1）
 
-未来可增加：
+目标：用户选择某个 idea 后，后续阶段可以继承该方向。
 
-```text
-emotion-pattern-library
-comedy-pattern-library
-virality-pattern-library
-character-archetype-library
-social-commentary-library
+最小实现方式：
+
+在 `PROJECT_BOARD.md` 中记录：
+
+```yaml
+adaptation_selection:
+  status: selected | pending
+  selected_idea_id:
+  selected_title:
+  selection_note:
 ```
 
-但不纳入 v6.1 首轮。
+下游读取：
+
+```text
+scene-script-adapter
+读取 selected adaptation idea 后再写剧本。
+
+scene-storyboard-director
+继承 selected adaptation idea 的题材、核心结构和视觉方向。
+
+scene-video-prompt-builder
+继承 selected adaptation idea，不重新发散题材。
+```
+
+验收标准：
+
+- 用户未选择时，只能展示候选方向或询问选择。
+- 用户选择后，才能进入正式剧本改写。
+- 后续阶段不得忽略用户选择重新自创方向。
 
 ---
 
-## 最小可交付版本（MVP）
+## Phase 5 — 暂缓项
 
-第一轮只做：
-
-1. adaptation_recommendations_v1 协议。
-2. 四个 adaptation 资产库。
-3. scene-video-intake 生成能力。
-4. scene-script-adapter 消费能力。
-
-达到：
+以下不纳入 v6.1 MVP：
 
 ```text
-Video Understanding
--> Adaptation Recommendations
--> Better Script Adaptation
+upgrade-pattern-library.md
+ai-generation-risk-library.md
+adaptation-risk-library.md
+adaptation-objective-framework.md
+adaptation-selection-contract.md
+feasibility matrix
+quality scoring system
 ```
 
-即可视为 v6.1 MVP 完成。
+原因：
+
+```text
+这些会把创作者工作流变成重型企业 SOP。
+v6.1 首轮只需要高质量改写方向推荐 + 用户选择。
+```
+
+---
+
+## MVP 完成定义
+
+v6.1 MVP 完成时，系统应做到：
+
+```text
+输入一个源视频或案例
+↓
+完成 source_intake
+↓
+抽象核心叙事模式和可替换槽位
+↓
+给出 5-10 个改写方向
+↓
+等待用户选择
+↓
+用户选择后再进入剧本/分镜/prompt
+```
+
+一句话：
+
+```text
+v6.1 = Adaptation Ideas Generator，不是重型 Adaptation Workflow Engine。
+```
