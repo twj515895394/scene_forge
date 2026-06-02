@@ -25,6 +25,7 @@ bridge_shots:
 prop_state_machines:
 blocking_map:
 faction_layout:
+expressive_animation:
 created_at:
 updated_at:
 ```
@@ -36,6 +37,9 @@ context_policy:
   mode: minimal
   allow_docs_scan: false
   active_protocol_docs: []
+  allowed_runtime_asset_paths:
+    - assets/animation-stylization/effect-library.md
+    - assets/animation-stylization/contrast-comedy-library.md
   forbidden_runtime_paths:
     - docs/
     - .handoff/
@@ -50,6 +54,7 @@ user_confirmations:
   duration_strategy_confirmed: false
   script_plan_confirmed: false
   design_direction_confirmed: false
+  expressive_animation_confirmed: false
   storyboard_plan_confirmed: false
   video_prompt_plan_confirmed: false
 
@@ -110,6 +115,80 @@ faction_layout:
 - `bridge_shots` 记录 Segment 之间的桥接分镜。
 - `prop_state_machines` 记录核心道具状态变化，供分镜和视频提示词继承。
 - `blocking_map` 与 `faction_layout` 记录角色站位、阵营和禁止区域，降低视频分段中的空间漂移。
+- `expressive_animation` 记录 v4 动画电影级表现力扩展策略，供设计、剧本、表演、分镜、声音和视频提示词阶段继承。
+
+## v4 表现力扩展字段：`expressive_animation`
+
+`expressive_animation` 是 v4 新增顶层项目记忆字段，用于统一记录动画风格化、轻中度卡通伤害尺度和反差喜剧策略。
+
+默认结构：
+
+```yaml
+expressive_animation:
+  enabled: true
+  mode: animated_feature_comedy
+  assets:
+    effect_library: assets/animation-stylization/effect-library.md
+    contrast_comedy_library: assets/animation-stylization/contrast-comedy-library.md
+  animation_stylization:
+    level: expressive
+    preset: animated_feature_expressive
+    effect_density: medium
+    density_rule: hero_moment_and_high_risk_translation_only
+  injury_tone_policy:
+    visible_injury_level: minor_cartoon
+    allow_minor_cartoon_injury: true
+    allow_small_blood: selective
+    allow_nosebleed_gag: true
+    allow_bumps_bruises_dust: true
+    allow_soot_face: true
+    allow_torn_clothes: selective
+    forbid_large_blood_loss: true
+    forbid_graphic_wounds: true
+    forbid_gore: true
+    forbid_realistic_weapon_wound: true
+    forbid_realistic_bullet_wound: true
+    forbid_prolonged_pain_focus: true
+    restore_character_integrity_after_gag: true
+  contrast_comedy:
+    enabled: selective
+    contrast_density: low_to_medium
+    max_core_contrasts_per_project: 2
+    max_hero_contrast_per_segment: 1
+    allowed_contrast_types:
+      - size_mismatch
+      - prop_scale_irony
+      - personality_gap
+      - identity_behavior_gap
+      - visual_context_gap
+      - capability_gap
+    avoid_when:
+      - serious_emotional_scene
+      - repeated_same_gag
+      - climax_tension_without_release
+    contrast_must_serve:
+      - character
+      - story
+      - emotional_turn
+      - visual_payoff
+```
+
+字段说明：
+
+- `animation_stylization`：动画电影级夸张物理、VFX、喜剧冲击和动作安全转译策略。
+- `injury_tone_policy`：允许轻中度卡通受伤，禁止严重写实创伤。
+- `contrast_comedy`：反差喜剧策略，例如体型反差、道具反差、性格反差、画面语境反差。
+- `assets`：执行期允许按需读取的资产库路径。
+
+使用规则：
+
+1. 设计阶段负责定义项目级默认值。
+2. 剧本阶段负责识别 Story Beat 机会点。
+3. 表演阶段负责把机会点转成可拍表演。
+4. 分镜阶段负责镜头化 setup / reveal / impact / hold / recovery。
+5. 声音阶段负责卡通动作声、轻伤喜剧声和声音反差。
+6. 视频提示词阶段负责写入最终 Segment Prompt。
+7. 强特效、明显轻伤和核心反差母题必须服务 Hero Moment、情绪转折、喜剧 payoff 或安全转译，不能随机堆叠。
 
 ## 主流程阶段
 
@@ -168,10 +247,10 @@ data:
 
 涉及以下阶段时，默认必须先产出方案预览或候选方向，并等待用户明确确认后，才允许写入正式文件、输出最终 Prompt 或推进到下一阶段：
 
-- `scene-script-adapter`：时长分段策略、剧本方案、Story Beat 方向
-- `scene-design-builder`：角色方向、场景道具清单、视觉语言方向、参考强度
-- `scene-storyboard-director`：分镜结构、Hero Shot、Bridge Shot、Segment Plan、Blocking Map
-- `scene-video-prompt-builder`：分段提示词结构、参考图使用方案、连续性策略
+- `scene-script-adapter`：时长分段策略、剧本方案、Story Beat 方向、v4 表现力机会点
+- `scene-design-builder`：角色方向、场景道具清单、视觉语言方向、参考强度、`expressive_animation` 表达策略
+- `scene-storyboard-director`：分镜结构、Hero Shot、Bridge Shot、Segment Plan、Blocking Map、v4 表达镜头策略
+- `scene-video-prompt-builder`：分段提示词结构、参考图使用方案、连续性策略、v4 表达写入方案
 
 用户纠错、补充偏好、指出问题或提出比较方向，不等于授权落盘。只有用户明确表达“确认 / 采用 / 按这个生成 / 落盘 / 写入 / 继续执行该阶段”时，才能推进。
 
@@ -184,6 +263,9 @@ token_budget_level: compact
 context_policy:
   mode: minimal
   allow_docs_scan: false
+  allowed_runtime_asset_paths:
+    - assets/animation-stylization/effect-library.md
+    - assets/animation-stylization/contrast-comedy-library.md
 ```
 
 默认读取：
@@ -194,6 +276,19 @@ projects/<project>/PROJECT_BOARD.md
 .agents/skills/<current-skill>/references/output-contract.md
 当前阶段明确依赖的输入文件
 ```
+
+按需允许读取的 v4 执行期资产：
+
+```text
+assets/animation-stylization/effect-library.md
+assets/animation-stylization/contrast-comedy-library.md
+```
+
+读取条件：
+
+- 当前阶段需要选择动画物理、VFX、轻中度卡通伤害尺度或反差喜剧模板。
+- `PROJECT_BOARD.md` 中 `expressive_animation.enabled` 为 `true` 或当前阶段正在定义该字段。
+- 读取目的必须服务当前阶段输出，不得全仓库扫描。
 
 运行时禁止任何 Skill 或 Agent 访问：
 
@@ -208,13 +303,15 @@ docs/
 说明：
 
 - `docs/` 只作为人类阅读的说明文档，不作为任何 Skill 或 Agent 的运行时上下文来源。
+- `.handoff/` 只用于人工交接和复盘，不作为阶段执行上下文来源。
+- `assets/animation-stylization/*` 是 v4 明确允许的执行期资产库，但只能按需读取。
 - 即使用户要求“看 docs / 读 docs / 扫文档”，SceneForge 执行链路也不得读取 `docs/` 来推进项目。
 - 如果需要修改协议，应直接修改 `.agents/skills/**/SKILL.md` 或 `.agents/skills/**/references/*.md`；`docs/` 不参与运行时仲裁。
 
 预算等级：
 
-- `compact`：只读黑板、当前 Skill、当前输出协议和必要输入文件。
-- `standard`：允许读取 1-3 个明确依赖文件，但不得包含 forbidden runtime paths。
+- `compact`：只读黑板、当前 Skill、当前输出协议和必要输入文件；如当前阶段需要 v4 表现力扩展，可按需读取 1 个明确 asset。
+- `standard`：允许读取 1-3 个明确依赖文件和必要 asset，但不得包含 forbidden runtime paths。
 - `deep`：仅用于人工复盘或协议改造说明，不用于项目阶段执行；即使 deep，也不得读取 forbidden runtime paths 作为 Skill 上下文。
 
 ## 显示规范
@@ -227,6 +324,7 @@ docs/
 
 - 项目状态：选题已评分（`topic_scored`）
 - 演绎风格：鬼畜离谱化（`absurd_chaotic`）
+- 表现力扩展：动画电影喜剧（`animated_feature_comedy`）
 
 ## 总控路由原则
 
@@ -235,3 +333,4 @@ docs/
 3. 只调度 `next_stage` 指向的一个当前必需子 Skill
 4. 合并阶段补丁后再更新顶层索引
 5. 若补丁与旧文档冲突，以当前 Skill 的 `references/` 协议为准，不读取 `docs/` 仲裁
+6. 若项目启用 `expressive_animation`，总控只负责传递顶层字段和允许当前 Skill 按需读取 asset；不得代替子 Skill 设计具体镜头、表演或 prompt
