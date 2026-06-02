@@ -22,7 +22,7 @@ SceneForge 当前只输出提示词和制作说明，不生成图片。设定图
 ## 执行步骤
 
 1. 读取项目 `PROJECT_BOARD.md`，确认 `project_status` 已到 `assets_checked`，且总控路由的 `next_stage` 为 `scene-design-builder`。
-2. 采用 `compact` 上下文预算：只读取 `PROJECT_BOARD.md`、本 Skill、`references/output-contract.md`、`scene-reference-decider` 的边界和 `scene-asset-checker` 的复用结论；默认不扫描 `docs/`、`.handoff/` 或历史项目。
+2. 采用 `compact` 上下文预算：只读取 `PROJECT_BOARD.md`、本 Skill、`references/output-contract.md`、`scene-reference-decider` 的边界和 `scene-asset-checker` 的复用结论；运行时禁止读取 `docs/`、`.handoff/`、历史项目输出或其他无关项目目录。
 3. 读取 `references/output-contract.md`，确认制作档位、参考强度和输出落点。
 4. 在正式产出锁定卡和 prompt 前，先输出“设计方向预览”，至少包含角色方向候选、场景道具清单、统一视觉语言基线、参考强度、角色/场景/道具输出清单和需要用户确认的问题。
 5. 等待用户明确确认设计方向；用户纠错或补充偏好不等于授权落盘。
@@ -51,6 +51,7 @@ SceneForge 当前只输出提示词和制作说明，不生成图片。设定图
 - 核心道具必须建立状态机，至少说明状态变化、可见证据、允许交互和安全边界。
 - 多角色项目必须输出初版 `blocking_map` 与 `faction_layout`，说明默认站位、允许区域和禁止区域，供分镜与视频提示词继承。
 - 本技能输出的核心不只是“某个角色长什么样”，而是“这一整个视觉宇宙遵循什么电影级设计语言”。
+- 运行时禁止读取 `docs/`、`.handoff/`、历史项目输出或其他无关项目目录。
 
 ## 参考资料
 
