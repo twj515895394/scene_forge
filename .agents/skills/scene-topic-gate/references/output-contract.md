@@ -1,6 +1,6 @@
 # scene-topic-gate 输出协议
 
-本文件定义 `scene-topic-gate` 的输出字段、评分规则和状态推进方式。
+本文件定义 `scene-topic-gate` 的输出字段、评分规则、source intake 读取记录和状态推进方式。
 
 ## 阶段补丁壳
 
@@ -23,6 +23,23 @@ data:
     source_name:
     source_locator:
     notes:
+  source_intake_used: true | false
+  source_intake_files_read:
+    - file:
+      read_budget: compact | standard | deep
+      reason:
+  source_intake_summary_used:
+    candidate_topic:
+    core_must_keep:
+    highlights_to_consider:
+    optional_to_compress:
+    safe_replacement_notes:
+    risks_or_limits:
+  assetization_recommendation:
+    candidate_for_assetization: true | false | uncertain
+    reason:
+    suggested_asset_slug:
+    recommended_asset_status: none | proposed
   total_score:
   performance_style_suggestion:
   production_level:
@@ -35,11 +52,52 @@ data:
     风险可控性:
     制作成本可控性:
     平台传播潜力:
+  source_intake_dimension_notes:
+    源视频核心是否清晰:
+    亮点是否足够支撑改编:
+    可压缩内容是否明确:
+    可替换内容是否明确:
+    是否有不应照搬元素:
+    是否具备资产化候选价值:
   rationale:
   risk_notes:
   reuse_hints:
   evaluator_rule_version:
 ```
+
+## source_intake 输入规则
+
+如果 `PROJECT_BOARD.md` 存在：
+
+```yaml
+source_intake:
+  status: analyzed
+  files:
+    topic_gate_handoff:
+    priority_map:
+```
+
+则本阶段优先读取：
+
+```text
+inputs/source_intake/topic_gate_handoff_v1.md
+inputs/source_intake/source_video_priority_map_v1.md
+```
+
+必要时读取：
+
+```text
+inputs/source_intake/source_intake_index_v1.md
+```
+
+不应默认读取完整：
+
+```text
+source_video_analysis_v1.md
+source_video_timeline_v1.md
+```
+
+如果读取完整长解析，必须在 `source_intake_files_read.reason` 中说明原因。
 
 ## 枚举约束
 
@@ -71,14 +129,13 @@ data:
 - 这是选题阶段的建议值，不直接写入顶层 `performance_style`
 - 最终 `performance_style` 由 `scene-script-adapter` 确认
 
+除非字段明确写明 `strict_enum: true`，否则枚举仍遵守 `reference_policy` 的开放参考原则。
+
 ## 摘要显示规则
 
 - `summary` 必须用中文
 - 关键决策、制作档位、演绎风格建议在中文后附英文参数值
-
-示例：
-
-- 该选题判断为进入制作（`go`），建议走夸张搞笑化（`exaggerated_comedy`）路线，进入重点制作池（`focus`）。
+- 若使用 source intake，应在摘要中说明“已基于源视频 handoff 和优先级分层完成评估”
 
 ## 七维评分权重
 
@@ -91,6 +148,21 @@ data:
 | 风险可控性 | 10 |
 | 制作成本可控性 | 10 |
 | 平台传播潜力 | 5 |
+
+## source intake 额外判断维度
+
+基于 source intake 增加以下判断：
+
+```text
+源视频核心是否清晰
+亮点是否足够支撑改编
+可压缩内容是否明确
+可替换内容是否明确
+是否有不应照搬元素
+是否具备资产化候选价值
+```
+
+这些维度用于辅助七维评分，不单独改变权重。
 
 ## 决策门槛
 
@@ -125,39 +197,20 @@ data:
 - `production_level` 留空
 - `lifecycle_flag: abandoned`
 
-## 示例
+## source asset 约束
+
+`scene-topic-gate` 可以根据 source intake 建议资产化候选，但不得自动创建：
+
+```text
+assets/source-materials/<source-slug>/
+```
+
+只能建议：
 
 ```yaml
-patch_type: scene-topic-gate
-version: 1
-status: completed
-updated_at: 2026-06-01
-summary: 该选题总分 86，判断为进入制作（`go`），建议走夸张搞笑化（`exaggerated_comedy`）路线，并进入重点制作池（`focus`）。
-data:
-  topic_name: 西游记三打白骨精
-  source_material:
-    source_type: specific_adaptation
-    source_name: 86版西游记
-    source_locator: 第10集相关桥段
-    notes: 以大众共同记忆最强的版本作为首轮参考输入
-  total_score: 86
-  performance_style_suggestion: exaggerated_comedy
-  production_level: focus
-  decision: go
-  dimension_scores:
-    热点价值: 18
-    动画化适配度: 19
-    改编空间: 14
-    经典认知锚点: 15
-    风险可控性: 8
-    制作成本可控性: 8
-    平台传播潜力: 4
-  rationale:
-    - 国民级认知强，具备天然传播锚点
-    - 人物冲突和动作戏适合动画化重演
-  risk_notes:
-    - 需区分原著母题与具体影视表达
-  reuse_hints:
-    - 孙悟空角色具备高复用潜力
-  evaluator_rule_version: topic-gate-v1
+assetization_recommendation:
+  candidate_for_assetization: true | false | uncertain
+  recommended_asset_status: proposed
 ```
+
+资产化必须由用户明确确认后再执行。
