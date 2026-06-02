@@ -31,26 +31,43 @@ source_intake:
     audio:
     camera:
     priority_map:
+    adaptation_ideas:
     topic_gate_handoff:
+
   topic_gate_handoff_summary:
     candidate_topic:
     core_must_keep:
     highlights_to_consider:
     optional_to_compress:
     safe_replacement_notes:
+    adaptation_ideas_summary:
     risks_or_limits:
+
+  adaptation_ideas_summary:
+    idea_count:
+    recommended_ideas:
+    user_selection_required: true
+
+  adaptation_selection:
+    status: pending | selected
+    selected_idea_id:
+    selected_title:
+    selection_note:
+
   assetization:
     candidate_for_assetization: false
     reason:
     suggested_asset_slug:
     asset_status: none
     asset_path:
+
   source_asset_ref:
     asset_id:
     asset_path:
     reuse_mode:
+
   read_policy:
-    default_read: topic_gate_handoff + priority_map_summary
+    default_read: topic_gate_handoff + priority_map_summary + adaptation_ideas_summary
     read_full_analysis_only_when_needed: true
     downstream_must_not_load_all_by_default: true
 ```
@@ -61,5 +78,8 @@ source_intake:
 - 不保存完整逐镜头表。
 - 不保存完整台词表。
 - 不保存完整长解析正文。
+- 不保存完整 adaptation ideas 正文。
 - 长解析统一保存到 `inputs/source_intake/`。
+- adaptation ideas 仅保存摘要和文件路径。
+- 用户未选择改写方向前，不进入正式剧本改写阶段。
 - source asset 必须用户确认后才创建。
