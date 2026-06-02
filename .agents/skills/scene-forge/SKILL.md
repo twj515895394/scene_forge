@@ -35,14 +35,15 @@ SceneForge 当前只负责输出提示词、制作说明、结构化方案和项
 1. 判断用户意图是否已对应到某个现有项目；如果没有现有项目但用户表达了制作意图，应进入新项目初始化或 `scene-topic-gate`。
 2. 读取目标项目的 `PROJECT_BOARD.md`；如果用户没有指定项目且无法从上下文判断，先确认目标项目目录或为新项目生成候选目录名。
 3. 读取 `references/board-protocol.md`，确认顶层索引字段、阶段补丁壳、主状态机、上下文读取边界和确认闸门规则。
-4. 根据 `project_status`、`next_stage`、`lifecycle_flag` 判断当前阶段和是否存在阻塞。
-5. 只选择 `PROJECT_BOARD.md` 中 `next_stage` 指向的一个子 Skill；不得跳过、推断替换或同时展开多个阶段。
-6. 如果用户只说“继续”，只能解释为执行当前 `next_stage`；不得一口气连跑多个阶段。
-7. 要求子 Skill 只产出该阶段的 YAML 补丁块，不要重写整份黑板。
-8. 阶段涉及剧本、角色/场景道具、故事板、视频提示词等核心创作决策时，必须先输出方案预览或候选方向，并等待用户明确确认后再落盘正式文件。
-9. 用户纠错、补充偏好或指出问题，不等于授权落盘；只有用户明确表达“确认/采用/按这个生成/落盘/写入”时，才可以写入正式文件或推进状态。
-10. 将子 Skill 结果合并回 `PROJECT_BOARD.md`，并同步更新顶层索引字段。
-11. 在阶段完成后推进 `project_status` 和 `next_stage`；如果存在真实阻塞，再写 `blocker_note`。
+4. 如果项目包含或即将定义 `expressive_animation`，读取 `references/expressive-animation-protocol.md`，只理解顶层字段、阶段分工、资产读取白名单和负向边界；总控不得代替子 Skill 设计具体镜头、表演或 prompt。
+5. 根据 `project_status`、`next_stage`、`lifecycle_flag` 判断当前阶段和是否存在阻塞。
+6. 只选择 `PROJECT_BOARD.md` 中 `next_stage` 指向的一个子 Skill；不得跳过、推断替换或同时展开多个阶段。
+7. 如果用户只说“继续”，只能解释为执行当前 `next_stage`；不得一口气连跑多个阶段。
+8. 要求子 Skill 只产出该阶段的 YAML 补丁块，不要重写整份黑板。
+9. 阶段涉及剧本、角色/场景道具、故事板、视频提示词或 `expressive_animation` 等核心创作决策时，必须先输出方案预览或候选方向，并等待用户明确确认后再落盘正式文件。
+10. 用户纠错、补充偏好或指出问题，不等于授权落盘；只有用户明确表达“确认/采用/按这个生成/落盘/写入”时，才可以写入正式文件或推进状态。
+11. 将子 Skill 结果合并回 `PROJECT_BOARD.md`，并同步更新顶层索引字段。
+12. 在阶段完成后推进 `project_status` 和 `next_stage`；如果存在真实阻塞，再写 `blocker_note`。
 
 ## 编排顺序
 
@@ -74,6 +75,27 @@ projects/<project>/PROJECT_BOARD.md
 当前阶段明确依赖的输入文件
 ```
 
+总控可额外读取：
+
+```text
+.agents/skills/scene-forge/references/board-protocol.md
+.agents/skills/scene-forge/references/display-conventions.md
+.agents/skills/scene-forge/references/expressive-animation-protocol.md
+```
+
+当当前阶段确实需要 v4 表现力扩展时，子 Skill 可按需读取以下执行期资产库：
+
+```text
+assets/animation-stylization/effect-library.md
+assets/animation-stylization/contrast-comedy-library.md
+```
+
+读取条件：
+
+- 当前阶段需要选择动画物理、VFX、轻中度卡通伤害尺度或反差喜剧模板。
+- `PROJECT_BOARD.md` 中 `expressive_animation.enabled` 为 `true`，或当前阶段正在定义该字段。
+- 读取目的必须服务当前阶段输出，不得全仓库扫描。
+
 运行时禁止任何 Skill 或 Agent 访问：
 
 ```text
@@ -84,7 +106,35 @@ docs/
 其他无关项目目录
 ```
 
-说明：`docs/` 只作为人类阅读的说明文档，不作为任何 Skill 或 Agent 的运行时上下文来源。即使 `PROJECT_BOARD.md`、旧文档或用户表达中出现“查看 docs”的说法，SceneForge 执行链路也不得把 `docs/` 纳入阶段执行上下文。
+说明：`docs/` 只作为人类阅读的说明文档，不作为任何 Skill 或 Agent 的运行时上下文来源。即使 `PROJECT_BOARD.md`、旧文档或用户表达中出现“查看 docs”的说法，SceneForge 执行链路也不得把 `docs/` 纳入阶段执行上下文。`.handoff/` 也只用于人工交接，不作为阶段执行上下文。`assets/animation-stylization/*` 是 v4 明确允许的执行期资产库，但只能按需读取。
+
+## v4 表现力扩展总控规则
+
+`expressive_animation` 是 v4 新增顶层项目记忆字段，用于统一记录：
+
+```yaml
+expressive_animation:
+  animation_stylization:
+  injury_tone_policy:
+  contrast_comedy:
+```
+
+总控职责：
+
+- 识别并传递 `expressive_animation` 顶层字段。
+- 确保当前子 Skill 可按需读取白名单 asset。
+- 确保 `docs/` 和 `.handoff/` 不被运行时读取。
+- 确保涉及 v4 核心创作决策时仍遵守确认闸门。
+- 合并子 Skill 回写的 `expressive_animation` 补丁。
+
+总控不得：
+
+- 替代 `scene-design-builder` 选择具体视觉方案。
+- 替代 `scene-script-adapter` 改写 Story Beat。
+- 替代 `scene-performance-director` 设计具体表演。
+- 替代 `scene-storyboard-director` 设计镜头。
+- 替代 `scene-video-prompt-builder` 生成最终 Segment Prompt。
+- 默认把所有项目都变成强卡通、强反差或鬼畜风格。
 
 ## 关键规则
 
@@ -97,9 +147,11 @@ docs/
 - `blocker_note` 只在真实阻塞时写入
 - 运行时禁止读取 `docs/`、`.handoff/` 和历史项目输出
 - 默认 `token_budget_level` 为 `compact`
+- `assets/animation-stylization/*` 仅作为 v4 执行期资产库按需读取
 - 如果协议字段与旧文档冲突，以当前 Skill 的 `references/` 协议为准，不读取 `docs/` 仲裁
 
 ## 参考资料
 
 - `references/board-protocol.md`：黑板顶层字段、补丁结构、状态推进规则、上下文读取边界和确认闸门
 - `references/display-conventions.md`：中文显示名与英文参数值的统一表达规范
+- `references/expressive-animation-protocol.md`：v4 表现力扩展字段、资产读取白名单、阶段分工和负向边界
