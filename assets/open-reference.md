@@ -1,8 +1,22 @@
 # Open Reference Note
 
-SceneForge reference files provide starting points, not final limits.
+Status: deprecated duplicate.
 
-Templates, examples, enum values, shot patterns, effect lists, and prompt fragments are examples for alignment. When none of them fits the current project, the agent should create a better option for the current scene and briefly explain why.
+Canonical file:
+
+```text
+.agents/skills/scene-forge/references/open-reference.md
+```
+
+This file is kept only as a historical note. Do not add it to `allowed_runtime_asset_paths`.
+
+Reason:
+
+```text
+Open reference behavior is protocol interpretation, not an execution asset.
+```
+
+SceneForge templates, examples, enum values, shot patterns, effect lists, and prompt fragments are starting points, not final limits.
 
 Suggested metadata:
 
@@ -12,4 +26,4 @@ source_reference:
 reason:
 ```
 
-Keep the current project rules, stage contract, and user confirmation flow unchanged.
+This note does not change project rules, stage contracts, user confirmation gates, runtime path limits, or safety boundaries.
