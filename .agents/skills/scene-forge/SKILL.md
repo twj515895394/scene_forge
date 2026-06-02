@@ -1,5 +1,6 @@
 ---
 name: scene-forge
+manual_copy_target: .agents/skills/scene-forge/SKILL.md
 description: 当用户想用 SceneForge 制作、改编、推进或管理某个片段/桥段/短视频项目时应使用此技能，包括从一句自然语言创作意图开始建项、判断当前阶段、或编排 SceneForge 子 Skill。
 ---
 
@@ -36,16 +37,17 @@ SceneForge 当前只负责输出提示词、制作说明、结构化方案和项
 2. 如果没有现有项目但用户表达了制作意图，应进入新项目初始化或 `scene-topic-gate`。新项目初始化时读取 `references/project-board-template.md`，复制模板到 `projects/<project>/PROJECT_BOARD.md`，写入 `project_name`、`created_at`、`updated_at`，不得伪造用户确认。
 3. 读取目标项目的 `PROJECT_BOARD.md`；如果用户没有指定项目且无法从上下文判断，先确认目标项目目录或为新项目生成候选目录名。
 4. 读取 `references/board-protocol.md`，确认顶层索引字段、阶段补丁壳、主状态机、上下文读取边界和确认闸门规则。
-5. 如果项目包含或即将定义 `expressive_animation`，读取 `references/expressive-animation-protocol.md`，只理解顶层字段、阶段分工、资产读取白名单和负向边界；总控不得代替子 Skill 设计具体镜头、表演或 prompt。
-6. 如果项目包含 `storyboard_director_v5`，只理解该字段的启用状态、确认状态、资产读取白名单和分镜增强职责；总控不得代替分镜导演生成具体镜头语言。
-7. 根据 `project_status`、`next_stage`、`lifecycle_flag` 判断当前阶段和是否存在阻塞。
-8. 只选择 `PROJECT_BOARD.md` 中 `next_stage` 指向的一个子 Skill；不得跳过、推断替换或同时展开多个阶段。
-9. 如果用户只说“继续”，只能解释为执行当前 `next_stage`；不得一口气连跑多个阶段。
-10. 要求子 Skill 只产出该阶段的 YAML 补丁块，不要重写整份黑板。
-11. 阶段涉及剧本、角色/场景道具、故事板、视频提示词、`expressive_animation` 或 `storyboard_director_v5` 等核心创作决策时，必须先输出方案预览或候选方向，并等待用户明确确认后再落盘正式文件。
-12. 用户纠错、补充偏好或指出问题，不等于授权落盘；只有用户明确表达“确认/采用/按这个生成/落盘/写入”时，才可以写入正式文件或推进状态。
-13. 将子 Skill 结果合并回 `PROJECT_BOARD.md`，并同步更新顶层索引字段。
-14. 在阶段完成后推进 `project_status` 和 `next_stage`；如果存在真实阻塞，再写 `blocker_note`。
+5. 如果项目包含或即将定义 `reference_policy`，读取 `references/open-reference.md`，确认模板、示例、枚举和 pattern 都是参考锚点，不是封闭集合。
+6. 如果项目包含或即将定义 `expressive_animation`，读取 `references/expressive-animation-protocol.md`，只理解顶层字段、阶段分工、资产读取白名单和负向边界；总控不得代替子 Skill 设计具体镜头、表演或 prompt。
+7. 如果项目包含 `storyboard_director_v5`，只理解该字段的启用状态、确认状态、资产读取白名单和分镜增强职责；总控不得代替分镜导演生成具体镜头语言。
+8. 根据 `project_status`、`next_stage`、`lifecycle_flag` 判断当前阶段和是否存在阻塞。
+9. 只选择 `PROJECT_BOARD.md` 中 `next_stage` 指向的一个子 Skill；不得跳过、推断替换或同时展开多个阶段。
+10. 如果用户只说“继续”，只能解释为执行当前 `next_stage`；不得一口气连跑多个阶段。
+11. 要求子 Skill 只产出该阶段的 YAML 补丁块，不要重写整份黑板。
+12. 阶段涉及剧本、角色/场景道具、故事板、视频提示词、`expressive_animation` 或 `storyboard_director_v5` 等核心创作决策时，必须先输出方案预览或候选方向，并等待用户明确确认后再落盘正式文件。
+13. 用户纠错、补充偏好或指出问题，不等于授权落盘；只有用户明确表达“确认/采用/按这个生成/落盘/写入”时，才可以写入正式文件或推进状态。
+14. 将子 Skill 结果合并回 `PROJECT_BOARD.md`，并同步更新顶层索引字段。
+15. 在阶段完成后推进 `project_status` 和 `next_stage`；如果存在真实阻塞，再写 `blocker_note`。
 
 ## 编排顺序
 
@@ -82,6 +84,7 @@ projects/<project>/PROJECT_BOARD.md
 ```text
 .agents/skills/scene-forge/references/board-protocol.md
 .agents/skills/scene-forge/references/display-conventions.md
+.agents/skills/scene-forge/references/open-reference.md
 .agents/skills/scene-forge/references/expressive-animation-protocol.md
 .agents/skills/scene-forge/references/project-board-template.md
 ```
@@ -118,6 +121,16 @@ docs/
 ```
 
 说明：`docs/` 只作为人类阅读的说明文档，不作为任何 Skill 或 Agent 的运行时上下文来源。即使 `PROJECT_BOARD.md`、旧文档或用户表达中出现“查看 docs”的说法，SceneForge 执行链路也不得把 `docs/` 纳入阶段执行上下文。`.handoff/` 也只用于人工交接，不作为阶段执行上下文。`assets/animation-stylization/*` 是 v4 明确允许的执行期资产库，但只能按需读取。`assets/cinematic-language/*` 是 v5 明确允许的执行期资产库，主要供分镜与视频提示词阶段按需读取。
+
+## 开放参考原则
+
+所有模板、示例、枚举、资产库 pattern 和 prompt fragment 都是参考锚点，不是封闭集合。
+
+- 如果参考项高度匹配，使用 `selection_mode: reference`。
+- 如果参考项部分匹配，使用 `selection_mode: adapted_reference`。
+- 如果没有合适参考项，使用 `selection_mode: custom_generated`，并说明原因。
+- 除非字段明确写明 `strict_enum: true`，否则枚举默认开放。
+- 发散生成仍必须遵守确认闸门、运行时读取边界、当前阶段输出协议和安全边界。
 
 ## v4 表现力扩展总控规则
 
@@ -179,6 +192,7 @@ expressive_animation:
 - 默认 `token_budget_level` 为 `compact`
 - `assets/animation-stylization/*` 仅作为 v4 执行期资产库按需读取
 - `assets/cinematic-language/*` 仅作为 v5 执行期资产库按需读取
+- 所有模板、示例、枚举和 pattern 默认仅供参考，不限制 Agent 根据项目语境生成更匹配方案
 - 如果协议字段与旧文档冲突，以当前 Skill 的 `references/` 协议为准，不读取 `docs/` 仲裁
 
 ## 参考资料
@@ -186,4 +200,5 @@ expressive_animation:
 - `references/board-protocol.md`：黑板顶层字段、补丁结构、状态推进规则、上下文读取边界和确认闸门
 - `references/project-board-template.md`：新建 `projects/<project>/PROJECT_BOARD.md` 的初始化模板
 - `references/display-conventions.md`：中文显示名与英文参数值的统一表达规范
+- `references/open-reference.md`：开放参考原则，说明模板、示例、枚举和 pattern 均为参考锚点
 - `references/expressive-animation-protocol.md`：v4 表现力扩展字段、资产读取白名单、阶段分工和负向边界
