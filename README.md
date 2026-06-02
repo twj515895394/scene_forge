@@ -23,6 +23,7 @@ SceneForge v3 已将主链路从“自动生成并推进”调整为“方案预
 - `assets/cinematic-language/`：v5 执行期可读取的基础镜头语言、动画电影镜头模式和动作喜剧镜头模式资产库。
 - `expressive_animation`：v4 动画电影级表现力扩展字段，统一记录动画风格化、轻中度卡通伤害尺度和反差喜剧策略。
 - `storyboard_director_v5`：v5 专业分镜导演增强字段，统一记录剧本内容拆分、影视镜头语言转换和镜头模式资产选择策略。
+- `source_intake`：v6 视频源解析字段，用于记录视频输入解析摘要、长解析文件路径、topic gate handoff、优先级分层和资产化候选状态。
 - `user_confirmations`：剧本、设计、分镜、视频提示词等关键阶段必须先确认再落盘。
 - `segment_strategy`：区分整片目标时长与单段视频生成时长。
 - `hero_moments`、`bridge_shots`、`prop_state_machines`、`blocking_map`、`faction_layout`：用于提升多段视频提示词的看点表达、段落衔接、道具状态和角色空间连续性。
@@ -87,6 +88,76 @@ v4 回答：可以用什么动画表现。
 v5 回答：这个表现应该怎么拍。
 ```
 
+## v6 Video Intake / Source Intake
+
+v6 第一轮协议落地新增：
+
+```text
+scene-video-intake
+```
+
+当用户提供视频文件、视频链接、短视频链接或来自同一段视频的截图序列，并希望基于该视频进行分析、改编或制作项目时，主流程先进入 `scene-video-intake`，再进入 `scene-topic-gate`。
+
+视频源输入流程：
+
+```text
+scene-video-intake
+-> scene-topic-gate
+-> scene-reference-decider
+-> scene-asset-checker
+-> scene-design-builder
+-> scene-script-adapter
+-> scene-performance-director
+-> scene-storyboard-director
+-> scene-audio-director
+-> scene-video-prompt-builder
+-> scene-publish-review
+```
+
+普通文字输入仍直接进入：
+
+```text
+scene-topic-gate
+```
+
+v6 的关键不是普通视频总结，而是生成服务后续创作链路的 `source_intake`：
+
+```yaml
+source_intake:
+  type: video_clip
+  status: pending | analyzed | skipped | failed
+  files:
+    index: inputs/source_intake/source_intake_index_v1.md
+    analysis: inputs/source_intake/source_video_analysis_v1.md
+    timeline: inputs/source_intake/source_video_timeline_v1.md
+    priority_map: inputs/source_intake/source_video_priority_map_v1.md
+    topic_gate_handoff: inputs/source_intake/topic_gate_handoff_v1.md
+  read_policy:
+    default_read: topic_gate_handoff + priority_map_summary
+    read_full_analysis_only_when_needed: true
+    downstream_must_not_load_all_by_default: true
+```
+
+完整长解析不进入黑板，而保存到：
+
+```text
+projects/<project>/inputs/source_intake/
+```
+
+项目尚未创建时，可先保存到：
+
+```text
+projects/_intake/<timestamp-or-slug>/
+```
+
+如果某个源片段具备跨项目复用价值，`scene-video-intake` 只能先标记资产化候选；只有用户确认后，才可提升为可复用 source asset：
+
+```text
+assets/source-materials/<source-slug>/
+```
+
+不应把整个 `assets/source-materials/` 加入运行时白名单。若某项目明确引用 source asset，只加入具体文件路径。
+
 人类设计说明：
 
 ```text
@@ -98,13 +169,18 @@ docs/SceneForge-v4-Protocol-Review.md
 docs/SceneForge-v5-Storyboard-Director-Research-Framework.md
 docs/SceneForge-v5-Animation-Film-Shot-Language-Study.md
 docs/SceneForge-v5-Storyboard-Director-Implementation-Plan.md
+docs/SceneForge-v6-Video-Intake-System.md
+docs/SceneForge-v6-Video-Intake-Storage-and-Reading-Strategy.md
+docs/SceneForge-v6-Source-Intake-Assetization-Strategy.md
+docs/SceneForge-v6-Video-Intake-Implementation-Plan.md
+docs/SceneForge-v6-Video-Intake-Protocol-Review.md
 ```
 
 注意：`docs/` 与 `.handoff/` 仍不作为 Skill / Agent 阶段执行上下文。执行期规则应来自 `.agents/skills/**/references/`、`assets/` 和当前项目 `PROJECT_BOARD.md`。
 
 ## 主链路
 
-当前主流程为：
+当前普通文字输入主流程为：
 
 ```text
 scene-topic-gate
@@ -119,6 +195,14 @@ scene-topic-gate
 -> scene-publish-review
 ```
 
+视频源输入可选前置：
+
+```text
+scene-video-intake
+-> scene-topic-gate
+-> ...
+```
+
 总控 `scene-forge` 只执行 `PROJECT_BOARD.md` 中的 `next_stage`。用户说“继续”只能解释为执行当前 `next_stage`，不得一口气连跑多个阶段。
 
 ## 输出边界
@@ -126,6 +210,7 @@ scene-topic-gate
 SceneForge 当前只负责输出：
 
 - 结构化方案
+- 视频源解析资料与 source intake handoff
 - 角色 / 场景 / 道具设定图 prompt
 - 全场景资产总参考图 prompt
 - 故事板图 prompt
@@ -151,4 +236,4 @@ SceneForge 不负责生成图片、视频或音频。图片、视频和音频需
 已生成用于基于角色图、场景道具图、故事板图生成视频的分段提示词。
 ```
 
-当前协议基线见 [docs/协议层与选题闸门设计.md](docs/协议层与选题闸门设计.md)。v4 实施计划见 [docs/SceneForge-v4-Implementation-Plan.md](docs/SceneForge-v4-Implementation-Plan.md)。v5 实施计划见 [docs/SceneForge-v5-Storyboard-Director-Implementation-Plan.md](docs/SceneForge-v5-Storyboard-Director-Implementation-Plan.md)。
+当前协议基线见 [docs/协议层与选题闸门设计.md](docs/协议层与选题闸门设计.md)。v4 实施计划见 [docs/SceneForge-v4-Implementation-Plan.md](docs/SceneForge-v4-Implementation-Plan.md)。v5 实施计划见 [docs/SceneForge-v5-Storyboard-Director-Implementation-Plan.md](docs/SceneForge-v5-Storyboard-Director-Implementation-Plan.md)。v6 实施计划见 [docs/SceneForge-v6-Video-Intake-Implementation-Plan.md](docs/SceneForge-v6-Video-Intake-Implementation-Plan.md)。
