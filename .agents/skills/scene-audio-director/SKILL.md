@@ -35,7 +35,7 @@ SceneForge 当前只输出声音制作说明、音乐 prompt、拟音 prompt 和
 
 ## 上游输入
 
-默认采用 `compact` 上下文预算，只读取：
+采用 `compact` 上下文预算，运行时只读取：
 
 1. 项目 `PROJECT_BOARD.md`
 2. 本 Skill 文件
@@ -45,7 +45,7 @@ SceneForge 当前只输出声音制作说明、音乐 prompt、拟音 prompt 和
 6. `scene-performance-director` 的表演表和停顿设计
 7. `scene-storyboard-director` 的完整分镜、`segments`、`shot_highlights`、`hero_moments`、`bridge_shots`、`continuity_rules`、`prompt_hints`、`blocking_map`、`faction_layout` 和 `prop_state_machines`
 
-默认不读取：
+运行时禁止读取：
 
 ```text
 docs/
@@ -54,8 +54,6 @@ docs/
 历史项目输出
 其他无关项目目录
 ```
-
-只有用户明确要求复盘、重构协议或读取相关文档时，才允许超出默认读取范围。
 
 ## 执行步骤
 
@@ -85,6 +83,7 @@ docs/
 - 不复刻具体电影配乐、主题旋律或可识别音频表达。
 - 本阶段不得声称已生成最终音频，只能说明已生成声音制作说明、音乐 prompt、拟音 prompt 或混音计划。
 - 输出要能被 `scene-video-prompt-builder` 直接整合进每段视频 Prompt。
+- 运行时禁止读取 `docs/`、`.handoff/`、历史项目输出或其他无关项目目录。
 
 ## 参考资料
 
