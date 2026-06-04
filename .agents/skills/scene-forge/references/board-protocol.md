@@ -1,348 +1,543 @@
-# SceneForge 黑板协议摘要
+# SceneForge v8 轻黑板协议
 
-本文件给 `scene-forge` 总控 Skill 使用，作为读取和回写 `PROJECT_BOARD.md` 的最小协议摘要。
+本文件定义 `scene-forge` 总控和各子 Skill 共享的 `PROJECT_BOARD.md` 运行时协议。
 
-`PROJECT_BOARD.md` 是项目唯一状态源。黑板只保存顶层索引、跨阶段摘要、确认状态、文件路径和读取策略，不保存长正文。
+`PROJECT_BOARD.md` 仍然是项目唯一状态源，但从 v8 起只承担：
 
-## 顶层 YAML 字段
+1. 状态机
+2. 路由表
+3. 阶段索引
+4. 跨阶段极短摘要
+5. 确认记录
+6. 读取策略
+7. 阶段补丁摘要
+
+黑板不再保存完整剧本、完整分镜、完整 Prompt、完整 source 解析、完整设计说明或任何长正文。
+
+## 顶层结构
 
 ```yaml
-project_name:
-project_status:
-next_stage:
-lifecycle_flag:
-blocker_note:
-score:
-production_level:
-reference_type:
-adaptation_level:
-performance_style:
-target_total_duration_seconds:
-segment_duration_seconds:
-context_policy:
-reference_policy:
-source_intake:
-user_confirmations:
-segment_strategy:
-hero_moments:
-bridge_shots:
-prop_state_machines:
-blocking_map:
-faction_layout:
-expressive_animation:
-storyboard_director_v5:
-created_at:
-updated_at:
-stage_patches:
+project:
+  name:
+  slug:
+  created_at:
+  updated_at:
+
+state:
+  project_status:
+  next_stage:
+  lifecycle_flag:
+  blocker_note:
+
+routing:
+  current_stage:
+  allowed_next_stages: []
+  last_completed_stage:
+  route_reason:
+
+runtime_policy:
+  context_policy:
+    mode: minimal
+    allow_docs_scan: false
+    active_protocol_docs: []
+    allowed_runtime_asset_paths: []
+    forbidden_runtime_paths:
+      - docs/
+      - .handoff/
+      - 会话记录_*.md
+      - 历史项目输出
+      - 其他无关项目目录
+    token_budget:
+      default_stage_budget: compact
+      require_reason_for_extra_reads: true
+  reference_policy:
+    templates_are_reference_only: true
+    examples_are_reference_only: true
+    enums_are_open_by_default: true
+    strict_enum_only_when_explicit: true
+    allow_adapted_reference: true
+    allow_custom_generated_option: true
+    require_reason_for_custom_option: true
+
+project_config:
+  score:
+  production_level:
+  reference_type:
+  adaptation_level:
+  performance_style:
+  target_total_duration_seconds:
+  segment_duration_seconds:
+
+confirmations:
+  topic_confirmed:
+  reference_confirmed:
+  story_confirmed:
+  asset_plan_confirmed:
+  design_confirmed:
+  script_confirmed:
+  performance_confirmed:
+  storyboard_plan_confirmed:
+  audio_plan_confirmed:
+  video_prompt_plan_confirmed:
+  publish_confirmed:
+
+active_versions:
+  source_intake:
+  topic:
+  reference:
+  story:
+  assets:
+  design:
+  script:
+  performance:
+  storyboard:
+  audio:
+  video_prompts:
+  publish:
+
+stage_index:
+  source_intake:
+  topic:
+  reference:
+  story:
+  assets:
+  design:
+  script:
+  performance:
+  storyboard:
+  audio:
+  video_prompts:
+  publish:
+
+cross_stage_summary:
+  premise:
+  story_engine:
+  core_characters: []
+  core_scene:
+  key_props: []
+  visual_style:
+  continuity_focus:
+  source_adaptation_mode:
+  current_risks: []
+
+read_policy:
+  default_read:
+    - PROJECT_BOARD.md
+    - stage_index.<current_stage>.files.handoff
+  stage_specific_reads: {}
+  deep_read_requires_reason: true
+
+stage_patches: []
 ```
 
-## `context_policy`
+## 旧字段迁移规则
+
+以下旧顶层字段不再允许继续作为运行时根字段存在：
+
+```text
+project_name
+project_status
+next_stage
+lifecycle_flag
+blocker_note
+context_policy
+reference_policy
+source_intake
+script_strategy
+creative_direction_context
+story_development_summary
+story_beats
+character_functions
+core_scene_functions
+key_prop_functions
+hero_moment_candidates
+ending_payoff
+segment_strategy
+hero_moments
+bridge_shots
+prop_state_machines
+blocking_map
+faction_layout
+expressive_animation
+storyboard_director_v5
+video_prompt_files
+video_prompt_review
+created_at
+updated_at
+```
+
+迁移原则：
+
+1. 项目元信息进入 `project`
+2. 主流程状态进入 `state`
+3. 运行时白名单和开放参考规则进入 `runtime_policy`
+4. 可配置项目参数进入 `project_config`
+5. 用户确认状态进入 `confirmations`
+6. 阶段产物位置、激活版本和摘要进入 `stage_index`
+7. 下游必须知道但不值得深读正文的极短信息进入 `cross_stage_summary`
+8. 完整阶段正文一律写入 `details/`、`outputs/`、`inputs/`
+
+## `state`
 
 ```yaml
-context_policy:
-  mode: minimal
-  allow_docs_scan: false
-  active_protocol_docs: []
-  allowed_runtime_asset_paths:
-    - assets/animation-stylization/effect-library.md
-    - assets/animation-stylization/contrast-comedy-library.md
-    - assets/cinematic-language/shot-language-library.md
-    - assets/cinematic-language/animation-film-shot-patterns.md
-    - assets/cinematic-language/animation-comedy-action-patterns.md
-  forbidden_runtime_paths:
-    - docs/
-    - .handoff/
-    - 会话记录_*.md
-    - 历史项目输出
-    - 其他无关项目目录
-  token_budget:
-    default_stage_budget: compact
-    require_reason_for_extra_reads: true
+state:
+  project_status: draft | topic_scored | reference_decided | story_developed | assets_checked | design_ready | script_ready | performance_ready | storyboard_ready | audio_ready | video_prompts_ready | published | reviewed | archived
+  next_stage:
+  lifecycle_flag: active | blocked | skipped | abandoned | completed
+  blocker_note:
+```
+
+规则：
+
+- `state.next_stage` 是总控唯一准入条件。
+- 用户说“继续”时，只能解释为执行 `state.next_stage`。
+- `state.project_status` 只表达主流程阶段，不混入策略、版本或长摘要。
+- `state.blocker_note` 只在真实阻塞时填写。
+
+## `routing`
+
+```yaml
+routing:
+  current_stage:
+  allowed_next_stages: []
+  last_completed_stage:
+  route_reason:
+```
+
+规则：
+
+- `routing.current_stage` 通常与 `state.next_stage` 一致。
+- `allowed_next_stages` 只列当前协议允许的下一步，不做并行阶段展开。
+- `route_reason` 只写一句话原因，不写阶段正文。
+
+## `runtime_policy`
+
+### `context_policy`
+
+```yaml
+runtime_policy:
+  context_policy:
+    mode: minimal
+    allow_docs_scan: false
+    active_protocol_docs: []
+    allowed_runtime_asset_paths: []
+    forbidden_runtime_paths:
+      - docs/
+      - .handoff/
+      - 会话记录_*.md
+      - 历史项目输出
+      - 其他无关项目目录
+```
+
+规则：
+
+- `docs/` 和 `.handoff/` 永远不作为运行时上下文。
+- 资产库只允许按需加入 `allowed_runtime_asset_paths`。
+- `active_protocol_docs` 只记录当前运行中被允许参考的协议文件路径。
+
+### `reference_policy`
+
+```yaml
+runtime_policy:
+  reference_policy:
+    templates_are_reference_only: true
+    examples_are_reference_only: true
+    enums_are_open_by_default: true
+    strict_enum_only_when_explicit: true
+    allow_adapted_reference: true
+    allow_custom_generated_option: true
+    require_reason_for_custom_option: true
+```
+
+规则：
+
+- 模板、示例、枚举、资产库 pattern 都是参考锚点，不是封闭集合。
+- 除非字段显式声明 `strict_enum: true`，否则默认允许开放选择。
+
+## `project_config`
+
+```yaml
+project_config:
+  score:
+  production_level:
+  reference_type:
+  adaptation_level:
+  performance_style:
+  target_total_duration_seconds:
+  segment_duration_seconds:
+```
+
+规则：
+
+- 这里只保留项目级配置索引，不保存阶段正文。
+- 时长字段更新时，阶段产物、`stage_index` 摘要和 `project_config` 必须一致。
+
+## `confirmations`
+
+```yaml
+confirmations:
+  topic_confirmed:
+    status: pending | confirmed | rejected | not_needed
+    note:
+  reference_confirmed:
+    status:
+    note:
+```
+
+规则：
+
+- 不得伪造用户确认。
+- 用户纠错、比较方案、补充偏好不等于 `confirmed`。
+
+## `active_versions`
+
+```yaml
+active_versions:
+  topic: v1
+  storyboard: v2
+```
+
+规则：
+
+- 这里只记录当前激活版本号。
+- 版本对应的正文路径必须落在 `stage_index.<stage>.files` 中。
+
+## `stage_index`
+
+每个阶段统一使用以下结构：
+
+```yaml
+stage_index:
+  <stage_key>:
+    status: pending | in_progress | completed | blocked | skipped
+    active_version:
+    summary:
+    updated_at:
+    files:
+      index:
+      primary:
+      details: []
+      outputs: []
+      handoff:
+      quality_check:
+    read_policy:
+      default_read: []
+      deep_read: []
+      never_read_by_default: []
+    next_action:
+```
+
+规则：
+
+1. `summary` 只写 1-3 句话，不写长正文。
+2. `files.primary` 指向该阶段最权威的正文文件。
+3. `files.details` / `files.outputs` 只保存路径列表，不内联内容。
+4. `handoff` 与 `quality_check` 也是路径索引，不写正文。
+5. `read_policy.default_read` 只列下游默认应读的最小集合。
+6. `deep_read` 只列允许深读的文件，深读仍必须说明原因。
+7. `never_read_by_default` 用于限制长文件或参考型文件被误读。
+
+## 阶段键约定
+
+固定阶段键：
+
+```text
+source_intake
+topic
+reference
+story
+assets
+design
+script
+performance
+storyboard
+audio
+video_prompts
+publish
+```
+
+旧概念映射：
+
+- `source_intake` 进入 `stage_index.source_intake`
+- `script_strategy` 和 `creative_direction_context` 进入 `cross_stage_summary.source_adaptation_mode` 与相关阶段正文
+- `story_beats`、`hero_moment_candidates`、`ending_payoff` 进入 `stage_index.story` 的正文文件
+- `expressive_animation` 进入 `stage_index.design` / `stage_index.script` / `stage_index.performance` / `stage_index.storyboard` 的产物文件与 `cross_stage_summary.visual_style`
+- `storyboard_director_v5` 进入 `stage_index.storyboard` 的正文文件和读取白名单
+- `video_prompt_files`、`video_prompt_review` 进入 `stage_index.video_prompts`
+- 故事板方法论资产不新增黑板顶层字段；只通过 `runtime_policy.context_policy.allowed_runtime_asset_paths` 与 `stage_index.storyboard.files` 暴露
+
+## 故事板方法论资产读取约定
+
+以下文件允许在故事板阶段和视频提示词阶段按需加入运行时白名单：
+
+```yaml
+runtime_policy:
+  context_policy:
+    allowed_runtime_asset_paths:
+      - assets/storyboard-methodology/index.md
+      - assets/storyboard-methodology/video-generation-unit-library.md
+      - assets/storyboard-methodology/beat-structure-library.md
+      - assets/storyboard-methodology/shot-type-library.md
+      - assets/storyboard-methodology/rhythm-type-shot-combo-library.md
+      - assets/storyboard-methodology/shot-density-reference.md
+      - assets/storyboard-methodology/continuity-control-library.md
+      - assets/storyboard-methodology/storyboard-dual-version-prompt-library.md
+      - assets/storyboard-methodology/video-prompt-translation-library.md
+      - assets/storyboard-methodology/storyboard-quality-checklist.md
+      - assets/storyboard-methodology/model-adaptation-library.md
+```
+
+规则：
+
+1. 不得新增 `storyboard_methodology_v8` 这类黑板顶层方法论字段。
+2. 是否启用、读取了哪些方法论资产、产出了哪份配置，统一写入 `stage_index.storyboard.files` 与 `stage_index.storyboard.read_policy`。
+3. `docs/` 中的方法论说明文档依然不进入运行时上下文。
+
+## `stage_index.storyboard` 的 v8 附加约定
+
+故事板阶段除通用结构外，建议补足以下文件索引：
+
+```yaml
+stage_index:
+  storyboard:
+    files:
+      index:
+      primary:
+      details:
+        - details/storyboard/video_generation_units_v*.md
+        - details/storyboard/space_continuity_map_v*.md
+        - details/storyboard/action_emotion_chains_v*.md
+      outputs:
+        - outputs/storyboard_prompts/control_storyboard_prompt_v*.md
+        - outputs/storyboard_prompts/styled_storyboard_prompt_v*.md
+      handoff:
+      quality_check:
+      methodology_config:
 ```
 
 说明：
 
-- `docs/` 只作为人类阅读的说明文档，不作为 Skill / Agent 阶段执行上下文。
-- `.handoff/` 只用于人工交接和复盘，不作为阶段执行上下文。
-- `assets/animation-stylization/*` 是 v4 执行期资产库，只能按需读取。
-- `assets/cinematic-language/*` 是 v5 执行期资产库，主要供分镜和视频提示词阶段按需读取。
-- `assets/source-materials/*` 不默认进入白名单；只有用户确认具体 source asset 后，才允许把具体文件路径加入白名单。
+- `methodology_config` 用于记录本次故事板阶段实际使用的方法论配置或索引文件。
+- `quality_check` 用于记录故事板质量检查结果路径。
+- 这些都是文件路径，不是黑板正文。
 
-## `reference_policy`
+## `cross_stage_summary`
 
 ```yaml
-reference_policy:
-  templates_are_reference_only: true
-  examples_are_reference_only: true
-  enums_are_open_by_default: true
-  strict_enum_only_when_explicit: true
-  allow_adapted_reference: true
-  allow_custom_generated_option: true
-  require_reason_for_custom_option: true
+cross_stage_summary:
+  premise:
+  story_engine:
+  core_characters: []
+  core_scene:
+  key_props: []
+  visual_style:
+  continuity_focus:
+  source_adaptation_mode:
+  current_risks: []
 ```
 
-所有模板、示例、枚举、资产库 pattern 和 prompt fragment 都是参考锚点，不是封闭集合。除非字段明确写明 `strict_enum: true`，否则枚举默认开放。
+规则：
 
-推荐选择字段：
+- 这里只保留跨阶段必需的短摘要。
+- 不再把完整故事骨架、角色功能表、场景功能表、道具状态机直接放入黑板。
+- 任何超过轻摘要的信息都应落盘到对应阶段正文文件。
+
+## `read_policy`
 
 ```yaml
-selection_mode: reference | adapted_reference | custom_generated
-source_reference:
-reason:
+read_policy:
+  default_read:
+    - PROJECT_BOARD.md
+    - stage_index.<current_stage>.files.handoff
+  stage_specific_reads:
+    storyboard:
+      - stage_index.performance.files.handoff
+      - stage_index.script.files.primary
+  deep_read_requires_reason: true
 ```
 
-## v6 字段：`source_intake`
+规则：
 
-`source_intake` 是 v6 新增顶层字段，用于记录视频源输入的结构化解析摘要、长解析文件索引、给选题闸门的 handoff、内容优先级分层和资产化候选状态。
+- 默认只读黑板和当前阶段最必要的 handoff / primary。
+- 需要读取完整正文、长分析或大资产库时，必须说明原因。
 
-默认结构：
+## 阶段补丁协议
 
-```yaml
-source_intake:
-  type: video_clip | video_url | short_video_url | frame_sequence | other
-  status: pending | analyzed | skipped | failed
-  source_path_or_url:
-  source_summary:
-  source_duration_seconds:
-  source_language_hint:
-  active_version:
-  files:
-    index: inputs/source_intake/source_intake_index_v1.md
-    analysis: inputs/source_intake/source_video_analysis_v1.md
-    timeline: inputs/source_intake/source_video_timeline_v1.md
-    dialogue: inputs/source_intake/source_video_dialogue_v1.md
-    audio: inputs/source_intake/source_video_audio_v1.md
-    camera: inputs/source_intake/source_video_camera_v1.md
-    priority_map: inputs/source_intake/source_video_priority_map_v1.md
-    topic_gate_handoff: inputs/source_intake/topic_gate_handoff_v1.md
-  topic_gate_handoff_summary:
-    candidate_topic:
-    core_must_keep:
-    highlights_to_consider:
-    optional_to_compress:
-    safe_replacement_notes:
-    risks_or_limits:
-  assetization:
-    candidate_for_assetization: true | false | uncertain
-    reason:
-    suggested_asset_slug:
-    asset_status: none | proposed | confirmed | created
-    asset_path:
-  source_asset_ref:
-    asset_id:
-    asset_path:
-    reuse_mode: direct_reference | adapted_reference | structure_only
-  read_policy:
-    default_read: topic_gate_handoff + priority_map_summary
-    read_full_analysis_only_when_needed: true
-    downstream_must_not_load_all_by_default: true
-```
-
-### source_intake 保存规则
-
-完整解析内容必须落盘，黑板只保存轻量索引：
-
-```text
-projects/<project>/inputs/source_intake/
-  source_video_analysis_v1.md
-  source_video_timeline_v1.md
-  source_video_dialogue_v1.md
-  source_video_audio_v1.md
-  source_video_camera_v1.md
-  source_video_priority_map_v1.md
-  topic_gate_handoff_v1.md
-  source_intake_index_v1.md
-```
-
-项目尚未创建时，先写入：
-
-```text
-projects/_intake/<timestamp-or-slug>/
-```
-
-不得把以下内容写入 `PROJECT_BOARD.md`：
-
-```text
-完整逐镜头表
-完整台词表
-完整长解析正文
-完整音频细节表
-```
-
-### source_intake 读取规则
-
-`scene-topic-gate` 默认读取：
-
-```text
-PROJECT_BOARD.md source_intake summary
-inputs/source_intake/topic_gate_handoff_v1.md
-inputs/source_intake/source_video_priority_map_v1.md
-```
-
-必要时读取：
-
-```text
-inputs/source_intake/source_intake_index_v1.md
-```
-
-不默认读取完整：
-
-```text
-source_video_analysis_v1.md
-source_video_timeline_v1.md
-```
-
-如果下游阶段需要深读，必须说明原因，并只读取相关章节。
-
-### source asset 约束
-
-`scene-video-intake` 和 `scene-topic-gate` 只能提出资产化候选，不得自动创建：
-
-```text
-assets/source-materials/<source-slug>/
-```
-
-只有用户明确确认资产化后，才允许创建长期 source asset，并更新：
-
-```yaml
-source_intake:
-  assetization:
-    asset_status: created
-    asset_path:
-  source_asset_ref:
-    asset_id:
-    asset_path:
-    reuse_mode:
-```
-
-## v4 字段：`expressive_animation`
-
-`expressive_animation` 用于记录动画风格化、轻中度卡通伤害尺度和反差喜剧策略。
-
-```yaml
-expressive_animation:
-  enabled: true
-  confirmation_status: pending_design_confirmation | confirmed | disabled
-  mode: animated_feature_comedy
-  assets:
-    effect_library: assets/animation-stylization/effect-library.md
-    contrast_comedy_library: assets/animation-stylization/contrast-comedy-library.md
-  animation_stylization:
-    level: expressive
-    preset: animated_feature_expressive
-    effect_density: medium
-    density_rule: hero_moment_and_high_risk_translation_only
-  injury_tone_policy:
-    visible_injury_level: minor_cartoon
-    allow_minor_cartoon_injury: true
-    allow_small_blood: selective
-    allow_nosebleed_gag: true
-    allow_bumps_bruises_dust: true
-    allow_soot_face: true
-    allow_torn_clothes: selective
-    forbid_large_blood_loss: true
-    forbid_graphic_wounds: true
-    forbid_gore: true
-    forbid_realistic_weapon_wound: true
-    forbid_realistic_bullet_wound: true
-    forbid_prolonged_pain_focus: true
-    restore_character_integrity_after_gag: true
-  contrast_comedy:
-    enabled: selective
-    contrast_density: low_to_medium
-    max_core_contrasts_per_project: 2
-    max_hero_contrast_per_segment: 1
-```
-
-新项目初始化时不得伪造确认，`confirmation_status` 默认为 `pending_design_confirmation`。
-
-## v5 字段：`storyboard_director_v5`
-
-`storyboard_director_v5` 用于记录专业分镜导演增强策略。
-
-```yaml
-storyboard_director_v5:
-  enabled: true
-  confirmation_status: pending_storyboard_plan_confirmation | confirmed | disabled
-  assets:
-    shot_language_library: assets/cinematic-language/shot-language-library.md
-    animation_film_patterns: assets/cinematic-language/animation-film-shot-patterns.md
-    animation_comedy_action_patterns: assets/cinematic-language/animation-comedy-action-patterns.md
-  default_policy:
-    require_storyboard_content_breakdown: true
-    require_cinematic_language_plan: true
-    require_visual_motivation: true
-    avoid_template_stack: true
-    require_pattern_reason: true
-    do_not_reference_specific_films_in_runtime_output: true
-```
-
-新项目初始化时不得伪造确认，`confirmation_status` 默认为 `pending_storyboard_plan_confirmation`。
-
-## 主流程阶段
-
-- `draft`
-- `topic_scored`
-- `reference_decided`
-- `assets_checked`
-- `design_ready`
-- `script_ready`
-- `performance_ready`
-- `storyboard_ready`
-- `audio_ready`
-- `video_prompts_ready`
-- `published`
-- `reviewed`
-- `archived`
-
-`project_status` 只表达主流程阶段，不混入异常态。
-
-## 生命周期字段
-
-- `active`
-- `blocked`
-- `skipped`
-- `abandoned`
-- `completed`
-
-`blocker_note` 只在真实阻塞时填写。
-
-## 阶段补丁壳
+子 Skill 只输出单阶段补丁，不直接重写整份黑板。
 
 ```yaml
 patch_type:
+stage:
 version:
 status: pending | in_progress | completed | blocked | skipped
 updated_at:
 summary:
-data:
+board_updates:
+  state:
+  routing:
+  project_config:
+  confirmations:
+  active_versions:
+  stage_index:
+  cross_stage_summary:
+  read_policy:
+files_created:
+  - path:
+    purpose:
+    version:
+files_updated:
+  - path:
+    purpose:
+    version:
+next_action:
 ```
 
-子 Skill 只输出单阶段补丁，不直接重写完整黑板。
+强制规则：
 
-## 确认闸门规则
+1. `board_updates` 禁止出现完整正文。
+2. 必须先生成 `details/`、`outputs/` 或 `inputs/` 文件，再回写 `stage_index`。
+3. `files_created` / `files_updated` 只列文件索引和用途。
+4. `next_action` 只写下一步建议，不写新正文。
 
-涉及以下阶段时，默认必须先产出方案预览或候选方向，并等待用户明确确认后，才允许写入正式文件、输出最终 Prompt 或推进到下一阶段：
+## 总控路由规则
 
-- `scene-script-adapter`：时长分段策略、剧本方案、Story Beat 方向、v4 表现力机会点
-- `scene-design-builder`：角色方向、场景道具清单、视觉语言方向、参考强度、`expressive_animation` 表达策略
-- `scene-storyboard-director`：分镜结构、Hero Shot、Bridge Shot、Segment Plan、Blocking Map、v4 表达镜头策略、v5 内容拆分与镜头语言方案
-- `scene-video-prompt-builder`：分段提示词结构、参考图使用方案、连续性策略、v4 表达写入方案、v5 镜头语言继承方案
+1. 总控先读 `state.project_status`、`state.next_stage`、`state.lifecycle_flag`。
+2. 视频源输入优先进入 `scene-video-intake`，但只在 `stage_index.source_intake.status != completed` 时触发。
+3. `topic_scored` 后若剧本模式或改写方向未确认，应先停在确认闸门，不得越级推进。
+4. `reference_decided` 后下一步必须是 `scene-story-development`。
+5. `story_developed` 后下一步必须是 `scene-asset-checker`。
+6. 任何时刻只允许调度 `state.next_stage` 指向的一个阶段。
+7. 合并阶段结果时，只接受补丁中的 `board_updates` 与文件索引。
 
-用户纠错、补充偏好、指出问题或提出比较方向，不等于授权落盘。只有用户明确表达“确认 / 采用 / 按这个生成 / 落盘 / 写入 / 继续执行该阶段”时，才能推进。
+## 禁止事项
 
-## 总控路由原则
+黑板中禁止出现：
 
-1. 先看顶层 `project_status`、`next_stage`、`lifecycle_flag`。
-2. 如果用户提供视频源输入，且尚未完成 `source_intake`，优先路由到 `scene-video-intake`。
-3. 如果 `source_intake.status: analyzed` 且 `next_stage: scene-topic-gate`，由 `scene-topic-gate` 读取 handoff 和 priority map。
-4. 只调度 `next_stage` 指向的一个当前必需子 Skill。
-5. 合并阶段补丁后再更新顶层索引。
-6. 若补丁与旧文档冲突，以当前 Skill 的 `references/` 协议为准，不读取 `docs/` 仲裁。
-7. 用户说“继续”只能解释为执行当前 `next_stage`，不得一口气连跑多个阶段。
+```text
+完整 source 视频解析
+完整故事骨架正文
+完整角色设定
+完整场景设定
+完整剧本
+完整分镜
+完整故事板 Prompt
+完整视频 Prompt
+完整声音方案
+完整发布文案
+完整质量检查报告
+完整方法论策略正文
+```
+
+这些内容必须写入：
+
+```text
+projects/<project>/inputs/
+projects/<project>/details/
+projects/<project>/outputs/
+```
 
 ## 显示规范
 
-- 对话层使用中文。
-- `summary` 使用中文描述，必要时在关键值后附英文参数值。
-- 结构化字段值始终保留英文参数值。
+- 对话层默认使用中文。
+- `summary` 使用中文，必要时可在关键参数后附英文值。
+- 结构化字段值保留英文参数值，便于后续阶段消费。

@@ -1,18 +1,17 @@
 # scene-design-builder 输出协议
 
-本文件定义 `scene-design-builder` 的输出形态、设定图 prompt 包、全场景资产总参考图、道具状态机、Blocking/Faction 记忆字段、v4 表现力扩展设计和长内容落盘边界。
-
-本协议是通用项目记忆协议，不绑定任何具体样例项目。样例项目暴露的问题只能转译为通用字段与执行规则，不得把样例角色、样例台词、样例站位直接固化进协议。
+本文件定义 `scene-design-builder` 的输出形态、设定图 prompt 包、全场景资产总参考图、空间连续性种子、道具状态机、Blocking/Faction 记忆字段、表现力扩展设计和长内容落盘边界。
 
 ## 上游输入
 
 本阶段默认消费以下结果：
 
-- `scene-reference-decider`：参考边界、`must_keep`、`must_avoid`
-- `scene-asset-checker`：`character_assets`、`scene_assets`、`prop_assets`、`design_actions`
-- 顶层索引：`production_level`、`performance_style`（若已在后续流程中确认则继承；未确认时仅参考建议）
-- 顶层记忆字段：`context_policy`、`user_confirmations`、既有 `blocking_map` / `faction_layout` / `prop_state_machines`、既有 `expressive_animation`（如有）
-- v4 执行期资产库（仅在需要定义表现力扩展策略时按需读取）：
+- `scene-reference-decider`：参考边界、`must_keep`、`must_avoid`、`creative_direction_context`
+- `scene-story-development`：`story_beats`、`character_functions`、`core_scene_functions`、`key_prop_functions`、`hero_moment_candidates`
+- `scene-asset-checker`：`character_assets`、`scene_assets`、`prop_assets`、`design_actions`、`asset_lock_file`、`asset_lock_summary`
+- 项目配置索引：`project_config.production_level`、`project_config.performance_style`（若已在后续流程中确认则继承；未确认时仅参考建议）
+- 黑板与阶段索引：`runtime_policy.context_policy`、`confirmations`、既有阶段产物中的 `blocking_map` / `faction_layout` / `prop_state_machines`、既有表现力扩展摘要（如有）
+- 表现力扩展资产库（仅在需要定义表现力扩展策略时按需读取）：
   - `assets/animation-stylization/effect-library.md`
   - `assets/animation-stylization/contrast-comedy-library.md`
 
@@ -42,7 +41,7 @@
 - 是否需要全场景资产总参考图
 - 初版 `blocking_map` / `faction_layout` 设计原则
 - 核心道具是否需要 `prop_state_machines`
-- v4 `expressive_animation` 项目级策略：动画风格化档位、轻中度卡通伤害尺度、反差喜剧启用与密度
+- `expressive_animation` 项目级策略：动画风格化档位、轻中度卡通伤害尺度和反差喜剧启用密度
 - 需要用户确认的问题
 
 用户纠错、补充偏好或指出问题，不等于授权落盘。只有用户明确表达确认、采用、按此生成、落盘或写入时，才能输出正式文件并推进阶段。
@@ -51,21 +50,58 @@
 
 ```yaml
 patch_type: scene-design-builder
-version: 3
-status:
+stage: scene-design-builder
+version: 8
+status: pending | in_progress | completed | blocked | skipped
 updated_at:
 summary:
-data:
+board_updates:
+  state:
+  routing:
+  project_config:
+  confirmations:
+  active_versions:
+  stage_index:
+  cross_stage_summary:
+  read_policy:
+files_created:
+  - path:
+    purpose:
+    version:
+files_updated:
+  - path:
+    purpose:
+    version:
+next_action:
 ```
 
-## `data` 结构
+## 阶段正文结构
+
+下文结构用于阶段正式产物文件，例如 `details/`、`outputs/` 或 `inputs/` 中的 primary/handoff 文件；不得直接作为黑板正文回写。黑板只写 `board_updates`、文件索引和摘要。
 
 ```yaml
 data:
   design_mode:
+  script_strategy:
+    status:
+    mode:
+  creative_direction_context:
+    script_mode:
+    selected_adaptation:
+      status:
+      selected_idea_id:
+      selected_title:
+      selection_note:
+    downstream_rule:
   design_confirmation:
     confirmed_by_user: false
     confirmation_note:
+  story_design_mapping:
+    beat_to_design_targets:
+      - beat_id:
+        related_characters:
+        related_scenes:
+        related_props:
   visual_language:
     shape_language_core:
     silhouette_anchors:
@@ -135,12 +171,17 @@ data:
       reference_strength:
       asset_strategy:
       lock_card_file:
+      character_bible_file:
       prompt_file:
+      prompt_target: character_bible_sheet
       sheet_requirements:
         views:
+        silhouette_required:
         expression_count:
+        micro_expression_count:
         action_pose_count:
         prop_interaction_required:
+        detail_callout_required:
         scale_comparison_required:
         safety_boundary_required:
   scene_designs:
@@ -165,6 +206,12 @@ data:
       - prop_state_matrix
       - physical_safety_notes
       - expressive_animation_notes
+  space_continuity_seed:
+    seed_file:
+    anchor_spaces:
+    recurring_landmarks:
+    entrance_exit_logic:
+    axis_preservation_note:
   prop_state_machines:
     - prop_name:
       states:
@@ -200,27 +247,59 @@ data:
 
 ## 字段说明
 
-- `design_mode`：本次走完整设定还是轻量锁定，建议直接复用顶层 `production_level` 的语义。
+- `design_mode`：本次走完整设定还是轻量锁定，建议直接复用`project_config.production_level` 的语义。
+- `script_strategy`：本次项目是改写剧本还是使用原始剧本。
+- `creative_direction_context`：统一记录当前创作方向；设计阶段不得自行推断或改写。
 - `design_confirmation`：记录用户是否确认设计方向。正式落盘时应为 `confirmed_by_user: true`。
+- `story_design_mapping`：说明哪些角色、场景和道具分别服务哪些 Story Beat，防止设计脱离剧情功能。
 - `visual_language`：本次项目的统一视觉语言基线，角色、场景、核心道具都必须继承这组约束。
-- `expressive_animation_design`：v4 表现力扩展设计，定义项目级动画风格化、轻中度卡通伤害尺度和反差喜剧策略。正式落盘后应同步回写或更新顶层 `expressive_animation`。
+- `expressive_animation_design`：表现力扩展设计，定义项目级动画风格化、轻中度卡通伤害尺度和反差喜剧策略。正式落盘后应同步更新 `stage_index.design` 摘要与相关文件索引。
 - `animation_stylization`：动画物理、VFX、特效密度和高风险动作转译策略。设计阶段只定义允许范围，不写具体镜头。
 - `injury_tone_policy`：动画动作喜剧伤害尺度，允许轻中度卡通伤害，禁止严重写实创伤。
 - `contrast_comedy`：反差喜剧策略，定义是否启用、核心反差类型、密度规则和调性边界。
-- `design_notes_for_downstream`：把 v4 表达策略交给后续剧本、表演、分镜和视频提示词阶段继承。
-- `character_designs`：角色级锁定卡与设定图 prompt 路径。
-- `sheet_requirements`：角色设定图结构要求；默认允许板块标题、编号和说明文字。
+- `design_notes_for_downstream`：把表现力扩展策略交给后续剧本、表演、分镜和视频提示词阶段继承。
+- `character_designs`：角色级锁定卡、角色说明书和图片生成 prompt 路径。
+- `character_bible_file`：单角色角色说明书正文，默认写入 `details/角色说明书_角色名_v*.md`。
+- `prompt_target`：默认应为 `character_bible_sheet`，表示目标不是概念海报，而是角色说明书板。
+- `sheet_requirements`：角色说明书板结构要求；默认允许板块标题、编号和说明文字。
 - `scene_designs`：场景级锁定卡与设定图 prompt 路径。
 - `prop_designs`：关键道具锁定卡与 prompt 路径；仅对核心道具使用。
 - `master_scene_prop_reference`：全场景资产总参考图，用于在参考图数量有限时把主场景、角色站位、核心道具位置和道具状态压缩为一个总参考 prompt。
+- `space_continuity_seed`：写入 `details/design/space_continuity_seed_v*.md` 的空间连续性种子，供剧本、分镜和视频提示词阶段继承。
 - `prop_state_machines`：核心道具状态机，供剧本、分镜和视频提示词继承。
 - `blocking_map`：通用空间调度图，记录空间轴线、区域、允许/禁止角色。
 - `faction_layout`：通用阵营布局，记录角色属于哪个阵营、默认区域和禁止区域。
 - `visual_consistency`：供后续分镜和视频提示词继承的一致性锚点。
-- `script_adaptation_notes`：剧本阶段需要继承的视觉、动作、站位、道具与 v4 表现力约束。
+- `script_adaptation_notes`：剧本阶段需要继承的视觉、动作、站位、道具与表现力扩展约束。
 - `next_action`：下一阶段执行提示。
 
-## v4 表现力扩展设计原则
+### `space_continuity_seed` 字段口径
+
+- `seed_file`：空间连续性种子正文路径。
+- `anchor_spaces`：后续分镜和视频提示词必须保持可识别的空间锚点。
+- `recurring_landmarks`：跨段重复出现的地标、空间部件或构图识别物。
+- `entrance_exit_logic`：角色与镜头默认的进入 / 离开空间逻辑。
+- `axis_preservation_note`：后续镜头语言需要优先保留的朝向或轴线边界。
+
+## 创作方向继承规则
+
+设计阶段必须显式继承：
+
+```yaml
+script_strategy:
+  mode: rewrite_adaptation | preserve_original
+creative_direction_context:
+  script_mode: rewrite_adaptation | preserve_original
+  selected_adaptation:
+    status: selected | bypassed | not_applicable
+```
+
+规则：
+
+- `rewrite_adaptation`：角色、场景、道具和视觉语言应围绕已选 adaptation direction 服务。
+- `preserve_original`：角色、场景、道具和视觉语言应围绕原始剧情/桥段保留，不得再发散新的改写方向。
+
+## 表现力扩展设计原则
 
 设计阶段只回答：
 
@@ -239,19 +318,22 @@ data:
 5. 是否启用反差喜剧，以及最多使用几个核心反差母题。
 6. 反差喜剧必须服务人物、故事、情绪转折或视觉 payoff。
 
-## 角色设定图要求
+## 角色说明书要求
 
-角色设定图默认允许包含文字、编号和板块标题，因为它是制作资料板和多图参考输入，不是最终视频画面。
+角色说明书板默认允许包含文字、编号和板块标题，因为它是制作资料板和多图参考输入，不是最终视频画面。
 
 每个核心角色默认应包含：
 
 - 正面 / 3/4 / 侧面 / 背面
+- 轮廓剪影区
 - 6 到 9 个剧本驱动表情
+- 2 到 4 个微表情
 - 4 到 6 个剧情动作姿态
 - 至少 1 个关键道具交互姿态（如适用）
+- 至少 1 组服装、配件或手部细节区
 - 角色之间的比例对照
 - 物理边界和安全边界说明
-- v4 表现力扩展边界：动画物理、轻中度卡通伤害尺度、反差喜剧角色边界
+- 表现力扩展边界：动画物理、轻中度卡通伤害尺度、反差喜剧角色边界
 - 服装、配件、材质与剪影锚点
 
 只有用户明确要求时，才额外输出无文字干净参考图 prompt。
@@ -267,7 +349,7 @@ data:
 - 核心道具位置
 - 核心道具状态矩阵
 - 镜头动线和安全边界
-- v4 表现力扩展边界：允许的卡通物理、轻伤尺度和反差道具关系
+- 表现力扩展边界：允许的卡通物理、轻伤尺度和反差道具关系
 - 后续故事板 / 视频提示词引用方式
 
 ## 黑板摘要建议
@@ -277,12 +359,13 @@ data:
 - 本次走的是完整设定还是轻量锁定卡
 - 用户是否已经确认设计方向
 - 本次统一视觉语言基线是什么
-- v4 `expressive_animation` 是否启用、默认档位、伤害尺度和反差喜剧密度
+- `expressive_animation` 是否启用、默认档位、伤害尺度和反差喜剧密度
 - 角色参考强度和场景参考强度
 - 哪些内容来自资产复用，哪些内容是新建
 - 锁定卡写入了哪些 `details/` 文件
 - 设定图 prompt 写入了哪些 `outputs/design_prompts/` 文件
 - 是否产出全场景资产总参考图 prompt
+- 是否产出 `space_continuity_seed_v*.md`
 - 是否产出 `prop_state_machines`、`blocking_map`、`faction_layout`
 
 ## 长内容落盘
@@ -292,19 +375,20 @@ data:
 - `details/character_design_v*.md`
 - `details/scene_design_v*.md`
 - `details/prop_design_v*.md`
+- `details/design/space_continuity_seed_v*.md`
 
 可直接生成设定图的 prompt 写入：
 
-- `outputs/design_prompts/character_prompts_v*.md`
+- `outputs/design_prompts/角色说明书图片提示词_v*.md`
 - `outputs/design_prompts/scene_prompts_v*.md`
 - `outputs/design_prompts/prop_prompts_v*.md`
 - `outputs/design_prompts/master_scene_prop_reference_v*.md`
 
 ## prompt 文档语言规范
 
-- 设定图 prompt 文档默认以中文为主。
+- 角色说明书图片 prompt 文档默认以中文为主。
 - 结构说明、角色描述、场景描述、负向约束优先使用中文。
-- 只有在特定平台确实需要时，才额外派生英文适配版；英文不作为默认主交付。
+- 英文只作为锚词、风格词和板式名词的辅助，不单独派生纯英文主交付。
 
 ## 生成 prompt 与对外文案的风格口径
 
@@ -335,4 +419,4 @@ data:
 10. 道具要角色化，而不是普通产品图。
 11. 色彩要统一，不要杂乱堆叠。
 12. 灯光和材质服务电影感。
-13. v4 表现力扩展必须服务角色、故事、情绪或画面 payoff，不随机加特效或梗。
+13. 表现力扩展必须服务角色、故事、情绪或画面 payoff，不随机加特效或梗。

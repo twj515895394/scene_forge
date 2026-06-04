@@ -29,7 +29,7 @@ SceneForge 当前只输出声音制作说明、音乐 prompt、拟音 prompt 和
 
 在以下场景使用此技能：
 
-- 总控 Skill 发现项目 `next_stage` 为 `scene-audio-director`
+- 总控 Skill 发现项目 `state.next_stage` 为 `scene-audio-director`
 - `scene-storyboard-director` 已完成，项目状态为 `storyboard_ready`
 - 已有完整分镜、Segment Plan 和关键镜头声音提示
 - 需要在生成最终视频 Prompt 前，先统一规划配音、拟音、环境音、音乐和静默点
@@ -68,11 +68,11 @@ docs/
 
 ## 执行步骤
 
-1. 读取项目 `PROJECT_BOARD.md`，确认 `project_status` 为 `storyboard_ready`，且总控路由的 `next_stage` 为 `scene-audio-director`。
+1. 读取项目 `PROJECT_BOARD.md`，确认 `state.project_status` 为 `storyboard_ready`，且总控路由的 `state.next_stage` 为 `scene-audio-director`。
 2. 读取完整分镜和 Segment Plan，确认每个 Segment 覆盖的镜头和 Story Beat。
 3. 读取 Hero Shot、Bridge Shot、Blocking/Faction 和道具状态连续性，作为声音钩子与段落衔接的输入。
 4. 读取表演表，提取台词气口、停顿、反应节奏和关键动作。
-5. 继承 v4 `expressive_animation`，识别哪些镜头需要卡通动作声、轻伤喜剧声或声音反差。
+5. 继承项目级表现力扩展策略 `expressive_animation`，识别哪些镜头需要卡通动作声、轻伤喜剧声或声音反差。
 6. 为主要角色设计 `voice_direction`，包括语速、情绪递进、停顿、气口和表达质感。
 7. 为每个关键镜头设计 Foley 拟音，确保动作、表情和喜剧节奏有声音支撑。
 8. 对动画物理镜头设计非写实声音，如 boing、bonk、puff、paper_slide、rubber_thump，避免写实伤害声。
@@ -88,14 +88,14 @@ docs/
 
 ## 关键规则
 
-- 只执行当前 `next_stage`，不得跳过分镜阶段或直接进入视频提示词阶段。
+- 只执行当前 `state.next_stage`，不得跳过分镜阶段或直接进入视频提示词阶段。
 - 音乐不是背景填充，而是情绪叙事工具。
 - 拟音必须服务动作、表情、角色性格和喜剧节奏。
 - 静默必须被设计，而不是缺省。
 - 配音必须写清语速、气口、停顿和情绪递进。
 - 每个 Segment 都应有声音连续性说明。
 - Bridge Shot 的动作、视线或空间衔接，应尽量配合声音钩子。
-- v4 动画物理声音要非写实、轻盈、可爱化或动作喜剧化，不能变成真实击打和真实伤害声音。
+- 动画物理声音要非写实、轻盈、可爱化或动作喜剧化，不能变成真实击打和真实伤害声音。
 - 轻中度卡通伤害声音允许服务笑点，但不得使用骨裂、湿黏伤害声、真实惨叫或血腥拟音。
 - 声音反差必须服务角色、故事、情绪释放或视觉 reveal，不得随机搞怪。
 - 不复刻具体电影配乐、主题旋律或可识别音频表达。
@@ -105,4 +105,4 @@ docs/
 
 ## 参考资料
 
-- `references/output-contract.md`：声音导演输出协议、v4 表现力声音字段、黑板摘要字段和长正文落盘方式
+- `references/output-contract.md`：声音导演输出协议、表现力扩展声音字段、黑板摘要字段和长正文落盘方式

@@ -1,16 +1,34 @@
 # scene-asset-checker 输出协议
 
-本文件定义 `scene-asset-checker` 的判断分类、黑板摘要边界和阶段推进建议。
+本文件定义 `scene-asset-checker` 的判断分类、资产锁定文件约定、黑板摘要边界和阶段推进建议。
 
 ## 阶段补丁壳
 
 ```yaml
 patch_type: scene-asset-checker
-version: 1
-status:
+stage: scene-asset-checker
+version: 8
+status: pending | in_progress | completed | blocked | skipped
 updated_at:
 summary:
-data:
+board_updates:
+  state:
+  routing:
+  project_config:
+  confirmations:
+  active_versions:
+  stage_index:
+  cross_stage_summary:
+  read_policy:
+files_created:
+  - path:
+    purpose:
+    version:
+files_updated:
+  - path:
+    purpose:
+    version:
+next_action:
 ```
 
 ## 阶段目标
@@ -43,10 +61,16 @@ data:
 - `embed_in_character_or_scene`
 - `new_core_prop`
 
-## `data` 结构
+## 阶段正文结构
+
+下文结构用于阶段正式产物文件，例如 `details/`、`outputs/` 或 `inputs/` 中的 primary/handoff 文件；不得直接作为黑板正文回写。黑板只写 `board_updates`、文件索引和摘要。
 
 ```yaml
 data:
+  story_function_summary:
+    key_characters:
+    key_scenes:
+    key_props:
   character_assets:
     - role_name:
       reuse_status:
@@ -69,6 +93,12 @@ data:
     tweak_targets:
     new_light_targets:
     new_full_targets:
+  asset_lock_file:
+  asset_lock_summary:
+    locked_characters:
+    locked_scenes:
+    locked_props:
+    downstream_constraints:
   risk_notes:
   next_action:
 ```
@@ -79,6 +109,9 @@ data:
 - `scene_assets`：场景资产判断结果列表。
 - `prop_assets`：核心道具判断结果列表；普通道具可为空或只记录跳过结论。
 - `design_actions`：供 `scene-design-builder` 直接消费的设计动作清单。
+- `asset_lock_file`：写入 `details/assets/asset_lock_v*.md` 的资产锁定文件路径，供设计、剧本和分镜阶段读取。
+- `asset_lock_summary`：轻量资产锁定摘要，用于快速说明本项目哪些角色、场景和核心道具已经锁定，哪些必须新建或微调。
+- `story_function_summary`：本阶段读取到的关键角色/场景/道具剧情功能摘要，用于解释资产判断为什么成立。
 - `risk_notes`：风险提示列表。
 - `next_action`：下一阶段执行提示。
 
@@ -106,11 +139,18 @@ data:
 - `new_light_targets`：需要轻量新建锁定卡的对象列表。
 - `new_full_targets`：需要完整新建设定的对象列表。
 
+#### `asset_lock_summary`
+
+- `locked_characters`：已经明确复用 / 微调 / 新建路径的角色列表。
+- `locked_scenes`：已经明确复用 / 微调 / 新建路径的场景列表。
+- `locked_props`：已经被视为核心道具或附属处理的关键道具列表。
+- `downstream_constraints`：后续设计和分镜必须继承的资产锁定边界，例如“不得新增未评估角色外观锚点”。
+
 ## 与上一阶段的衔接规则
 
-- 只判断 `scene-reference-decider` 允许继承的内容。
+- 只判断 `scene-reference-decider` 允许继承，且 `scene-story-development` 明确需要的内容。
 - 若对象落在 `forbidden_inheritance` 所覆盖的表达边界内，不应直接按高相似度资产复用。
-- 资产命中判断服从参考边界，不能因为“库存里有现成项”就越界继承。
+- 资产命中判断服从参考边界和故事功能，不能因为“库存里有现成项”就越界继承。
 
 ## 阻塞规则
 
@@ -134,16 +174,36 @@ data:
 - 命中的角色资产
 - 命中的场景资产
 - 是否存在需要单独沉淀的核心道具
+- `asset_lock_v*.md` 是否已生成
 - 后续设计阶段应复用或新建的对象清单
 
 ## 示例
 
 ```yaml
 patch_type: scene-asset-checker
-version: 1
+stage: scene-asset-checker
+version: 8
 status: completed
 updated_at: 2026-06-01
 summary: 角色与场景资产判断已完成，孙悟空进入微调复用（`reuse_tweak`），山林小路进入直接复用（`reuse_direct`），白骨精进入完整新建（`new_full`）。
+board_updates:
+  state:
+    project_status: assets_checked
+    next_stage: scene-design-builder
+  stage_index:
+    assets:
+files_created:
+  - path: details/assets/asset_check_v1.md
+    purpose: 资产判断正文
+    version: v1
+  - path: details/assets/asset_lock_v1.md
+    purpose: 资产锁定文件
+    version: v1
+files_updated:
+  - path: projects/<project>/PROJECT_BOARD.md
+    purpose: 资产阶段索引更新
+    version: v1
+next_action: 进入 scene-design-builder，优先补白骨精完整设定和妖洞内部轻量场景锁定卡。
 data:
   character_assets:
     - role_name: 孙悟空
@@ -183,6 +243,19 @@ data:
       - 妖洞内部
     new_full_targets:
       - 白骨精
+  asset_lock_file: details/assets/asset_lock_v1.md
+  asset_lock_summary:
+    locked_characters:
+      - 孙悟空
+      - 白骨精
+    locked_scenes:
+      - 山林小路
+      - 妖洞内部
+    locked_props:
+      - 金箍棒
+    downstream_constraints:
+      - 后续设计不得跳过白骨精完整新建路径
+      - 孙悟空只能在既有资产基础上微调，不得改成全新陌生造型
   risk_notes:
     - 若孙悟空微调过度贴近86版外观，可能越过参考边界。
   next_action: 进入 scene-design-builder，优先补白骨精完整设定和妖洞内部轻量场景锁定卡。
@@ -190,6 +263,8 @@ data:
 
 ## 阶段推进建议
 
-- `project_status: assets_checked`
-- `next_stage: scene-design-builder`
-- 顶层不新增全局索引字段
+- `board_updates.state.project_status: assets_checked`
+- `board_updates.state.next_stage: scene-design-builder`
+- `board_updates.stage_index.assets`
+- 黑板不新增全局正文字段，只更新摘要、文件索引和下一步设计动作
+- `files_created` 应显式包含 `details/assets/asset_lock_v*.md`

@@ -6,23 +6,41 @@
 
 ```yaml
 patch_type: scene-publish-review
+stage: scene-publish-review
 version: 1
-status:
+status: pending | in_progress | completed | blocked | skipped
 updated_at:
 summary:
-data:
+board_updates:
+  state:
+  routing:
+  project_config:
+  confirmations:
+  active_versions:
+  stage_index:
+  cross_stage_summary:
+  read_policy:
+files_created:
+  - path:
+    purpose:
+    version:
+files_updated:
+  - path:
+    purpose:
+    version:
+next_action:
 ```
 
 ## 上游输入
 
 本阶段默认消费以下结果：
 
-- `scene-video-prompt-builder`：`prompt_pack_version`、提示词文件路径、`consistency_rules`、`audio_rules`、`readiness_notes`
-- 顶层索引：`performance_style`
+- `scene-video-prompt-builder`：`prompt_pack_version`、提示词交付文件索引、review 结果、`consistency_rules`、`audio_rules`、`readiness_notes`
+- 黑板索引：`project_config.performance_style`、`stage_index.video_prompts.files`、`stage_index.video_prompts.summary`
 
 ## 风格与表达规则
 
-发布文案和复盘摘要应延续顶层 `performance_style` 的中文表达，但正式对外措辞继续使用通用动画电影化语言，不直接写具体品牌名。
+发布文案和复盘摘要应延续`project_config.performance_style` 的中文表达，但正式对外措辞继续使用通用动画电影化语言，不直接写具体品牌名。
 
 例如：
 
@@ -39,11 +57,19 @@ data:
 - 发布后数据复盘
 - 资产沉淀建议
 
-## `data` 结构
+## 阶段正文结构
+
+下文结构用于阶段正式产物文件，例如 `details/`、`outputs/` 或 `inputs/` 中的 primary/handoff 文件；不得直接作为黑板正文回写。黑板只写 `board_updates`、文件索引和摘要。
 
 ```yaml
 data:
   publish_pack_version:
+  source_video_prompt_files:
+    zh_full:
+    en_full:
+    zh_runtime:
+    en_runtime:
+  delivery_readiness_checked: false
   publish_files:
     - file:
       platform:
@@ -62,6 +88,8 @@ data:
 ### 字段说明
 
 - `publish_pack_version`：本次发布物版本号。
+- `source_video_prompt_files`：发布阶段引用的最终视频提示词交付物。默认读取`stage_index.video_prompts.files`。
+- `delivery_readiness_checked`：发布阶段是否已确认 `stage_index.video_prompts.files.quality_check` 指向的 review 文件里 `final_delivery_ready = true`。
 - `publish_files`：标题、封面文案、平台文案等文件列表。
 - `subtitle_or_voice_file`：字幕或配音文案路径。
 - `review_status`：复盘状态，建议使用 `pending / published / reviewed`。
@@ -100,6 +128,8 @@ data:
 
 黑板补丁至少应说明：
 
+- 发布前是否确认视频提示词已通过自动 review
+- 发布阶段引用了哪些最终提示词文件
 - 已生成哪些平台发布物
 - 发布后复盘状态
 - 是否建议沉淀为角色、场景或道具资产
@@ -108,18 +138,34 @@ data:
 
 ## 阻塞规则
 
-- 只要能产出一版可发布文本包，就不应阻塞。
+- 只要能产出一版可发布文本包，且视频提示词已通过自动 review，就不应阻塞。
 - 即使发布后复盘数据还未完整回流，也可以先完成“发布”状态。
+- 若 review 文件中的 `final_delivery_ready != true`，应视为上游未就绪，而不是静默继续发布阶段。
 - 只有在发布表达明显越过风险边界，或最终发布物目录和内容范围无法确定时，才使用 `status: blocked`。
 
 ## 示例
 
 ```yaml
 patch_type: scene-publish-review
+stage: scene-publish-review
 version: 1
 status: completed
 updated_at: 2026-06-01
 summary: 夸张搞笑化（`exaggerated_comedy`）发布文案已生成，发布状态已完成（`published`），待后续补充完整复盘。
+board_updates:
+  state:
+    project_status: published
+  stage_index:
+    publish:
+files_created:
+  - path: outputs/publish_copy/title_cover_v1.md
+    purpose: 发布文案示例
+    version: v1
+files_updated:
+  - path: projects/<project>/PROJECT_BOARD.md
+    purpose: 发布阶段索引更新
+    version: v1
+next_action: 若上线后数据达标，补写 review_v1.md 并推进到 reviewed。
 data:
   publish_pack_version: v1
   publish_files:

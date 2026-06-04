@@ -1,85 +1,354 @@
-# PROJECT_BOARD.md 初始化模板
+# PROJECT_BOARD.md v8 初始化模板
 
-本文件给 `scene-forge` 总控 Skill 使用，作为新建 `projects/<project>/PROJECT_BOARD.md` 时的默认模板。
+本模板用于新建 `projects/<project>/PROJECT_BOARD.md`。
 
 模板原则：
 
-1. `PROJECT_BOARD.md` 是项目唯一状态源。
-2. 黑板只保存顶层索引、跨阶段摘要、确认状态和文件路径，不塞长正文。
-3. 运行时仍禁止读取 `docs/`、`.handoff/`、历史项目输出和其他无关项目目录。
-4. v4 起默认包含 `expressive_animation`。
-5. v5 起默认包含 `storyboard_director_v5`。
-6. v6 起支持 `source_intake`，但完整视频解析必须落盘到 `inputs/source_intake/`。
-7. 所有模板、示例、枚举和资产库 pattern 都是参考锚点，不是封闭集合。
+1. 只使用 v8 轻黑板结构
+2. 不保留旧顶层兼容字段
+3. 黑板只保存状态、索引、摘要、读取策略和确认记录
+4. 完整阶段内容统一落到 `inputs/`、`details/`、`outputs/`
+5. `docs/` 与 `.handoff/` 永远不进入运行时上下文
 
-## v6 source_intake 顶层协议
+## 初始化模板
 
 ```yaml
-source_intake:
-  type:
-  status: pending
-  source_path_or_url:
-  source_summary:
-  source_duration_seconds:
-  source_language_hint:
-  active_version:
-  files:
-    index:
-    analysis:
-    timeline:
-    dialogue:
-    audio:
-    camera:
-    priority_map:
-    adaptation_ideas:
-    topic_gate_handoff:
+project:
+  name:
+  slug:
+  created_at:
+  updated_at:
 
-  topic_gate_handoff_summary:
-    candidate_topic:
-    core_must_keep:
-    highlights_to_consider:
-    optional_to_compress:
-    safe_replacement_notes:
-    adaptation_ideas_summary:
-    risks_or_limits:
+state:
+  project_status: draft
+  next_stage: scene-topic-gate
+  lifecycle_flag: active
+  blocker_note:
 
-  adaptation_ideas_summary:
-    idea_count:
-    recommended_ideas:
-    user_selection_required: true
+routing:
+  current_stage: scene-topic-gate
+  allowed_next_stages:
+    - scene-topic-gate
+  last_completed_stage:
+  route_reason: 新项目初始化，等待进入选题闸门。
 
-  adaptation_selection:
-    status: pending | selected
-    selected_idea_id:
-    selected_title:
-    selection_note:
+runtime_policy:
+  context_policy:
+    mode: minimal
+    allow_docs_scan: false
+    active_protocol_docs:
+      - .agents/skills/scene-forge/references/board-protocol.md
+      - .agents/skills/scene-forge/references/project-board-template.md
+    allowed_runtime_asset_paths: []
+    forbidden_runtime_paths:
+      - docs/
+      - .handoff/
+      - 会话记录_*.md
+      - 历史项目输出
+      - 其他无关项目目录
+    token_budget:
+      default_stage_budget: compact
+      require_reason_for_extra_reads: true
+  reference_policy:
+    templates_are_reference_only: true
+    examples_are_reference_only: true
+    enums_are_open_by_default: true
+    strict_enum_only_when_explicit: true
+    allow_adapted_reference: true
+    allow_custom_generated_option: true
+    require_reason_for_custom_option: true
 
-  assetization:
-    candidate_for_assetization: false
-    reason:
-    suggested_asset_slug:
-    asset_status: none
-    asset_path:
+project_config:
+  score:
+  production_level:
+  reference_type:
+  adaptation_level:
+  performance_style:
+  target_total_duration_seconds:
+  segment_duration_seconds:
 
-  source_asset_ref:
-    asset_id:
-    asset_path:
-    reuse_mode:
+confirmations:
+  topic_confirmed:
+    status: pending
+    note:
+  reference_confirmed:
+    status: pending
+    note:
+  story_confirmed:
+    status: pending
+    note:
+  asset_plan_confirmed:
+    status: pending
+    note:
+  design_confirmed:
+    status: pending
+    note:
+  script_confirmed:
+    status: pending
+    note:
+  performance_confirmed:
+    status: pending
+    note:
+  storyboard_plan_confirmed:
+    status: pending
+    note:
+  audio_plan_confirmed:
+    status: pending
+    note:
+  video_prompt_plan_confirmed:
+    status: pending
+    note:
+  publish_confirmed:
+    status: pending
+    note:
 
-  read_policy:
-    default_read: topic_gate_handoff + priority_map_summary + adaptation_ideas_summary
-    read_full_analysis_only_when_needed: true
-    downstream_must_not_load_all_by_default: true
+active_versions:
+  source_intake:
+  topic:
+  reference:
+  story:
+  assets:
+  design:
+  script:
+  performance:
+  storyboard:
+  audio:
+  video_prompts:
+  publish:
+
+stage_index:
+  source_intake:
+    status: pending
+    active_version:
+    summary:
+    updated_at:
+    files:
+      index:
+      primary:
+      details: []
+      outputs: []
+      handoff:
+      quality_check:
+    read_policy:
+      default_read: []
+      deep_read: []
+      never_read_by_default: []
+    next_action:
+  topic:
+    status: pending
+    active_version:
+    summary:
+    updated_at:
+    files:
+      index:
+      primary:
+      details: []
+      outputs: []
+      handoff:
+      quality_check:
+    read_policy:
+      default_read: []
+      deep_read: []
+      never_read_by_default: []
+    next_action:
+  reference:
+    status: pending
+    active_version:
+    summary:
+    updated_at:
+    files:
+      index:
+      primary:
+      details: []
+      outputs: []
+      handoff:
+      quality_check:
+    read_policy:
+      default_read: []
+      deep_read: []
+      never_read_by_default: []
+    next_action:
+  story:
+    status: pending
+    active_version:
+    summary:
+    updated_at:
+    files:
+      index:
+      primary:
+      details: []
+      outputs: []
+      handoff:
+      quality_check:
+    read_policy:
+      default_read: []
+      deep_read: []
+      never_read_by_default: []
+    next_action:
+  assets:
+    status: pending
+    active_version:
+    summary:
+    updated_at:
+    files:
+      index:
+      primary:
+      details: []
+      outputs: []
+      handoff:
+      quality_check:
+    read_policy:
+      default_read: []
+      deep_read: []
+      never_read_by_default: []
+    next_action:
+  design:
+    status: pending
+    active_version:
+    summary:
+    updated_at:
+    files:
+      index:
+      primary:
+      details: []
+      outputs: []
+      handoff:
+      quality_check:
+    read_policy:
+      default_read: []
+      deep_read: []
+      never_read_by_default: []
+    next_action:
+  script:
+    status: pending
+    active_version:
+    summary:
+    updated_at:
+    files:
+      index:
+      primary:
+      details: []
+      outputs: []
+      handoff:
+      quality_check:
+    read_policy:
+      default_read: []
+      deep_read: []
+      never_read_by_default: []
+    next_action:
+  performance:
+    status: pending
+    active_version:
+    summary:
+    updated_at:
+    files:
+      index:
+      primary:
+      details: []
+      outputs: []
+      handoff:
+      quality_check:
+    read_policy:
+      default_read: []
+      deep_read: []
+      never_read_by_default: []
+    next_action:
+  storyboard:
+    status: pending
+    active_version:
+    summary:
+    updated_at:
+    files:
+      index:
+      primary:
+      details: []
+      outputs: []
+      handoff:
+      quality_check:
+      methodology_config:
+    read_policy:
+      default_read: []
+      deep_read: []
+      never_read_by_default: []
+    next_action:
+  audio:
+    status: pending
+    active_version:
+    summary:
+    updated_at:
+    files:
+      index:
+      primary:
+      details: []
+      outputs: []
+      handoff:
+      quality_check:
+    read_policy:
+      default_read: []
+      deep_read: []
+      never_read_by_default: []
+    next_action:
+  video_prompts:
+    status: pending
+    active_version:
+    summary:
+    updated_at:
+    files:
+      index:
+      primary:
+      details: []
+      outputs: []
+      handoff:
+      quality_check:
+    read_policy:
+      default_read: []
+      deep_read: []
+      never_read_by_default: []
+    next_action:
+  publish:
+    status: pending
+    active_version:
+    summary:
+    updated_at:
+    files:
+      index:
+      primary:
+      details: []
+      outputs: []
+      handoff:
+      quality_check:
+    read_policy:
+      default_read: []
+      deep_read: []
+      never_read_by_default: []
+    next_action:
+
+cross_stage_summary:
+  premise:
+  story_engine:
+  core_characters: []
+  core_scene:
+  key_props: []
+  visual_style:
+  continuity_focus:
+  source_adaptation_mode:
+  current_risks: []
+
+read_policy:
+  default_read:
+    - PROJECT_BOARD.md
+  stage_specific_reads: {}
+  deep_read_requires_reason: true
+
+stage_patches: []
 ```
 
-关键规则：
+## 初始化规则
 
-- 黑板只保存摘要。
-- 不保存完整逐镜头表。
-- 不保存完整台词表。
-- 不保存完整长解析正文。
-- 不保存完整 adaptation ideas 正文。
-- 长解析统一保存到 `inputs/source_intake/`。
-- adaptation ideas 仅保存摘要和文件路径。
-- 用户未选择改写方向前，不进入正式剧本改写阶段。
-- source asset 必须用户确认后才创建。
+- 若项目来自视频源输入，新建黑板后可把：
+  - `state.next_stage` 改为 `scene-video-intake`
+  - `routing.current_stage` 改为 `scene-video-intake`
+  - `routing.allowed_next_stages` 改为 `[scene-video-intake]`
+- 若项目进入 v8 故事板方法论阶段，只允许把 `assets/storyboard-methodology/*` 中实际需要的文件加入 `runtime_policy.context_policy.allowed_runtime_asset_paths`，不得整目录默认深读。
+- 不得预先创建 `source_intake`、`expressive_animation`、`storyboard_director_v5` 等旧顶层大字段。
+- 不得把 `docs/`、`.handoff/`、历史产出目录写入任何默认读取白名单。

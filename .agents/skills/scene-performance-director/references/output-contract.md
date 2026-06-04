@@ -1,14 +1,14 @@
 # scene-performance-director 输出协议
 
-本文件定义 `scene-performance-director` 的输出形态、表演表字段、Hero/Bridge/Blocking/道具状态承接、v4 表现力表演设计、黑板摘要边界和长内容落盘方式。
-
-本协议是通用项目记忆协议，不绑定任何具体样例项目。样例项目暴露的问题只能转译为通用字段与执行规则，不得把样例角色、样例台词、样例站位直接固化进协议。
+本文件定义 `scene-performance-director` 的输出形态、表演表字段、Hero/Bridge/Blocking/道具状态承接、动作/情绪连续性链、表现力扩展表演设计、黑板摘要边界和长内容落盘方式。
 
 ## 阶段定位
 
 `scene-performance-director` 位于：
 
 ```text
+scene-story-development
+-> scene-script-adapter
 scene-script-adapter
 -> scene-performance-director
 -> scene-storyboard-director
@@ -22,7 +22,7 @@ scene-script-adapter
 把文字剧本节拍转化为动画电影级角色表演方案。
 ```
 
-v4 起，本阶段还负责把剧本阶段识别出的 `expressive_beat_opportunities`、`stylized_action_opportunities` 和 `contrast_opportunities` 转化为可拍表演。
+本阶段还负责把剧本阶段识别出的 `expressive_beat_opportunities`、`stylized_action_opportunities` 和 `contrast_opportunities` 转化为可拍表演。
 
 ---
 
@@ -30,11 +30,12 @@ v4 起，本阶段还负责把剧本阶段识别出的 `expressive_beat_opportun
 
 本阶段默认消费以下结果：
 
-- `scene-reference-decider`：参考边界、`must_keep`、`must_avoid`
+- `scene-reference-decider`：参考边界、`must_keep`、`must_avoid`、`creative_direction_context`
+- `scene-story-development`：`story_beats`、`character_functions`、`core_scene_functions`、`key_prop_functions`、`hero_moment_candidates`
 - `scene-design-builder`：角色设定、视觉语言、角色轮廓、表情系统、`expressive_animation_design`、`blocking_map`、`faction_layout`、`prop_state_machines`
-- `scene-script-adapter`：`adaptation_level`、`performance_style`、`story_beats`、`expressive_beat_opportunities`、`stylized_action_opportunities`、`contrast_opportunities`、`script_file`、`storyboard_hints`、`segment_strategy`、`hero_moment_candidates`
-- 顶层索引：`performance_style`、`production_level`、`target_total_duration_seconds`、`segment_duration_seconds`、`segment_strategy`、`expressive_animation`
-- v4 执行期资产库（仅在需要细化动画物理、轻伤尺度或反差表演时按需读取）：
+- `scene-script-adapter`：`adaptation_level`、`performance_style`、`story_beats`、`beat_table`、`video_generation_unit_plan`、`expressive_beat_opportunities`、`stylized_action_opportunities`、`contrast_opportunities`、`script_file`、`storyboard_hints`、`segment_strategy`、`hero_moment_candidates`、`creative_direction_context`
+- 项目配置与阶段索引：`project_config.performance_style`、`project_config.production_level`、`project_config.target_total_duration_seconds`、`project_config.segment_duration_seconds`、上游阶段产出的 `segment_strategy` 与表现力扩展摘要
+- 表现力扩展资产库（仅在需要细化动画物理、轻伤尺度或反差表演时按需读取）：
   - `assets/animation-stylization/effect-library.md`
   - `assets/animation-stylization/contrast-comedy-library.md`
 
@@ -56,20 +57,51 @@ details/performance_sheet_v*.md
 
 ```yaml
 patch_type: scene-performance-director
-version: 3
-status:
+stage: scene-performance-director
+version: 8
+status: pending | in_progress | completed | blocked | skipped
 updated_at:
 summary:
-data:
+board_updates:
+  state:
+  routing:
+  project_config:
+  confirmations:
+  active_versions:
+  stage_index:
+  cross_stage_summary:
+  read_policy:
+files_created:
+  - path:
+    purpose:
+    version:
+files_updated:
+  - path:
+    purpose:
+    version:
+next_action:
 ```
 
 ---
 
-# 四、`data` 结构
+# 四、阶段正文结构
+
+下文结构用于表演阶段 primary / handoff 正文文件；不得直接作为黑板正文回写。黑板只写 `board_updates`、文件索引和摘要。
 
 ```yaml
 data:
   performance_version:
+  script_strategy:
+    status:
+    mode:
+  creative_direction_context:
+    script_mode:
+    selected_adaptation:
+      status:
+      selected_idea_id:
+      selected_title:
+      selection_note:
+    downstream_rule:
   performance_style:
   expressive_animation_inheritance:
     enabled:
@@ -160,6 +192,22 @@ data:
       comedic_timing:
       forbidden_realistic_focus:
       recovery_or_settle:
+  action_continuity_chains:
+    - chain_id:
+      source_beats:
+        - beat_id:
+      involved_characters:
+      carry_over_action:
+      handoff_signal:
+      break_risk:
+  emotion_continuity_chains:
+    - chain_id:
+      source_beats:
+        - beat_id:
+      involved_characters:
+      emotion_arc:
+      carry_over_expression:
+      reset_risk:
   continuity_rules:
     character_performance_consistency:
     emotional_progression:
@@ -190,8 +238,10 @@ data:
 # 五、字段说明
 
 - `performance_version`：本次表演设计版本号。
-- `performance_style`：继承并细化顶层 `performance_style`。
-- `expressive_animation_inheritance`：继承顶层 `expressive_animation` 的摘要。
+- `script_strategy`：本次项目是改写剧本还是使用原始剧本。
+- `creative_direction_context`：表演阶段必须继承的统一创作方向上下文。
+- `performance_style`：继承并细化`project_config.performance_style`。
+- `expressive_animation_inheritance`：继承设计或剧本阶段提供的表现力扩展摘要。
 - `performance_sheet_path`：完整表演表路径。
 - `character_performance_profiles`：角色级表演档案。
 - `expressive_physics_capacity`：角色可以承受何种动画物理变形，以及如何恢复。
@@ -200,18 +250,34 @@ data:
 - `blocking_behavior`：角色在空间调度中的行为习惯，例如是否主动逼近、保持阵营侧、回避某个区域。
 - `prop_interaction_behavior`：角色与关键道具交互时的表演动作和安全边界。
 - `beat_performance_notes`：按 Story Beat 输出表演设计。
-- `expressive_performance`：Beat 级 v4 表现力表演设计摘要。
+- `expressive_performance`：Beat 级表现力扩展表演设计摘要。
 - `physical_comedy_performance`：专门记录动画物理动作表演，必须覆盖前摇、冲击/揭示、变形/反差动作、停顿、恢复。
 - `contrast_performance`：专门记录反差喜剧表演，例如先藏后露、一本正经、类型片误导、群体反应衬托。
 - `injury_reaction_performance`：专门记录轻中度卡通伤害表演。
+- `action_continuity_chains`：供分镜和视频提示词继承的动作连续性链，说明哪些动作必须跨 Beat / Segment 延续。
+- `emotion_continuity_chains`：供分镜和视频提示词继承的情绪连续性链，说明哪些情绪弧线不能在镜头交接时断掉。
 - `potential_hero_support`：该 Beat 是否需要表演层强化，以支持后续 Hero Shot。
 - `bridge_performance_hook`：该 Beat 交给下一 Beat 或 Segment 的表演钩子，例如视线、停顿、动作余势。
 - `blocking_note`：该 Beat 中角色站位和移动边界。
 - `prop_state_note`：该 Beat 中关键道具状态与表演交互。
-- `continuity_rules`：表演、手势、情绪、站位、道具交互和 v4 表现力连续性约束。
+- `continuity_rules`：表演、手势、情绪、站位、道具交互和表现力扩展连续性约束。
 - `storyboard_handoff`：交给 `scene-storyboard-director` 的镜头提示。
 - `risk_notes`：风险提示列表。
 - `next_action`：下一阶段执行提示。
+
+## 创作方向继承规则
+
+表演阶段必须继承：
+
+```yaml
+creative_direction_context:
+  script_mode: rewrite_adaptation | preserve_original
+```
+
+规则：
+
+- `rewrite_adaptation`：表演服务已选改写方向。
+- `preserve_original`：表演服务原始剧情/桥段保留，不得再发散新的改写方向。
 
 每个主要角色至少需要覆盖：
 
@@ -225,9 +291,9 @@ data:
 - 喜剧反应规则
 - 空间调度行为
 - 关键道具交互行为（如适用）
-- 动画物理承受度（如启用 v4）
-- 卡通轻伤反应规则（如启用 v4）
-- 反差表演画像（如启用 v4）
+- 动画物理承受度（如启用表现力扩展）
+- 卡通轻伤反应规则（如启用表现力扩展）
+- 反差表演画像（如启用表现力扩展）
 
 每个关键 Beat 至少需要说明：
 
@@ -302,7 +368,7 @@ payoff
 settle
 ```
 
-## 5. v4 动画物理表演必须有完整节奏
+## 5. 动画物理表演必须有完整节奏
 
 使用动画物理时，必须写清楚：
 
@@ -365,7 +431,7 @@ anticipation → impact → deformation → hold → recovery / settle
 - 哪些 Beat 使用轻中度卡通伤害反应
 - 哪些 Beat 使用反差喜剧表演
 - 给分镜阶段的镜头化建议
-- v4 表现力连续性规则
+- 表现力扩展连续性规则
 
 ---
 
@@ -375,6 +441,8 @@ anticipation → impact → deformation → hold → recovery / settle
 
 ```text
 details/performance_sheet_v*.md
+details/performance/action_continuity_chains_v*.md
+details/performance/emotion_continuity_chains_v*.md
 ```
 
 黑板只保留摘要和路径，不直接塞完整表演表正文。

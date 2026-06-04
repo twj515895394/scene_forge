@@ -6,18 +6,48 @@
 
 ```yaml
 patch_type: scene-topic-gate
+stage: scene-topic-gate
 version: 1
-status:
+status: pending | in_progress | completed | blocked | skipped
 updated_at:
 summary:
-data:
+board_updates:
+  state:
+  routing:
+  project_config:
+  confirmations:
+  active_versions:
+  stage_index:
+  cross_stage_summary:
+  read_policy:
+files_created:
+  - path:
+    purpose:
+    version:
+files_updated:
+  - path:
+    purpose:
+    version:
+next_action:
 ```
 
-## `data` 结构
+## 阶段正文结构
+
+下文结构用于阶段正式产物文件，例如 `details/`、`outputs/` 或 `inputs/` 中的 primary/handoff 文件；不得直接作为黑板正文回写。黑板只写 `board_updates`、文件索引和摘要。
 
 ```yaml
 data:
   topic_name:
+  script_strategy:
+    status:
+    mode:
+  creative_direction_context:
+    script_mode:
+    selected_adaptation:
+      status:
+      selected_idea_id:
+      selected_title:
+      selection_note:
   source_material:
     source_type:
     source_name:
@@ -34,6 +64,7 @@ data:
     highlights_to_consider:
     optional_to_compress:
     safe_replacement_notes:
+    adaptation_ideas_summary:
     risks_or_limits:
   assetization_recommendation:
     candidate_for_assetization: true | false | uncertain
@@ -75,6 +106,7 @@ source_intake:
   files:
     topic_gate_handoff:
     priority_map:
+    adaptation_ideas:
 ```
 
 则本阶段优先读取：
@@ -89,6 +121,15 @@ inputs/source_intake/source_video_priority_map_v1.md
 ```text
 inputs/source_intake/source_intake_index_v1.md
 ```
+
+如果顶层：
+
+```yaml
+script_strategy:
+  mode: rewrite_adaptation | preserve_original
+```
+
+则本阶段还必须读取该字段，并生成统一的 `creative_direction_context`。
 
 不应默认读取完整：
 
@@ -126,7 +167,7 @@ source_video_timeline_v1.md
 
 说明：
 
-- 这是选题阶段的建议值，不直接写入顶层 `performance_style`
+- 这是选题阶段的建议值，不直接写入`project_config.performance_style`
 - 最终 `performance_style` 由 `scene-script-adapter` 确认
 
 除非字段明确写明 `strict_enum: true`，否则枚举仍遵守 `reference_policy` 的开放参考原则。
@@ -171,31 +212,34 @@ source_video_timeline_v1.md
 - `40-59`：观察池
 - `<40`：放弃池
 
-## 顶层状态推进
+## 黑板回写建议
 
 ### `decision = go`
 
-- `project_status: topic_scored`
-- `next_stage: scene-reference-decider`
-- 顶层写入 `score`
-- 顶层写入 `production_level`
-- `lifecycle_flag: active`
+- `board_updates.state.project_status: topic_scored`
+- `board_updates.state.next_stage: scene-reference-decider`
+- `board_updates.state.lifecycle_flag: active`
+- `board_updates.project_config.score`
+- `board_updates.project_config.production_level`
+- `board_updates.stage_index.topic`
 
 ### `decision = observe`
 
-- `project_status: topic_scored`
-- `next_stage` 留空
-- 顶层写入 `score`
-- `production_level` 留空
-- `lifecycle_flag: active`
+- `board_updates.state.project_status: topic_scored`
+- `board_updates.state.next_stage` 留空
+- `board_updates.state.lifecycle_flag: active`
+- `board_updates.project_config.score`
+- `board_updates.project_config.production_level` 留空
+- `board_updates.stage_index.topic`
 
 ### `decision = drop`
 
-- `project_status: topic_scored`
-- `next_stage` 留空
-- 顶层写入 `score`
-- `production_level` 留空
-- `lifecycle_flag: abandoned`
+- `board_updates.state.project_status: topic_scored`
+- `board_updates.state.next_stage` 留空
+- `board_updates.state.lifecycle_flag: abandoned`
+- `board_updates.project_config.score`
+- `board_updates.project_config.production_level` 留空
+- `board_updates.stage_index.topic`
 
 ## source asset 约束
 
@@ -214,3 +258,37 @@ assetization_recommendation:
 ```
 
 资产化必须由用户明确确认后再执行。
+
+## 剧本模式规则
+
+本阶段产出 `decision = go` 后，不直接决定进入 `scene-reference-decider`。总控必须先确认：
+
+```yaml
+script_strategy:
+  status: selected
+  mode: rewrite_adaptation | preserve_original
+```
+
+`creative_direction_context` 规则：
+
+- `rewrite_adaptation`：
+  - 若项目来自视频源并准备继续推进，则必须先完成 adaptation idea 选择。
+  - 进入 `scene-reference-decider` 后，`selected_adaptation.status` 只能为 `selected`。
+- `preserve_original`：
+  - `selected_adaptation.status = bypassed`
+  - adaptation ideas 仅作参考，不得作为阻塞条件。
+
+建议输出结构：
+
+```yaml
+script_strategy:
+  status: pending | selected
+  mode: rewrite_adaptation | preserve_original
+creative_direction_context:
+  script_mode: rewrite_adaptation | preserve_original
+  selected_adaptation:
+    status: selected | bypassed | not_applicable
+    selected_idea_id:
+    selected_title:
+    selection_note:
+```
