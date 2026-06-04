@@ -260,6 +260,7 @@ data:
 - `design_notes_for_downstream`：把表现力扩展策略交给后续剧本、表演、分镜和视频提示词阶段继承。
 - `character_designs`：角色级锁定卡、角色说明书和图片生成 prompt 路径。
 - `character_bible_file`：单角色角色说明书正文，默认写入 `details/角色说明书_角色名_v*.md`。
+- `character_bible_file` 同时也是角色说明书图片最终提示词的最高规范源；最终提示词允许按生成需要重组，但不得比该正文更弱、更短或更失真。
 - `prompt_target`：默认应为 `character_bible_sheet`，表示目标不是概念海报，而是角色说明书板。
 - `sheet_requirements`：角色说明书板结构要求；默认允许板块标题、编号和说明文字。
 - `scene_designs`：场景级锁定卡与设定图 prompt 路径。
@@ -384,11 +385,19 @@ creative_direction_context:
 - `outputs/design_prompts/prop_prompts_v*.md`
 - `outputs/design_prompts/master_scene_prop_reference_v*.md`
 
+其中：
+
+- `角色说明书图片提示词_v*.md` 应作为可直接复制使用的长版最终提示词。
+- 它必须以对应角色的 `details/角色说明书_角色名_v*.md` 为最高规范源。
+- 允许把说明书内容重组为更适合生成的顺序，但不应压缩成丢失结构的短 prompt。
+- 不默认按模型拆分多个版本，也不默认生成偏 Midjourney/SD 的兼容压缩稿作为主交付。
+
 ## prompt 文档语言规范
 
 - 角色说明书图片 prompt 文档默认以中文为主。
 - 结构说明、角色描述、场景描述、负向约束优先使用中文。
 - 英文只作为锚词、风格词和板式名词的辅助，不单独派生纯英文主交付。
+- 最终提示词应保证“拿起即可复制使用”，而不是要求用户再从设计稿二次提炼。
 
 ## 生成 prompt 与对外文案的风格口径
 
