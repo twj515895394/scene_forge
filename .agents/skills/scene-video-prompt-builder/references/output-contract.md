@@ -387,6 +387,22 @@ data:
     mode: control_primary_style_secondary
     control_board_role:
     styled_board_role:
+    sequential_keyframe_reference: true
+    preserve_storyboard_progression:
+      beat_progression:
+      camera_rhythm:
+      composition_logic:
+      action_choreography:
+      spatial_relationships:
+      emotional_progression:
+      key_pose_readability:
+      anticipation_and_release:
+    inbetween_motion_expansion:
+      preserve_key_pose_direction: true
+      preserve_performance_timing: true
+      expand_to_cinematic_animation: true
+    scene_lock_rule:
+    character_reappearance_lock:
     do_not_render_storyboard_artifacts: true
   prompt_trace:
     - segment_id:
@@ -508,6 +524,10 @@ data:
 - `segment_continuity`：每段开头如何承接上一段、结尾如何交给下一段。
 - `segment_continuity.primary_vgu_ids`：该段主要由哪些视频生成单元驱动，避免末端退化成只看 `segments` 的旧结构。
 - `storyboard_reference_usage`：说明控制版 / 风格版故事板在本阶段如何使用，以及必须排除哪些故事板版式痕迹。
+- `storyboard_reference_usage.sequential_keyframe_reference`：若上游存在故事板总板或故事板包，应把它视为顺序视觉关键帧参考，而不是松散灵感图参考。
+- `preserve_storyboard_progression`：最终视频提示词必须显式继承的故事板推进维度，包括节拍推进、镜头节奏、构图逻辑、动作编排、空间关系、情绪递进、关键姿势可读性以及预备动作/发力/反应/收势逻辑。
+- `inbetween_motion_expansion`：说明最终视频不是逐格硬切，而是要在相邻故事板关键姿势之间扩展出流畅、连续、电影化的动作过渡。
+- `scene_lock_rule` / `character_reappearance_lock`：同一连续场景段默认保持同一主场景空间锚点；同一角色重复出现时必须保持同一角色设计，不得无因重复、增殖、替换或漂移。
 - `prompt_trace`：记录最终每段提示词到底继承了哪些上游信息，避免末端过度压缩后无法反查。
 - `source_video_generation_units` / `source_shot_continuity` / `source_anchor_frames`：把最终每段 prompt 对应的分镜控制单元、镜头交接和锚帧来源记清，防止末端断链。
 - `expressive_animation_prompting`：表现力扩展提示词写入计划，分为全局口径和每段口径。
@@ -610,6 +630,14 @@ segment_prompt:
   emotion_chain_continuity:
   next_handoff:
   reference_images:
+  storyboard_translation_rule:
+    sequential_keyframe_reference:
+    preserve_storyboard_progression:
+    inbetween_motion_expansion:
+    readability_priority:
+    do_not_render_storyboard_artifacts:
+    scene_lock_rule:
+    character_reappearance_lock:
   negative_constraints:
   shot_plan:
     - shot_id:
@@ -662,6 +690,7 @@ segment_prompt:
 - `vfx_support` 写尘雾、速度线、冲击环、星星等是否使用，以及密度边界。
 - `expressive_audio` 写 boing、bonk、puff、小铃铛、静默等声音钩子。
 - `foley_direction`、`music_direction`、`ambience_direction`、`silence_or_pause` 必须继承 audio plan。
+- `storyboard_translation_rule` 用于把故事板驱动规则直接写进最终视频提示词正文：说明本段如何把上游故事板当作顺序视觉关键帧参考、保留哪些推进维度、如何在相邻关键姿势之间扩展出电影化动作、如何确保画面可读性，以及哪些故事板版式痕迹不得渲染。
 - `continuity_in` 和 `continuity_out` 必须确保多个 10 秒/15 秒 Segment 可以拼接成完整视频。
 - `related_shot_continuity_refs`、`shot_plan[].shot_continuity` 和 `next_handoff` 必须同源，确保镜头交接不是在末端临时脑补。
 - `opening_anchor_reference` / `closing_anchor_reference` 用于显式承接分镜阶段的起止锚帧，避免跨段首尾漂移。
@@ -674,6 +703,7 @@ segment_prompt:
 - `action_chain_continuity` / `emotion_chain_continuity` 必须显式承接上游连续性链，避免动作对不上或情绪断档。
 - `next_handoff` 必须说明给下一段留下的动作、视线、声音、镜头语言或道具状态钩子。
 - `shot_plan` 是导演长版内部的强结构要求。导演长版不得退化成“10 秒一段的大 Prompt”，而必须显式写出每个 Shot 的时间码、所属 VGU、镜头交接重点和逐镜头站位承接。
+- `storyboard_translation_rule.readability_priority` 应使用题材无关的表达，例如画面可读性、动作清晰度、角色轮廓识别、空间稳定性和表演时机准确性；不要把这层总规则写窄成只服务喜剧的 timing 要求。
 
 每个 Segment 还应提供一个“可直接复制使用块”，默认按以下顺序组织：
 
