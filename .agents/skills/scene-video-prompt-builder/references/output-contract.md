@@ -107,7 +107,7 @@ next_action:
 - `scene-story-development`：`story_beats`、`hero_moment_candidates`、`ending_payoff`
 - `scene-performance-director`：`performance_sheet_path`、角色表演档案、Beat 表演重点、`physical_comedy_performance`、`contrast_performance`、`injury_reaction_performance`、表演连续性规则
 - `scene-audio-director`：`audio_plan_path`、`music_prompt_path`、`foley_prompt_path`、`audio_mix_plan_path`、`segment_audio_plan`、`expressive_audio_design`、`video_prompt_handoff`
-- `scene-design-builder`：角色与场景设定摘要、全场景资产总参考图 prompt、视觉语言和一致性锚点、`expressive_animation_design`
+- `scene-design-builder`：角色与场景设定摘要、全场景资产总参考图 prompt、空间站位图 prompt、视觉语言和一致性锚点、`expressive_animation_design`
 - 项目配置与阶段索引：`project_config.performance_style`、`project_config.segment_duration_seconds`、`project_config.target_total_duration_seconds`、上游阶段产出的 `segment_strategy`、表现力扩展摘要和分镜方法论摘要
 - 表现力扩展资产库（仅在需要统一正向/负向口径时按需读取）：
   - `assets/animation-stylization/effect-library.md`
@@ -285,6 +285,18 @@ data:
   video_prompt_files:
     zh_full:
     en_full:
+    zh_segment_copy_ready:
+      - segment_id:
+        file:
+        includes_global_render_rules: true
+        includes_technical_control_block: true
+        includes_zh_natural_language_prompt: true
+    en_segment_copy_ready:
+      - segment_id:
+        file:
+        includes_global_render_rules: true
+        includes_technical_control_block: true
+        includes_en_natural_language_prompt: true
   reference_assets:
     character_design_refs:
     scene_prop_master_ref:
@@ -468,11 +480,12 @@ data:
 - `storyboard_prompt_pack_mode`：上游故事板 prompt 是单包还是多包。本阶段若看到多包模式，必须消费全部相关 pack。
 - `video_prompt_review`：自动 review 与自动修复结果；只有 `final_delivery_ready: true` 时，才算真正可交付。
 - `video_prompt_files`：最终交付文件路径。默认必须支持中文 / 英文双份导演长版；运行时强结构直接内嵌在导演长版正文中。
+- `video_prompt_files.zh_segment_copy_ready` / `video_prompt_files.en_segment_copy_ready`：每个 Segment 的可直接复制使用块。默认用于按 10 秒一段生成视频时的直接交付；每个文件或区块都应自带全局生成与渲染规则、当前 Segment 的结构化控制参数、以及对应语言的导演长版自然语言提示词。
 - `reference_assets`：生成视频时需要一并喂给模型的角色说明书、全场景资产总参考图、故事板图、表演表和声音方案来源。
 - `control_storyboard_files` / `styled_storyboard_files`：分镜阶段落盘的同源双版故事板主产物。视频提示词阶段应优先消费它们，再结合对应 prompt 文件和参考图，不应只读故事板 prompt 文件。
 - `control_storyboard_refs` / `styled_storyboard_refs`：同源双版故事板参考路径。控制版负责结构和构图锚定，风格版负责材质、光感和氛围边界。
 - `methodology_refs`：当前提示词真正使用到的 Beat Skeleton、视频生成单元、镜头交接、连续性控制和模型适配文件。
-- `storyboard_prompt_pack_refs`：当上游故事板拆成多包时，用于记录每个 pack 的路径和覆盖范围，防止末端漏读。
+- `storyboard_prompt_pack_refs`：当上游故事板拆成多包时，用于记录每个中文整板故事板总板 pack 的路径和覆盖范围，辅助校对镜头画面层、控制轨道和对白轨是否与内部控制链一致，并防止末端漏读；它不替代控制版故事板主产物。
 - `reference_image_plan`：多图参考使用顺序和每段所需参考图。
 - `consistency_rules`：角色、场景、表演、运动、声音、站位、道具状态、表现力扩展和镜头语言连续性约束摘要。
 - `storyboard_anchor_continuity`：锚帧和连续性控制链如何跨段保持稳定。
@@ -646,6 +659,16 @@ segment_prompt:
 - `next_handoff` 必须说明给下一段留下的动作、视线、声音、镜头语言或道具状态钩子。
 - `shot_plan` 是导演长版内部的强结构要求。导演长版不得退化成“10 秒一段的大 Prompt”，而必须显式写出每个 Shot 的时间码、所属 VGU、镜头交接重点和逐镜头站位承接。
 
+每个 Segment 还应提供一个“可直接复制使用块”，默认按以下顺序组织：
+
+```text
+1. 全局生成与渲染规则
+2. 当前 Segment 的结构化控制参数（Technical Control Block）
+3. 当前 Segment 的导演长版自然语言提示词
+```
+
+这个“可直接复制使用块”是给用户按段直接投喂外部视频模型使用的，不应混入其他 Segment、英文版正文、review 日志或实现说明。
+
 ## 自动 review 与 auto-fix 规则
 
 自动 review 至少检查：
@@ -657,6 +680,7 @@ segment_prompt:
 - 每个 Segment 是否显式继承 `primary_vgu_ids`
 - 每个 Segment 是否显式声明 `dialogue_plan.has_dialogue`
 - 仅当上游已有对白设计时，Segment 是否写出 `dialogue_plan.speakers[].dialogue_text`
+- 每个 Segment 是否提供完整的可直接复制使用块
 - `related_shot_continuity_refs` 与 `shot_plan[].shot_continuity` 是否完整且同源
 - `blocking_execution` / `prop_state_execution` 是否完整
 - `shot_plan[].screen_positioning` 是否完整

@@ -22,7 +22,7 @@ story_beats / performance_sheet / source_intake_constraints
 1. 先把剧本、source intake 约束和表演压成 Beat Skeleton，明确每个 Beat 的功能、节奏、信息释放和建议镜头数。
 2. 再把 Beat Skeleton 拆成可拍内容单元，并同步落专业影视镜头语言。
 3. 再以 Beat Skeleton 和镜头语言为主驱动生成视频生成单元、镜头交接、锚帧和四线连续性控制。
-4. 最后生成分镜、双版故事板 prompt、声音交接和视频 prompt 交接。
+4. 最后生成分镜、双版故事板主产物、可直接投喂生图模型的中文整板故事板总板 prompt、声音交接和视频 prompt 交接。
 
 黑板记录分镜摘要、分段信息、方法论配置路径、故事板 prompt 路径、Hero Shot、Bridge Shot、视频生成单元摘要、source intake 镜头继承说明和连续性规则，完整分镜另行落盘。
 
@@ -81,12 +81,13 @@ story_beats / performance_sheet / source_intake_constraints
 21. 对动画物理镜头，必须镜头化 setup / impact / deformation / hold / recovery。
 22. 对反差喜剧镜头，必须镜头化 setup / conceal / reveal / hold / continue。
 23. 对轻中度卡通伤害镜头，必须明确 injury_visibility、喜剧化呈现方式和禁止的写实伤害边界。
-24. 产出“每段覆盖哪些镜头和 Story Beat”的 Segment Plan，并分别落同源双版故事板主产物与控制版 / 风格版故事板 prompt 文件。
-25. 如果 `total_shots > 20`，或 `target_total_duration_seconds > 90`，默认推荐拆成多个故事板 prompt 包，不把全部镜头硬塞进一个故事板 prompt。
-26. 拆分多个故事板 prompt 包时，优先按连续戏剧单元、场景块或段落块拆，而不是机械平均分镜头数。
-27. 将完整分镜写入 `details/分镜清单_v*.md`，并把 `beat_skeleton`、`video_generation_units`、`shot_continuity_plan`、空间连续性图、动作/情绪连续性链、同源双版故事板主产物、故事板质量检查分别落到 `details/storyboard/` 或 `outputs/storyboard_prompts/`；黑板只记录版本、索引、摘要和关键连续性规则。
-28. 输出单个 YAML 补丁块；`summary` 使用中文，必要时附英文参数值。
-29. 将状态推进建议交回总控 Skill，进入 `scene-audio-director`。
+24. 产出“每段覆盖哪些镜头和 Story Beat”的 Segment Plan，并分别落同源双版故事板主产物与控制版 / 风格版故事板生成 prompt 文件，同时产出可直接整份复制给 `gpt-image2` 的中文整板故事板总板 prompt。
+25. 进入“中文整板故事板总板 prompt”模式后，默认单板最大承载量为 `12` 格；如果 `total_shots > 12`，必须拆成多个故事板 prompt 包，不把全部镜头硬塞进一张总板。
+26. 如果 `total_shots > 20`，或 `target_total_duration_seconds > 90`，即使单镜头信息密度较低，也默认推荐进一步拆成多个故事板 prompt 包。
+27. 拆分多个故事板 prompt 包时，优先按连续戏剧单元、场景块或段落块拆，而不是机械平均分镜头数。
+28. 将完整分镜写入 `details/分镜清单_v*.md`，并把 `beat_skeleton`、`video_generation_units`、`shot_continuity_plan`、空间连续性图、动作/情绪连续性链、同源双版故事板主产物、故事板质量检查分别落到 `details/storyboard/` 或 `outputs/storyboard_prompts/`；`outputs/storyboard_prompts/` 下的主交付是中文整板故事板总板 prompt，要求整份可直接复制给 `gpt-image2` 使用；黑板只记录版本、索引、摘要和关键连续性规则。
+29. 输出单个 YAML 补丁块；`summary` 使用中文，必要时附英文参数值。
+30. 将状态推进建议交回总控 Skill，进入 `scene-audio-director`。
 
 ## source_intake 分镜继承规则
 
@@ -131,14 +132,19 @@ source_intake_storyboard_use:
 - 一个 Segment 可以包含多个 Shot；一个 Story Beat 可以跨多个 content unit、Shot 或 Segment。
 - 不允许把“每段 10 秒”误当成“每段只能有一个镜头”；若 5 秒或 10 秒内存在多个必要镜头，应正常拆开。
 - 默认按 10 秒 Segment 进行技术分段；只有在镜头密度过高、动作和台词承载不下时，才在用户确认后改为 15 秒或混合分段。
-- 当 `total_shots > 20`，或 `target_total_duration_seconds > 90` 时，默认推荐拆成多个故事板 prompt 包，以避免单个故事板包过粗、镜头设计失真。
+- 当故事板主交付为“中文整板故事板总板 prompt”时，默认单板最大承载量为 `12` 格；`total_shots > 12` 时必须拆成多个 pack，以避免单板信息密度过高、控制轨道失真或画面可读性下降。
+- 当 `total_shots > 20`，或 `target_total_duration_seconds > 90` 时，默认推荐进一步拆成更多故事板 prompt 包，以避免单个故事板包过粗、镜头设计失真。
 - `video_generation_units` 是故事板运行时主驱动，`segments` 只是最终交付切片；不允许继续用 `segments` 反向主导 Beat、镜头和连续性设计。
 - `shot_continuity_plan` 必须显式写清每个关键镜头如何承接上一镜头、如何把动作 / 情绪 / 空间交给下一镜头，不能只写“镜头摘要”。
 - 必须输出开头/结尾锚帧、空间连续性图、动作连续性链和情绪连续性链，降低后续视频模型跨段漂移。
 - 必须输出 `continuity_control_system`，显式覆盖 rhythm / action / emotion / space 四条连续性控制线。
 - 必须产出同源双版故事板主产物：控制版负责视频生成控制链，风格版负责风格层表达；两者都不能退化成“只有 prompt 文件”。
 - 故事板 prompt 由本阶段产出，供用户在外部平台生成故事板图；本阶段不得声称已生成故事板图片。
-- 控制版 / 风格版故事板 prompt 必须同源，只允许风格层表达不同，不允许叙事结构和镜头职责漂移。
+- `storyboard_prompt_files` 的主交付不是旧式平台 prompt 清单，而是中文整板故事板总板 prompt：整份文档应可直接复制给 `gpt-image2`，同时包含分镜画面要求与控制轨道要求。
+- 控制版 / 风格版故事板生成 prompt 必须同源，只允许风格层表达不同，不允许叙事结构和镜头职责漂移。
+- 故事板总板默认继承项目设计阶段已经确认的正式视觉风格；除非用户明确要求草稿 / 线稿 / 灰模风格，否则不得默认降级为草稿式故事板。
+- 故事板总板的控制面默认使用中文，至少覆盖节拍线、镜头路径、动作路径、节奏轨、升级曲线、状态轨、风格轨；若上游剧本或分镜明确存在对白设计，还应加入中文对白轨。
+- 故事板总板的版式必须优先保证镜头画面区可读：默认采用 `3 x 4` 的 12 格镜头区时，镜头画面区应占整板约 `70% ~ 80%` 的纵向空间，底部控制轨道区只占约 `20% ~ 30%`，不得让控制面反向压缩镜头画面可读性。
 - 必须显式标记 `hero_shot` / `hero_moment`，说明该镜头为什么是看点、服务哪个情绪或反转。
 - 必须显式设计 `bridge_shot` / 桥接分镜，用于解决 Segment 之间的动作、视线、声音和空间衔接。
 - 动画物理镜头必须包含可看清的停顿，不要把所有动作压成一团快节奏。

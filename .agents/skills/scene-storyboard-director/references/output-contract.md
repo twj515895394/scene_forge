@@ -1,6 +1,6 @@
 # scene-storyboard-director 输出协议
 
-本文件定义 `scene-storyboard-director` 的分镜字段、三层时间模型、分段规则、视频生成单元、开头/结尾锚帧、连续性控制、Hero Shot、Bridge Shot、Blocking/Faction 连续性、双版故事板 prompt，以及面向 `scene-video-prompt-builder` 的执行级交接结构。
+本文件定义 `scene-storyboard-director` 的分镜字段、三层时间模型、分段规则、视频生成单元、开头/结尾锚帧、连续性控制、Hero Shot、Bridge Shot、Blocking/Faction 连续性、双版故事板主产物、中文整板故事板总板 prompt，以及面向 `scene-video-prompt-builder` 的执行级交接结构。
 
 ## 阶段定位
 
@@ -18,7 +18,7 @@ scene-performance-director
 
 本阶段负责把动画物理表演、轻中度卡通伤害反应和反差喜剧表演镜头化。
 
-本阶段必须先把剧本与表演压成 `beat_skeleton`，再拆成可拍的 `storyboard_content_breakdown`，随后生成 `cinematic_language_plan`、`video_generation_units`、`shot_continuity_plan` 与四线连续性控制结构，最后从这些主结构派生 `shot_highlights`、完整 shotlist 和双版故事板 prompt。
+本阶段必须先把剧本与表演压成 `beat_skeleton`，再拆成可拍的 `storyboard_content_breakdown`，随后生成 `cinematic_language_plan`、`video_generation_units`、`shot_continuity_plan` 与四线连续性控制结构，最后从这些主结构派生 `shot_highlights`、完整 shotlist、同源双版故事板主产物和中文整板故事板总板 prompt。
 
 本阶段还必须把 Blocking / Faction / Prop State 从“可读说明”提升为“末端可执行交接结构”，确保最终视频提示词阶段能直接继承。
 
@@ -91,7 +91,7 @@ next_action:
 - `scene-script-adapter`：`adaptation_level`、`performance_style`、`story_beats`、`beat_table`、`video_generation_unit_plan`、`expressive_beat_opportunities`、`storyboard_hints`、`hero_moment_candidates`、`segment_strategy`、`creative_direction_context`
 - `scene-story-development`：已确认的 `story_beats`、`character_functions`、`core_scene_functions`、`key_prop_functions`
 - `scene-performance-director`：`performance_sheet_path`、角色表演档案、Beat 表演重点、`physical_comedy_performance`、`contrast_performance`、`injury_reaction_performance`、`action_continuity_chains`、`emotion_continuity_chains`、表演连续性规则
-- `scene-design-builder`：角色与场景设定摘要、视觉语言和一致性锚点、`expressive_animation_design`、`space_continuity_seed`、`blocking_map`、`faction_layout`、`prop_state_machines`
+- `scene-design-builder`：角色与场景设定摘要、视觉语言和一致性锚点、`expressive_animation_design`、`space_continuity_seed`、`space_blocking_reference`、`blocking_map`、`faction_layout`、`prop_state_machines`
 - 项目配置与阶段索引：`project_config.performance_style`、`project_config.segment_duration_seconds`、`project_config.target_total_duration_seconds`、上游阶段产出的 `segment_strategy`、表现力扩展摘要和分镜方法论摘要
 - 表现力扩展资产库（仅在需要镜头化动画物理、轻伤尺度或反差 reveal 时按需读取）：
   - `assets/animation-stylization/effect-library.md`
@@ -175,7 +175,8 @@ Segment Duration
 - 一个 Story Beat 也可以跨多个 Segment，但必须写清 `continuity_in` 和 `continuity_out`
 - Segment 之间如存在动作、视线、空间、声音、镜头语言或道具状态断点，必须补充 `bridge_shots`
 - `segment_duration_seconds` 是技术生成分段，不是镜头数量上限
-- 当 `total_shots > 20`，或 `target_total_duration_seconds > 90` 时，默认推荐拆成多个故事板 prompt 包
+- 当故事板主交付为“中文整板故事板总板 prompt”时，默认单板最大承载量为 `12` 格；`total_shots > 12` 时必须拆成多个故事板 prompt 包
+- 当 `total_shots > 20`，或 `target_total_duration_seconds > 90` 时，默认推荐进一步拆成更多故事板 prompt 包
 
 ---
 
@@ -638,6 +639,24 @@ data:
     - file:
       purpose:
       pack_id:
+      delivery_mode: whole_board_direct_copy_for_gpt_image2
+      primary_language: zh-CN
+      board_visual_style: project_default_formal | user_requested_sketch
+      board_layout: multi_panel_total_board
+      preferred_panel_grid: 3x4_when_twelve_panels
+      visual_area_priority:
+        storyboard_panel_area_ratio: 70_to_80_percent
+        control_track_area_ratio: 20_to_30_percent
+        keep_panels_larger_than_control_tracks: true
+      control_tracks:
+        - beat_line
+        - camera_path
+        - action_path
+        - rhythm_track
+        - escalation_map
+        - state_track
+        - style_track
+        - dialogue_track
       covered_segments:
       covered_shots:
       covered_story_function:
@@ -716,7 +735,7 @@ data:
 - `continuity_control_system`：v8 四线连续性主结构。统一记录 rhythm / action / emotion / space 四条连续性控制线。
 - `selected_shot_pattern`：若使用资产库 pattern，必须记录 pattern ID、来源资产、选择原因和适配说明。
 - `segments`：技术交付切片。负责把上游 Beat / VGU / Shot 组织成最终视频分段，不再充当分镜主驱动。
-- `storyboard_prompt_pack_mode`：故事板 prompt 是单包还是多包；当镜头数或总时长超过阈值时，不应默认单包。
+- `storyboard_prompt_pack_mode`：故事板总板 prompt 是单包还是多包；进入中文整板总板模式后，单板默认上限为 `12` 格，超过时不应默认单包。
 - `segments.blocking_execution`：交给视频提示词阶段的段级站位执行结构，不再只是阅读说明。
 - `segments.prop_state_execution`：交给视频提示词阶段的段级道具状态执行结构。
 - `segments.faction_execution`：交给视频提示词阶段的角色阵营空间分配。
@@ -738,6 +757,11 @@ data:
 - `storyboard_quality_check`：故事板阶段的结构化质量检查结果。必须检查镜头职责、动作交接、空间交接、连续性四线和双版故事板一致性。
 - `control_storyboard_file` / `styled_storyboard_file`：同源双版故事板主产物。控制版负责 VGU、Beat、Shot、Anchor、Space、Action、Emotion 等控制信息；风格版负责材质、光感、氛围和风格层表达，但不得改变叙事结构和镜头职责。
 - `control_storyboard_prompt_file` / `styled_storyboard_prompt_file`：生成上述双版故事板时使用的同源 prompt 文件；它们不是双版故事板本体的替代品。
+- `storyboard_prompt_files`：最终交付给生图模型的中文整板故事板总板 prompt 文件。它们应是一整份可直接复制给 `gpt-image2` 的长版文档，而不是 `Midjourney / Flux` 式的单镜头平台 prompt 清单。
+- `storyboard_prompt_files[*].board_visual_style`：故事板总板的视觉风格。默认继承项目设计阶段确认的正式视觉风格；只有用户明确要求时，才切换到草稿/线稿风格。
+- `storyboard_prompt_files[*].control_tracks`：故事板总板底部必须包含的中文控制轨道。默认至少包含节拍线、镜头路径、动作路径、节奏轨、升级曲线、状态轨、风格轨；若上游存在对白设计，则额外加入对白轨。
+- `storyboard_prompt_files[*].preferred_panel_grid`：当单板承载 12 格时，推荐使用 `3 x 4` 镜头区布局，让每格镜头画面保有足够可读性。
+- `storyboard_prompt_files[*].visual_area_priority`：整板纵向空间应优先给镜头画面区。默认镜头区占 `70% ~ 80%`，底部控制轨道区占 `20% ~ 30%`；若两者冲突，优先保证镜头画面清晰可读。
 - `audio_handoff`：交给 `scene-audio-director` 的声音设计提示。
 - `prompt_hints`：交给视频提示词阶段的重点。
 - `downstream_video_prompt_handoff`：显式告诉视频提示词阶段必须交付什么结构，重点保证 Beat / VGU / shot continuity 不在末端退化成说明型大 Prompt。
@@ -961,7 +985,7 @@ details/storyboard/control_storyboard_v*.md
 details/storyboard/styled_storyboard_v*.md
 ```
 
-故事板 prompt 写入：
+中文整板故事板总板 prompt 写入：
 
 ```text
 outputs/storyboard_prompts/故事板提示词_v*.md
@@ -975,6 +999,17 @@ outputs/storyboard_prompts/故事板提示词_pack_02_v*.md
 ```
 
 黑板只保留摘要和路径，不直接塞完整分镜表或完整 prompt。
+
+这些文件默认应满足以下交付要求：
+
+```text
+1. 整份文档可直接复制给 gpt-image2 使用
+2. 主语言为中文，控制面必须中文优先
+3. 文档同时包含分镜画面内容与控制轨道要求
+4. 默认继承项目正式视觉风格，不默认降级成草稿风格
+5. 若上游存在对白设计，应在总板中加入对白轨或镜头级对白标注
+6. 镜头画面区必须明显大于底部控制轨道区，优先保证镜头可读性
+```
 
 本阶段不得声称已经生成故事板图片，只能说明已经生成用于外部平台制作故事板图的 prompt。
 

@@ -1,6 +1,6 @@
 # scene-design-builder 输出协议
 
-本文件定义 `scene-design-builder` 的输出形态、设定图 prompt 包、全场景资产总参考图、空间连续性种子、道具状态机、Blocking/Faction 记忆字段、表现力扩展设计和长内容落盘边界。
+本文件定义 `scene-design-builder` 的输出形态、设定图 prompt 包、空间站位图、全场景资产总参考图、空间连续性种子、道具状态机、Blocking/Faction 记忆字段、表现力扩展设计和长内容落盘边界。
 
 ## 上游输入
 
@@ -196,6 +196,19 @@ data:
       lock_card_file:
       prompt_file:
       state_machine_id:
+  space_blocking_reference:
+    enabled:
+    prompt_file:
+    target_view: top_down | semi_top_down
+    includes:
+      - spatial_axis
+      - default_character_positions
+      - key_prop_positions
+      - entrance_exit_paths
+      - allowed_move_zones
+      - forbidden_zones
+      - camera_facing_reference
+      - relative_distance_notes
   master_scene_prop_reference:
     enabled:
     prompt_file:
@@ -265,6 +278,9 @@ data:
 - `sheet_requirements`：角色说明书板结构要求；默认允许并应保留板块标题、编号、角色名称和基础身份信息区。只有用户明确要求时，才额外派生无文字版本。
 - `scene_designs`：场景级锁定卡与设定图 prompt 路径。
 - `prop_designs`：关键道具锁定卡与 prompt 路径；仅对核心道具使用。
+- `space_blocking_reference`：空间站位图提示词，目标是生成一张给后续分镜和视频模型继承的站位参考图。它不是氛围图，而是空间控制图。
+- `space_blocking_reference.target_view`：优先使用 `top_down` 或 `semi_top_down`，让模型更稳定理解“谁在左、谁在右、谁在前、谁在后、道具在哪、入口出口在哪”。
+- `space_blocking_reference.includes`：至少覆盖空间轴线、角色默认站位、核心道具位置、进入/离开路径、允许移动区、禁止区、镜头朝向参考和相对距离说明。
 - `master_scene_prop_reference`：全场景资产总参考图，用于在参考图数量有限时把主场景、角色站位、核心道具位置和道具状态压缩为一个总参考 prompt。
 - `space_continuity_seed`：写入 `details/design/space_continuity_seed_v*.md` 的空间连续性种子，供剧本、分镜和视频提示词阶段继承。
 - `prop_state_machines`：核心道具状态机，供剧本、分镜和视频提示词继承。
@@ -353,6 +369,21 @@ creative_direction_context:
 - 表现力扩展边界：允许的卡通物理、轻伤尺度和反差道具关系
 - 后续故事板 / 视频提示词引用方式
 
+## 空间站位图要求
+
+当项目包含多角色、复杂道具关系、明显走位调度或容易出现站位漂移时，优先额外产出 `空间站位图提示词_v*.md`。
+
+该 prompt 应满足：
+
+- 目标是生成“空间控制图”，不是海报
+- 视角优先 `top_down` 或 `semi_top_down`
+- 明确角色默认位置：左 / 右 / 前 / 后 / 中心
+- 明确核心道具默认位置和相对距离
+- 明确入口 / 出口路径
+- 明确允许移动区与禁止区
+- 明确镜头默认朝向或轴线方向
+- 尽量使用模型可稳定继承的空间语言，不用模糊抒情描述
+
 ## 黑板摘要建议
 
 黑板补丁至少应说明：
@@ -383,6 +414,7 @@ creative_direction_context:
 - `outputs/design_prompts/角色说明书图片提示词_v*.md`
 - `outputs/design_prompts/scene_prompts_v*.md`
 - `outputs/design_prompts/prop_prompts_v*.md`
+- `outputs/design_prompts/空间站位图提示词_v*.md`
 - `outputs/design_prompts/master_scene_prop_reference_v*.md`
 
 其中：
