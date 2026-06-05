@@ -168,6 +168,7 @@ data:
       video_prompt_builder:
   character_designs:
     - name:
+      baseline_version:
       reference_strength:
       asset_strategy:
       lock_card_file:
@@ -184,6 +185,10 @@ data:
         detail_callout_required:
         scale_comparison_required:
         safety_boundary_required:
+      downstream_revision_policy:
+        minor_revision_allowed: true
+        major_revision_requires_confirmation: true
+        revision_request_file:
   scene_designs:
     - name:
       reference_strength:
@@ -272,10 +277,13 @@ data:
 - `contrast_comedy`：反差喜剧策略，定义是否启用、核心反差类型、密度规则和调性边界。
 - `design_notes_for_downstream`：把表现力扩展策略交给后续剧本、表演、分镜和视频提示词阶段继承。
 - `character_designs`：角色级锁定卡、角色说明书和图片生成 prompt 路径。
+- `character_designs.baseline_version`：当前角色设计基线版本。下游阶段默认继承这个版本，不得静默改写。
 - `character_bible_file`：单角色角色说明书正文，默认写入 `details/角色说明书_角色名_v*.md`。
 - `character_bible_file` 同时也是角色说明书图片最终提示词的最高规范源；最终提示词允许按生成需要重组，但不得比该正文更弱、更短或更失真。
+- `prompt_file`：默认应是可直接复制使用的完整终稿，不是摘要壳；至少覆盖角色说明书中的身份、外形、材质、服装、配件、表情系统、动作姿态、版式要求、文字信息区、关键道具交互和边界约束。
 - `prompt_target`：默认应为 `character_bible_sheet`，表示目标不是概念海报，而是角色说明书板。
 - `sheet_requirements`：角色说明书板结构要求；默认允许并应保留板块标题、编号、角色名称和基础身份信息区。只有用户明确要求时，才额外派生无文字版本。
+- `downstream_revision_policy`：下游阶段对角色设计的反馈与回修规则。补充型、功能型、连续性型问题允许形成增量版本；大改动必须回到设计确认。
 - `scene_designs`：场景级锁定卡与设定图 prompt 路径。
 - `prop_designs`：关键道具锁定卡与 prompt 路径；仅对核心道具使用。
 - `space_blocking_reference`：空间站位图提示词，目标是生成一张给后续分镜和视频模型继承的站位参考图。它不是氛围图，而是空间控制图。
@@ -354,6 +362,31 @@ creative_direction_context:
 - 服装、配件、材质与剪影锚点
 
 只有用户明确要求时，才额外输出无文字干净参考图 prompt。
+
+## 下游反馈与角色修正规则
+
+角色说明书和角色说明书图片提示词一旦确认，即构成当前项目的角色设计基线。
+
+后续阶段允许提出的反馈类型：
+
+- 补充型：补表情、补动作、补关键道具交互、补细节区
+- 功能型：为表演、动作或镜头识别强化服装、配件或轮廓锚点
+- 连续性型：为多镜头稳定性强化头盔、鞋子、道具、发型或站位识别点
+
+这些反馈应形成增量修订，例如：
+
+- `details/角色说明书_角色名_v1.1.md`
+- `outputs/design_prompts/角色说明书图片提示词_v1.1.md`
+
+下游不得直接静默改写的内容包括：
+
+- 脸型主结构
+- 发型主轮廓
+- 服装主配色
+- 角色核心气质
+- 核心身份锚点
+
+若反馈触及上述大项，必须回到设计阶段并重新确认。
 
 ## 全场景资产总参考图要求
 
