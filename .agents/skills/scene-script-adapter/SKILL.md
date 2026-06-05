@@ -7,6 +7,8 @@ description: 当用户要把 SceneForge 选中的经典片段、热点桥段或 
 
 负责把参考边界、轻量故事骨架、视频源优先级分层、用户选择的改写方向或原始剧情方向，以及设计结果整合成可拍、可表演、可分镜的正式剧本版本。
 
+执行期通用约束见仓库根 `AGENTS.md`；本文件只补当前阶段特有边界。
+
 本阶段不再负责前置故事发散；它以已确认的 `story_beats` 为骨架，输出正式剧本、节拍细化和下游 handoff。
 
 完整剧本正文继续落盘，黑板只记录摘要、档位、演绎风格、Story Beat、表现力扩展机会点、source intake 继承说明和路径引用。
@@ -108,7 +110,7 @@ script_strategy:
 4. 如果 `script_strategy.mode = rewrite_adaptation` 且 `adaptation_selection.status != selected`，输出阻塞补丁并等待用户选择，不得继续生成正式剧本。
 5. 如果 `script_strategy.mode = rewrite_adaptation` 且 `adaptation_selection.status: selected`，记录并继承 `selected_idea_id`、`selected_title` 和 `selection_note`。
 6. 如果 `script_strategy.mode = preserve_original`，记录 `creative_direction_context.selected_adaptation.status = bypassed | not_applicable`，不要求改写方向选择。
-7. 采用 `compact` 上下文预算：只读取 `PROJECT_BOARD.md`、本 Skill、`references/output-contract.md`、`scene-reference-decider` 的边界约束、`scene-story-development` 的故事骨架和 `scene-design-builder` 的设定摘要。
+7. 采用 `compact` 上下文预算：只读取 `PROJECT_BOARD.md`、本 Skill、`references/output-contract.md`、`scene-reference-decider` 的边界约束、`scene-story-development` 的故事骨架和 `scene-design-builder` 的设定摘要；执行期读取边界同时遵循仓库根 `AGENTS.md`。
 8. 如果存在 `source_intake.status: analyzed`，读取黑板中的 `source_intake.topic_gate_handoff_summary`、`adaptation_ideas_summary`、`adaptation_selection`，并按需读取：
    - `inputs/source_intake/source_video_priority_map_v1.md`
    - `inputs/source_intake/topic_gate_handoff_v1.md`
@@ -179,7 +181,6 @@ source_intake_script_use:
 - 必须把潜在 Hero Moment 作为 `storyboard_hints.shot_priority_note` 的输入，供分镜阶段明确标记。
 - 完整剧本落盘，黑板只保留可供后续阶段消费的摘要信息。
 - 本阶段完成后不直接进入分镜，而是先进入 `scene-performance-director`。
-- 运行时禁止读取 `docs/`、`.handoff/`、历史项目输出或其他无关项目目录。
 
 ## 参考资料
 
