@@ -67,6 +67,8 @@ data:
   source_video_prompt_files:
     zh_full:
     en_full:
+    zh_pack_files:
+    en_pack_files:
     zh_segment_copy_ready:
     en_segment_copy_ready:
   delivery_readiness_checked: false

@@ -19,6 +19,7 @@ scene-audio-director
 本阶段默认输出导演长版双语交付物：
 
 - 导演长版：中文 / 英文各一份，保留解释、继承理由、分段目标和 review 摘要
+- 如上游故事板为多包模式，额外输出按 `pack` 对齐的视频提示词文件，便于和故事板包一一对应使用
 
 导演长版必须直接包含 `Segment + Shot + Timecode` 双层强结构，不再额外维护一套独立的“模型投喂版”文件。
 
@@ -285,18 +286,32 @@ data:
   video_prompt_files:
     zh_full:
     en_full:
+    zh_pack_files:
+      - pack_id:
+        file:
+        covered_segments:
+        covered_shots:
+    en_pack_files:
+      - pack_id:
+        file:
+        covered_segments:
+        covered_shots:
     zh_segment_copy_ready:
       - segment_id:
         file:
         includes_global_render_rules: true
         includes_technical_control_block: true
         includes_zh_natural_language_prompt: true
+        excludes_trademark_avoidance: true
+        excludes_review_meta: true
     en_segment_copy_ready:
       - segment_id:
         file:
         includes_global_render_rules: true
         includes_technical_control_block: true
         includes_en_natural_language_prompt: true
+        excludes_trademark_avoidance: true
+        excludes_review_meta: true
   reference_assets:
     character_design_refs:
     scene_prop_master_ref:
@@ -480,7 +495,8 @@ data:
 - `storyboard_prompt_pack_mode`：上游故事板 prompt 是单包还是多包。本阶段若看到多包模式，必须消费全部相关 pack。
 - `video_prompt_review`：自动 review 与自动修复结果；只有 `final_delivery_ready: true` 时，才算真正可交付。
 - `video_prompt_files`：最终交付文件路径。默认必须支持中文 / 英文双份导演长版；运行时强结构直接内嵌在导演长版正文中。
-- `video_prompt_files.zh_segment_copy_ready` / `video_prompt_files.en_segment_copy_ready`：每个 Segment 的可直接复制使用块。默认用于按 10 秒一段生成视频时的直接交付；每个文件或区块都应自带全局生成与渲染规则、当前 Segment 的结构化控制参数、以及对应语言的导演长版自然语言提示词。
+- `video_prompt_files.zh_pack_files` / `video_prompt_files.en_pack_files`：当上游故事板为多包模式时，按故事板 `pack` 对齐的视频提示词文件索引。整片总控文件仍然保留，但用户可以按故事板包逐批生成和校对。
+- `video_prompt_files.zh_segment_copy_ready` / `video_prompt_files.en_segment_copy_ready`：每个 Segment 的可直接复制使用块。默认用于按 10 秒一段生成视频时的直接交付；每个文件或区块都应自带全局生成与渲染规则、当前 Segment 的结构化控制参数、以及对应语言的导演长版自然语言提示词；不得混入版权与安全规避说明、review 日志、确认事项或其他非投喂元信息。
 - `reference_assets`：生成视频时需要一并喂给模型的角色说明书、全场景资产总参考图、故事板图、表演表和声音方案来源。
 - `control_storyboard_files` / `styled_storyboard_files`：分镜阶段落盘的同源双版故事板主产物。视频提示词阶段应优先消费它们，再结合对应 prompt 文件和参考图，不应只读故事板 prompt 文件。
 - `control_storyboard_refs` / `styled_storyboard_refs`：同源双版故事板参考路径。控制版负责结构和构图锚定，风格版负责材质、光感和氛围边界。
@@ -667,7 +683,7 @@ segment_prompt:
 3. 当前 Segment 的导演长版自然语言提示词
 ```
 
-这个“可直接复制使用块”是给用户按段直接投喂外部视频模型使用的，不应混入其他 Segment、英文版正文、review 日志或实现说明。
+这个“可直接复制使用块”是给用户按段直接投喂外部视频模型使用的，不应混入其他 Segment、英文版正文、review 日志、确认事项、版权与安全规避说明或实现说明。
 
 ## 自动 review 与 auto-fix 规则
 
@@ -681,6 +697,8 @@ segment_prompt:
 - 每个 Segment 是否显式声明 `dialogue_plan.has_dialogue`
 - 仅当上游已有对白设计时，Segment 是否写出 `dialogue_plan.speakers[].dialogue_text`
 - 每个 Segment 是否提供完整的可直接复制使用块
+- 可直接复制使用块是否误混入版权与安全规避说明、review 日志、确认事项或其他元说明
+- 若 `storyboard_prompt_pack_mode` 为多包模式，是否同时提供了按 `pack` 对齐的视频提示词文件索引
 - `related_shot_continuity_refs` 与 `shot_plan[].shot_continuity` 是否完整且同源
 - `blocking_execution` / `prop_state_execution` 是否完整
 - `shot_plan[].screen_positioning` 是否完整

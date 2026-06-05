@@ -81,13 +81,14 @@ Prompt Draft
 12. 在正式生成视频提示词文件前，先输出“视频提示词方案预览”，至少包含分段提示词结构、导演长版内的 `Segment + Shot + Timecode` 执行方式、每段的 `primary_vgu_ids`、`shot_continuity` 承接方式、每段参考图使用计划、控制版 / 风格版故事板使用声明、source intake 继承与规避计划、每段是否有对白与对白承载策略、当上游已有对白设计时的具体台词写法、continuity_in / continuity_out、blocking_continuity、prop_state_continuity、blocking_execution、逐镜头站位承接、prop_state_execution、声音连续性、表现力扩展写入方案、镜头语言继承方案、模型适配计划、双语交付计划和需要用户确认的问题。
 13. 等待用户明确确认视频提示词方案；用户纠错或补充偏好不等于授权落盘。
 14. 用户确认后，先生成视频提示词草稿：为每个视频分段整合 Beat Skeleton 意图、`primary_vgu_ids`、镜头内容、动作、运镜、镜头语言、视觉动机、表演、按上游对白设计继承的具体台词、拟音、音乐、环境音、静默点、节奏、参考图使用方式、source intake 规避约束、表现力扩展要求、双版故事板转译规则和连续性钩子。
-15. 草稿只维护导演长版主交付；导演长版内部必须采用 `Segment + Shot + Timecode` 强结构，并显式写出 `primary_vgu_ids`、`shot_continuity`、`next_handoff`、对白正文和逐镜头站位承接，而不是只写“10 秒一段的大 Prompt”。
-16. 每个 Segment 默认还要生成一个“可直接复制使用块”：把“全局生成与渲染规则 + 当前 Segment 的结构化控制参数 + 当前 Segment 的中文导演长版提示词”放在一起，方便用户按 10 秒一段直接复制使用，不需要手动从文件不同位置拼接。
-17. 对草稿执行自动 review：检查时长一致性、双语完整性、Beat / VGU / shot continuity 继承、Shot Timecode 完整性、仅当上游已有对白设计时是否写出具体台词、Blocking / Prop State 执行结构、逐镜头站位承接、Hero Candidate / Ending Payoff 继承、声音/表演/镜头语言继承、锚帧与连续性链继承、模型适配完整性和负向约束，以及每个 Segment 的可直接复制使用块是否包含完整三部分。
-18. 若发现结构性问题，先自动修复，再重新 review；不得悄悄改动用户已确认的创作方向、总时长和 Segment 策略。
-19. 通过 review 后，将最终提示词写入 `outputs/video_prompts/`；黑板里只保留摘要、版本信息、review 状态和路径。
-20. 输出单个 YAML 补丁块，说明生成了哪些视频提示词版本、是否已覆盖分段、source intake 继承边界、参考图使用条件、表演/声音/空间/道具/连续性/表现力扩展/镜头语言连续性、模型适配和自动修复情况。
-21. 将状态推进建议交回总控 Skill，进入 `scene-publish-review`。
+15. 草稿直接维护完整导演长版主交付；导演长版内部必须采用 `Segment + Shot + Timecode` 强结构，并显式写出 `primary_vgu_ids`、`shot_continuity`、`next_handoff`、对白正文和逐镜头站位承接，而不是先产出过轻版本、再等待用户二次补全。
+16. 每个 Segment 默认还要生成一个“可直接复制使用块”：只放“全局生成与渲染规则 + 当前 Segment 的结构化控制参数 + 当前 Segment 的中文导演长版提示词”，方便用户按 10 秒一段直接复制使用，不需要手动从文件不同位置拼接；版权/安全规避说明、review 日志、实现解释和确认提示不得进入该块。
+17. 若上游故事板为 `multi_pack_recommended` 或 `multi_pack_confirmed`，除整片总控文件外，还应按故事板 `pack` 对齐生成对应的视频提示词文件，方便用户按故事板包逐批生成和校对。
+18. 对草稿执行自动 review：检查时长一致性、双语完整性、Beat / VGU / shot continuity 继承、Shot Timecode 完整性、仅当上游已有对白设计时是否写出具体台词、Blocking / Prop State 执行结构、逐镜头站位承接、Hero Candidate / Ending Payoff 继承、声音/表演/镜头语言继承、锚帧与连续性链继承、模型适配完整性和负向约束，以及每个 Segment 的可直接复制使用块是否包含完整三部分且未混入版权/安全规避说明或 review/确认文案。
+19. 若发现结构性问题，先自动修复，再重新 review；不得悄悄改动用户已确认的创作方向、总时长和 Segment 策略。
+20. 通过 review 后，将最终提示词写入 `outputs/video_prompts/`；黑板里只保留摘要、版本信息、review 状态和路径。
+21. 输出单个 YAML 补丁块，说明生成了哪些视频提示词版本、是否已覆盖分段、是否按故事板 `pack` 拆分交付、source intake 继承边界、参考图使用条件、表演/声音/空间/道具/连续性/表现力扩展/镜头语言连续性、模型适配和自动修复情况。
+22. 将状态推进建议交回总控 Skill，进入 `scene-publish-review`。
 
 ## source_intake 最终提示词规则
 
@@ -120,7 +121,9 @@ source_intake_prompt_use:
 - 每段视频提示词必须显式给出“对白存在性判断”，而不是默认存在对白；仅当上游剧本或分镜已明确存在对白设计时，才写出具体台词正文，并写清角色、对白意图、语气、停顿和承载方式，无对白时写明由动作、表情、环境音或静默承载。
 - 默认交付必须包含中文 / 英文双份导演长版；导演长版内部直接承载运行时强结构，不再单独拆模型投喂版。
 - 导演长版中的每个 Segment 默认都应附带“可直接复制使用块”，至少包含：全局生成与渲染规则、当前 Segment 的结构化控制参数、当前 Segment 的中文导演长版提示词。用户在按段生成视频时，不应被要求手动拼接这些部分。
+- `可直接复制使用块` 不得混入版权与安全规避说明、review 日志、实现说明、确认事项或其他非投喂性元信息。
 - 若上游故事板为 `multi_pack_recommended` 或 `multi_pack_confirmed`，本阶段必须显式消费全部相关故事板包，不得假设只有一个故事板 prompt 文件。
+- 若上游故事板为 `multi_pack_recommended` 或 `multi_pack_confirmed`，本阶段除整片总控文件外，还应按故事板 `pack` 对齐生成对应的视频提示词文件。
 - 每段视频提示词必须整合该段的动作、运镜、镜头语言、表演、台词、拟音、音乐、环境音和节奏，而不是把声音或镜头语言要求单独悬空。
 - 双版故事板只能作为同源参考，不得把控制版和风格版翻译成两个不同叙事版本。
 - 必须优先消费 `control_storyboard_file` 和 `styled_storyboard_file` 这对同源双版故事板主产物；故事板 prompt 文件只是生成这对产物时的辅助输入，不是唯一依据。
