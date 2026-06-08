@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "jest"
+    "test": "node --test \"dist/tests/**/*.test.js\""
   },
   "dependencies": {
     "commander": "^12.1.0",
