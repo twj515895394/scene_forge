@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: closed
 
 # Issue 03: 开发硬性校验规则引擎 (Schema & Semantic Validator)
 

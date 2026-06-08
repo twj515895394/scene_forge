@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: closed
 
 # Issue 04: 稳定化 CLI JSON API (CLI Interface Freeze)
 

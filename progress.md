@@ -24,3 +24,12 @@
   - 清理了 `docs/` 文件夹，将 v2 - v8 的所有历史说明文档和上一轮任务资产盘点计划归档至新创建的子目录 [docs/archive/](file:///Users/tangwujun/Documents/trae_projects/scene_forge/docs/archive/) 中。
 - **分支管理**：
   - 从 `codex/v8-board-slim-phase1-fixed` 分支上 `checkout -b` 创建了新的开发分支 **`codex/v9-dev`** 并推送关联了远程仓库。
+- **工票开发进展 (Issues 01 - 06)**：
+  - **工票 01 (Artifact Registry)**: 实现了 `artifacts.manifest.yaml` 自动 schema 验证，手写了 Markdown Frontmatter 解析，并锁定了 outputs/ 与 details/ 物理写入隔离，单元测试全数通过。
+  - **工票 02 (State Machine)**: 实现了无状态事务状态机 `PROJECT_STATE.json`，原子化 complete 动作，打回并生成 `handoff.json` 解锁下游阶段，测试全通。
+  - **工票 03 (Validator)**: 实现了 Lint、Zod Schema、禁词正则及 Pack ID / Segment ID 连续性三层校验器，修复了与设计文档 Section 9.2 输出格式的 Gap，新增了 SF-VP-001 跨阶段对齐硬校验，测试全通。
+  - **工票 04 (CLI)**: 稳定化了 `status`, `start`, `validate`, `complete`, `artifacts`, `rules` 子命令并完全对接 validator 与 state_machine。支持无 ANSI 的纯 JSON stdout 输出与全局错误码注册，测试全通。
+  - **工票 05 (PTY Bridge)**: 实现了基于 node-pty 派生交互式 shell 的 `TerminalBridge` 与 `OutputParser` XML 思考块气泡分包和 ANSI/CR 洗涤解析。特别开发了在受限沙箱/权限环境下的 **Mock 降级机制**，退化至原生 `child_process`，保证了 WS 会话和测试全通。
+  - **工票 06 (GUI & Watcher)**: 实现了基于 chokidar 的 `FileWatcher` 深度监听 outputs、details 和 state，并在变化时通过 WebSocket 广播热更新。编写了完全独立的 React 前端三栏式 Console，支持左栏状态红绿灯、中栏 PTY 聊天输入及右栏 Markdown 渲染和 secure `/api/file` 读取接口。单元测试已覆盖文件监听 add、change 和 unlink 事件，测试全通。
+
+

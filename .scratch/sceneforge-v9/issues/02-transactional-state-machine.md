@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: closed
 
 # Issue 02: 阶段事务状态机与推进原子化 (Transactional Complete)
 

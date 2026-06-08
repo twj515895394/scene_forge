@@ -6,13 +6,15 @@
   "scripts": {
     "dev:server": "tsx server/server.ts",
     "dev:client": "vite",
-    "build": "vite build && tsc -p tsconfig.server.json"
+    "build": "vite build && tsc -p tsconfig.server.json",
+    "test": "node --test \"dist/server/tests/**/*.test.js\""
   },
   "dependencies": {
     "@scene-forge/engine": "workspace:*",
     "express": "^4.19.2",
     "ws": "^8.17.0",
     "node-pty": "^1.1.0-beta21",
+    "chokidar": "^3.6.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

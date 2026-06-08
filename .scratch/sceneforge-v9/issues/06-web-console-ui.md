@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: closed
 
 # Issue 06: 构建 Web Console 界面与文件监听机制 (GUI & Watcher)
 

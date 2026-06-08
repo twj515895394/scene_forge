@@ -17,6 +17,9 @@ importers:
       '@scene-forge/engine':
         specifier: workspace:*
         version: link:../../packages/engine
+      chokidar:
+        specifier: ^3.6.0
+        version: 3.6.0
       express:
         specifier: ^4.19.2
         version: 4.22.2

@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: closed
 
 # Issue 05: 本地虚拟终端与聊天交互桥接 (PTY Terminal Bridge)
 
