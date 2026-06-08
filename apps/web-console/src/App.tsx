@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
+import VariantA from './VariantA';
+import VariantB from './VariantB';
+import VariantC from './VariantC';
+import PrototypeSwitcher from './PrototypeSwitcher';
+
 
 interface ChatBubble {
   id: string;
@@ -53,6 +58,18 @@ export default function App() {
   const [previewPath, setPreviewPath] = useState<string>('');
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'open' | 'closed'>('connecting');
   const [expandedThoughts, setExpandedThoughts] = useState<Record<string, boolean>>({});
+
+  const [variant, setVariant] = useState<string>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('variant') || 'A';
+  });
+
+  const handleVariantChange = (newVariant: string) => {
+    setVariant(newVariant);
+    const params = new URLSearchParams(window.location.search);
+    params.set('variant', newVariant);
+    window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+  };
 
   const wsRef = useRef<WebSocket | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
@@ -238,118 +255,39 @@ export default function App() {
     return <div dangerouslySetInnerHTML={{ __html: html }} />;
   };
 
+  const variantProps = {
+    projectState,
+    bubbles,
+    inputVal,
+    setInputVal,
+    activeStage,
+    setActiveStage,
+    previewContent,
+    previewPath,
+    connectionStatus,
+    expandedThoughts,
+    toggleThought,
+    sendMacro,
+    handleSend,
+    renderMarkdown
+  };
+
+  const variantsList = [
+    { key: 'A', name: 'Cinema Classic Dark' },
+    { key: 'B', name: 'Swiss Neo-Geek Grid' },
+    { key: 'C', name: 'Director\'s Multi-track' }
+  ];
+
   return (
-    <div className="console-container">
-      {/* 1. Header Navigation Bar */}
-      <header className="console-header">
-        <div className="logo-group">
-          <div className="logo-pulse"></div>
-          <h1>SceneForge <span>v9</span> Console</h1>
-        </div>
-        <div className="status-badge">
-          <span className={`dot ${connectionStatus}`}></span>
-          {connectionStatus === 'open' ? 'Service Connected' : connectionStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
-        </div>
-      </header>
-
-      {/* 2. Main Three-Panel Viewport */}
-      <main className="console-main">
-        
-        {/* Left Column: Pipeline 看板 */}
-        <section className="column pipeline-panel">
-          <div className="panel-title">Pipeline Gate Pipeline</div>
-          <div className="stage-list">
-            {STAGES.map((stg) => {
-              const state = projectState?.stages[stg];
-              const status = state?.status || 'ready';
-              const isActive = projectState?.current_stage === stg;
-              
-              return (
-                <div 
-                  key={stg} 
-                  className={`stage-card ${status} ${isActive ? 'active' : ''}`}
-                  onClick={() => setActiveStage(stg)}
-                >
-                  <div className="stage-info">
-                    <span className={`status-indicator ${status}`}></span>
-                    <span className="stage-name">{STAGE_NAMES[stg]}</span>
-                  </div>
-                  <div className="stage-actions" onClick={(e) => e.stopPropagation()}>
-                    {status === 'ready' && (
-                      <button className="btn-action start" onClick={() => sendMacro('start', stg)}>Start</button>
-                    )}
-                    {(status === 'in_progress' || status === 'review_failed') && (
-                      <>
-                        <button className="btn-action validate" onClick={() => sendMacro('validate', stg)}>Validate</button>
-                        <button className="btn-action complete" onClick={() => sendMacro('complete', stg)}>Complete</button>
-                      </>
-                    )}
-                    {status === 'completed' && <span className="completed-badge">Completed</span>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Center Column: Chat 终端对话 */}
-        <section className="column chat-panel">
-          <div className="panel-title">Interactive Agent Session</div>
-          <div className="chat-viewport">
-            {bubbles.map((b) => {
-              if (b.type === 'thought') {
-                const expanded = expandedThoughts[b.id];
-                return (
-                  <div key={b.id} className="chat-bubble thought-bubble">
-                    <div className="bubble-header" onClick={() => toggleThought(b.id)}>
-                      <span>⚡ Agent Thinking Process</span>
-                      <span className="toggle-btn">{expanded ? 'Collapse' : 'Expand'}</span>
-                    </div>
-                    {expanded && <pre className="thought-body">{b.content.trim()}</pre>}
-                  </div>
-                );
-              }
-              if (b.type === 'tool_call') {
-                return (
-                  <div key={b.id} className="chat-bubble tool-bubble">
-                    <div className="bubble-header">⚙️ Executing System Command</div>
-                    <pre className="tool-body">{b.content.trim()}</pre>
-                  </div>
-                );
-              }
-              return (
-                <div key={b.id} className="chat-bubble text-bubble">
-                  <pre className="text-body">{b.content}</pre>
-                </div>
-              );
-            })}
-            <div ref={chatEndRef}></div>
-          </div>
-          <div className="chat-input-bar">
-            <input 
-              type="text" 
-              placeholder="Ask Agent or input command..." 
-              value={inputVal}
-              onChange={(e) => setInputVal(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            />
-            <button className="send-btn" onClick={handleSend}>Send</button>
-          </div>
-        </section>
-
-        {/* Right Column: Markdown 预览 / Diff */}
-        <section className="column preview-panel">
-          <div className="panel-title">Artifact Preview Zone</div>
-          <div className="preview-meta">
-            <span className="file-icon">📄</span>
-            <span className="file-path">{previewPath || 'No file selected'}</span>
-          </div>
-          <div className="preview-viewport">
-            {renderMarkdown(previewContent)}
-          </div>
-        </section>
-
-      </main>
-    </div>
+    <>
+      {variant === 'A' && <VariantA {...variantProps} />}
+      {variant === 'B' && <VariantB {...variantProps} />}
+      {variant === 'C' && <VariantC {...variantProps} />}
+      <PrototypeSwitcher
+        variants={variantsList}
+        current={variant}
+        onChange={handleVariantChange}
+      />
+    </>
   );
 }

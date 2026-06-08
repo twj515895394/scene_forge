@@ -5,7 +5,8 @@
   "description": "SceneForge v9 Monorepo Project",
   "scripts": {
     "build": "pnpm -r build",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "dev": "bash dev.sh"
   },
   "devDependencies": {
     "typescript": "^5.4.5"

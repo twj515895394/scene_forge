@@ -32,8 +32,18 @@ export class OutputParser {
    * @returns Array of newly extracted or updated ChatBubbles
    */
   public feed(rawData: string): ChatBubble[] {
-    const cleanData = stripAnsi(rawData);
-    this.buffer += cleanData;
+    let cleanData = stripAnsi(rawData);
+    
+    // Filter out noisy npm deprecation environment config warnings
+    const lines = cleanData.split(/\r?\n/);
+    const filteredLines = lines.filter(line => {
+      const isNpmWarn = line.includes('npm warn Unknown env config') ||
+                        line.includes('This will stop working in the next major version of npm') ||
+                        line.includes('See `npm help npmrc` for supported config options');
+      return !isNpmWarn;
+    });
+    
+    this.buffer += filteredLines.join('\n');
 
     // Apply carriage return cleaning on our total buffer
     const readableText = cleanTerminalProgress(this.buffer);
