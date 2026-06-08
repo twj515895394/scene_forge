@@ -1406,19 +1406,50 @@ PTY 输出的内容包含大量的 ANSI 颜色转义字符和控制字符。Pars
 
 ---
 
-# 18. 项目目录结构建议
+# 18. 项目目录结构建议 (pnpm Workspaces Monorepo)
 
-v9 建议目录结构：
+v9 采用 **pnpm Workspaces** 单体多包 (Monorepo) 结构来组织项目。这可以隔离依赖，防止幽灵依赖 (Phantom Dependencies) 泄漏，并加速构建与共享开发依赖。
+
+根目录下包含一个 `pnpm-workspace.yaml` 指向各个包。
 
 ```text
 scene_forge/
-  .agents/
-    skills/
-      scene-forge/
-      scene-storyboard-director/
-      scene-video-prompt-builder/
+  pnpm-workspace.yaml             # pnpm workspaces 配置文件
+  package.json                    # 根目录全局 package.json (开发配置与工程命令)
+  tsconfig.json                   # 根目录全局 TS 配置基座
+  .gitignore                      # Git 忽略规则
 
-  .rules/
+  packages/                       # 核心模块与共享库
+    engine/                       # @scene-forge/engine (CLI 引擎与校验库)
+      package.json
+      tsconfig.json
+      src/
+        cli.ts                    # 命令行入口
+        engine.ts                 # 状态管理与核心协调器
+        project.ts                # 项目路径与 Manifest 管理
+        state_machine.ts          # 事务状态机
+        intake_builder.ts         # 下游输入生成器
+        rule_loader.ts            # 规则读取加载器
+        validators/               # 校验规则模块
+          base.ts
+          artifact_lint.ts
+          storyboard_validator.ts
+          video_prompts_validator.ts
+          forbidden_terms_validator.ts
+
+  apps/                           # 运行应用
+    web-console/                  # @scene-forge/web-console (可视化控制台)
+      package.json
+      tsconfig.json
+      index.html
+      src/                        # 前端 UI (Vite + React)
+      server/                     # 后端 Express PTY 桥接服务器
+        server.ts
+        TerminalBridge.ts
+        OutputParser.ts
+        FileWatcher.ts
+
+  .rules/                         # 规则数据层 (YAML 存储，独立于代码逻辑)
     artifact_taxonomy.yaml
     state_machine.yaml
     forbidden_terms.yaml
@@ -1430,7 +1461,7 @@ scene_forge/
       storyboard.yaml
       video_prompts.yaml
 
-  .schemas/
+  .schemas/                       # 阶段产物强约束 JSON Schema
     artifact_manifest.schema.json
     source_intake.schema.json
     handoff.schema.json
@@ -1438,28 +1469,7 @@ scene_forge/
     storyboard_prompt_pack.schema.json
     video_prompt_pack.schema.json
 
-  scene_forge_engine/
-    cli.ts
-    engine.ts
-    project.ts
-    state_machine.ts
-    artifact_registry.ts
-    intake_builder.ts
-    rule_loader.ts
-    validators/
-      base.ts
-      artifact_lint.ts
-      storyboard_validator.ts
-      video_prompts_validator.ts
-      forbidden_terms_validator.ts
-
-  apps/
-    web-console/
-      src/
-      server/
-      package.json
-
-  projects/
+  projects/                       # 项目数据存放区
     PROJECT_INDEX.md
     <project_slug>/
       PROJECT_BOARD.md

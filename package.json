@@ -1,0 +1,13 @@
+{
+  "name": "scene-forge-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SceneForge v9 Monorepo Project",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}
