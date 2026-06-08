@@ -135,13 +135,52 @@ export default function App() {
 
   // Switch preview stage
   useEffect(() => {
-    // Attempt to locate final output matching current stage
-    let foundPath = `outputs/${activeStage}_pack_001_cn.md`;
-    if (activeStage === 'topic_gate') foundPath = 'outputs/topic.md';
-    if (activeStage === 'script') foundPath = 'outputs/script.md';
-    if (activeStage === 'publish_review') foundPath = 'outputs/publish_review.md';
+    let isMounted = true;
+    const loadArtifact = async () => {
+      try {
+        const res = await fetch(`/api/artifacts?stage=${encodeURIComponent(activeStage)}`);
+        if (!res.ok) {
+          throw new Error('Failed to fetch artifacts list');
+        }
+        interface Artifact {
+          id: string;
+          stage: string;
+          kind: 'preview' | 'draft' | 'review' | 'final';
+          path: string;
+        }
+        const artifacts: Artifact[] = await res.json();
+        
+        if (!isMounted) return;
 
-    fetchPreviewFile(foundPath);
+        if (artifacts.length === 0) {
+          setPreviewContent(`*此阶段尚未登记任何产物文件.*\n(您可以执行 Start/Complete 来生成产物)`);
+          setPreviewPath('');
+          return;
+        }
+
+        // Priority order: final -> review -> draft -> preview
+        const priority: Record<string, number> = { final: 4, review: 3, draft: 2, preview: 1 };
+        const sorted = [...artifacts].sort((a, b) => (priority[b.kind] || 0) - (priority[a.kind] || 0));
+        const bestArtifact = sorted[0];
+
+        fetchPreviewFile(bestArtifact.path);
+      } catch (err) {
+        if (isMounted) {
+          // Fallback logic in case API fails
+          let foundPath = `outputs/${activeStage}_pack_001_cn.md`;
+          if (activeStage === 'topic_gate') foundPath = 'outputs/topic.md';
+          if (activeStage === 'script') foundPath = 'outputs/script.md';
+          if (activeStage === 'publish_review') foundPath = 'outputs/publish_review.md';
+          fetchPreviewFile(foundPath);
+        }
+      }
+    };
+
+    loadArtifact();
+
+    return () => {
+      isMounted = false;
+    };
   }, [activeStage, projectState]);
 
   // Trigger macro actions (starts, validates, completes)

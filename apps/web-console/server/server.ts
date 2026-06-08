@@ -6,7 +6,7 @@ import fs from 'fs';
 import { TerminalBridge } from './TerminalBridge.js';
 import { OutputParser } from './OutputParser.js';
 import { FileWatcher } from './FileWatcher.js';
-import { engineVersion } from '@scene-forge/engine';
+import { engineVersion, Project } from '@scene-forge/engine';
 
 const app = express();
 const server = http.createServer(app);
@@ -54,6 +54,23 @@ app.get('/api/file', (req, res) => {
     res.status(500).json({ error: (err as Error).message });
   }
 });
+
+// 2. Artifacts dynamic listing API
+app.get('/api/artifacts', (req, res) => {
+  const stage = req.query.stage as string;
+  if (!stage) {
+    return res.status(400).json({ error: 'Missing stage parameter' });
+  }
+  try {
+    const project = new Project(process.cwd());
+    const manifest = project.readManifest();
+    const list = manifest.artifacts.filter(a => a.stage === stage);
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 
 wss.on('connection', (ws: WebSocket) => {
   console.log('Client connected to Web Console WebSocket.');

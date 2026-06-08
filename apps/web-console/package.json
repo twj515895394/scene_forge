@@ -7,7 +7,7 @@
     "dev:server": "tsx server/server.ts",
     "dev:client": "vite",
     "build": "vite build && tsc -p tsconfig.server.json",
-    "test": "node --test \"dist/server/tests/**/*.test.js\""
+    "test": "tsc -p tsconfig.server.json && node --test \"dist/server/tests/**/*.test.js\""
   },
   "dependencies": {
     "@scene-forge/engine": "workspace:*",
