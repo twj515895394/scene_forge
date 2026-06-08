@@ -1,24 +1,26 @@
 Status: ready-for-agent
 
-# Issue 01: 实现 Artifact Manifest 与物理读取隔离 (Taxonomy)
+# Issue 01: Artifact Manifest 产物隔离与 Taxonomy 读取策略
 
-## 背景
+## 父问题
 
-当前阶段 Agent 在执行后续任务时（例如 video prompt 阶段），常常将上游阶段（storyboard 阶段）的草稿或说明稿误读为正式主交付，或者因为上下文里包含了太多无用的草稿数据，导致生成跑偏。
+[PRD.md](file:///Users/tangwujun/Documents/trae_projects/scene_forge/.scratch/sceneforge-v9/PRD.md)
 
-## 目标
+## 要构建什么
 
-1. 设计 `artifacts.manifest.yaml` 格式并实现解析。
-2. 在 `outputs/` 中实施 frontmatter 解析。
-3. 编写隔离逻辑：下游阶段调用 `artifacts` 读取接口时，仅能看到 `kind: final` 且 `readable_by_downstream: true` 的文件。
+本任务实现阶段产物的分类物理隔离与防泄漏。需要使用 TypeScript 编写核心逻辑，管理和解析 `artifacts.manifest.yaml` 产物清单，并读取 markdown 产物的 YAML frontmatter。
 
-## 约定
-
-- 配置文件：`projects/<project_slug>/artifacts.manifest.yaml`
-- 读取命令：`scene-forge artifacts --from <stage> --readable-by <next_stage> --json`
-- 写入规则：Agent 运行时，引擎锁定 `write_scope`，只允许写入 `details/<stage>/`（draft/preview）和 `outputs/`（final）。
+主要功能包括：
+1. **清单管理**：支持阶段运行（Run）生成和写入 `artifacts.manifest.yaml`（包含产物的 id、stage、kind、path、schema、readable_by_downstream 等）。
+2. **隔离读取逻辑**：实现获取可用上游产物接口。当后续阶段请求读取上游产物时，拦截读取请求，有且仅有标记为 `kind: final` 且 `readable_by_downstream: true` 的文件能暴露给下游。
+3. **写入范围锁定**：锁定阶段写入目录（Write Scope），仅允许将 `preview` / `draft` / `review` 写入 `details/<stage>/`，将 `final` 写入 `outputs/`，防止误标或混淆。
 
 ## 验收标准
 
-- [ ] 无法通过 CLI 读取下游不该访问的 `draft` 和 `preview` 文件。
-- [ ] final markdown 文件均带有标准 YAML frontmatter，说明包含哪些所需 section。
+- [ ] 无法通过引擎 API 读取标记为非 downstream-readable 的 preview 或 draft 文件。
+- [ ] 所有的 outputs 交付件 markdown 文件在顶部均带有符合 Schema 规范的 YAML frontmatter 头部。
+- [ ] 执行 `scene-forge artifacts --from storyboard --readable-by video_prompts` 命令只返回合规的 Final 产物记录。
+
+## 被阻塞于
+
+无 - 可以立即开始

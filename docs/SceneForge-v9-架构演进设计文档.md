@@ -936,7 +936,7 @@ v9 放弃繁琐且有安全隔离局限的 MCP Server 模式，转而采用以 *
 │           │ Parsing ANSI / Markdown / Diff                       │
 │  ┌────────┴────────┐              ┌───────────────────────────┐  │
 │  │  Output Parser  │              │    SceneForge Engine      │  │
-│  └─────────────────┘              │    (cli.py / engine.py)   │  │
+│  └─────────────────┘              │    (cli.ts / engine.ts)   │  │
 │                                   └─────────────┬─────────────┘  │
 │  ┌─────────────────┐  Read / Watch              │ Writes         │
 │  │  File Viewer /  │◄───────────────────────────┘                │
@@ -1439,19 +1439,19 @@ scene_forge/
     video_prompt_pack.schema.json
 
   scene_forge_engine/
-    cli.py
-    engine.py
-    project.py
-    state_machine.py
-    artifact_registry.py
-    intake_builder.py
-    rule_loader.py
+    cli.ts
+    engine.ts
+    project.ts
+    state_machine.ts
+    artifact_registry.ts
+    intake_builder.ts
+    rule_loader.ts
     validators/
-      base.py
-      artifact_lint.py
-      storyboard_validator.py
-      video_prompts_validator.py
-      forbidden_terms_validator.py
+      base.ts
+      artifact_lint.ts
+      storyboard_validator.ts
+      video_prompts_validator.ts
+      forbidden_terms_validator.ts
 
   apps/
     web-console/
@@ -1621,7 +1621,7 @@ scene-forge artifacts --json
 
 ```text
 .schemas/source_intake.schema.json
-intake_builder.py
+intake_builder.ts
 scene-forge intake --stage <stage> --json
 ```
 
@@ -1632,9 +1632,9 @@ scene-forge intake --stage <stage> --json
 交付：
 
 ```text
-storyboard_validator.py
-video_prompts_validator.py
-forbidden_terms_validator.py
+storyboard_validator.ts
+video_prompts_validator.ts
+forbidden_terms_validator.ts
 validation_result.schema.json
 scene-forge validate --stage <stage> --json
 ```
@@ -1660,7 +1660,7 @@ validation hash checking
 
 ```text
 handoff.schema.json
-handoff_builder.py
+handoff_builder.ts
 handoffs/<stage>.handoff.json
 ```
 

@@ -2,20 +2,24 @@ Status: ready-for-agent
 
 # Issue 03: 开发硬性校验规则引擎 (Schema & Semantic Validator)
 
-## 背景
+## 父问题
 
-阶段产物的具体要求（如 storyboard 双版 prompt、音频执行块等）分散在 prose 规则文档中，AI 极易在长上下文中遗漏。需要将其升级为可执行代码校验。
+[PRD.md](file:///Users/tangwujun/Documents/trae_projects/scene_forge/.scratch/sceneforge-v9/PRD.md)
 
-## 目标
+## 要构建什么
 
-1. 建立 `.rules/*.yaml` 作为统一的机器可读规则配置库。
-2. 建立 `.schemas/*.json` 锁死产物字段规范（如 storyboard_prompt_pack.schema.json 等）。
-3. 编写三层校验器：
-   - **Level 1 (Lint)**：校验产物文件命名与 manifest 登记的 path 是否对齐。
-   - **Level 2 (Schema)**：校验 Frontmatter 头部与产物中必须存在的 Sections/Blocks 是否完备（如声音块 `pack_audio_execution_plan`）。
-   - **Level 3 (Semantic Guard)**：校验禁用词正则过滤（禁止出现 IP 演员人名）、多包模式下的 Segment ID 连续性。
+设计并实现基于 TypeScript 的校验引擎，从 `.rules/*.yaml` 和 Zod Schema 中读取校验配置，用机器代码拦截代替纯文本自查。
+
+三层校验器结构设计：
+1. **Level 1 (Lint)**：校验产物文件路径及文件命名是否符合阶段规范、是否在 manifest 中完备登记。
+2. **Level 2 (Schema)**：校验 Frontmatter 属性，并使用 Zod 锁死必需字段（如 video prompt markdown 内是否含有 `pack_audio_execution_plan` 及 `segment_sound_execution` 等大标题和声音执行块）。
+3. **Level 3 (Semantic Guard)**：校验禁用词正则词库（读取 `forbidden_terms.yaml`，严禁出现真实演员真名或真实品牌名以防跑偏）、校验多包（pack）之间的 Segment ID 连续性。
 
 ## 验收标准
 
-- [ ] 运行 `scene-forge validate --stage <stage>` 能够针对规则库进行全量校验，输出标准的 JSON 报错对象（包含错误码、出错文件、规则 ID 及修正提示）。
-- [ ] 存在禁用词或缺少声音块的产物会被 Level 2/3 校验器精准标记为失败。
+- [ ] 提供标准的 Pydantic-like 或 Zod 强校验方法，运行 `scene-forge validate` 时输出标准的验证报告 JSON 格式（带错误码、错误行、规则 ID、修复提示）。
+- [ ] 故意在产物中写错必需块（如缺少声音段）或包含敏感禁用词时，校验报告能精准发现并报出 Level 2 或 Level 3 校验失败。
+
+## 被阻塞于
+
+- [Issue 01: Artifact Manifest 产物隔离与 Taxonomy 读取策略](file:///Users/tangwujun/Documents/trae_projects/scene_forge/.scratch/sceneforge-v9/issues/01-artifact-manifest.md)

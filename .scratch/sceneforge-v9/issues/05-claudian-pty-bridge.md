@@ -1,23 +1,28 @@
 Status: ready-for-agent
 
-# Issue 05: 开发本地虚拟终端与聊天交互桥接 (PTY Terminal Bridge)
+# Issue 05: 本地虚拟终端与聊天交互桥接 (PTY Terminal Bridge)
 
-## 背景
+## 父问题
 
-我们放弃了复杂的 MCP Server，转而采用类似 Claudian 插件的嵌入式聊天模型：在 GUI 后台直接 spawn 本地 CLI（如 Claude/Codex）的 PTY 进程，并将其标准输入输出流（stdin/stdout）与 GUI 界面桥接。
+[PRD.md](file:///Users/tangwujun/Documents/trae_projects/scene_forge/.scratch/sceneforge-v9/PRD.md)
 
-## 目标
+## 要构建什么
 
-1. 在 `apps/web-console/server/` 下使用 `node-pty` 构建 PTY 进程托管服务端。
-2. 编写 `TerminalBridge.js`：启动本地 shell 并在指定 workspace 运行 CLI 会话。
-3. 编写 `OutputParser.js`：
-   - 过滤 stdout/stderr 中的 ANSI Escape 码。
-   - 解析 Markdown 文本块与工具执行指令。
-   - 将流式终端字符提取为漂亮的聊天对话气泡（Chat Bubbles）与命令执行卡片。
-4. 编写 Prompt/Command 自动注入模块：在用户操作 GUI 时（如开始阶段、校验打回时），自动向 CLI stdin 模拟写入 `/run scene-forge validate` 或 Validator 的结构化报错，引导 Agent 自行修复。
+在 GUI 后台进程（Node.js 服务端）使用 `node-pty` 库托管命令行子进程，并将 CLI 的交互输入与输出流通过 WebSocket 暴露给 Web UI。
+
+主要模块设计：
+1. **TerminalBridge.ts**：在当前 workspace 派生子进程，并加载 `claude` / `codex` 命令行进程。
+2. **OutputParser.ts**：
+   - 清除 ANSI 特殊字符。
+   - 解析 Agent 的思考过程与工具调用过程，把 markdown 渲染与 diff 展示切片并转化为 Chat Bubble。
+3. **输入劫持与宏命令注入**：当用户在 GUI 界面触发特定卡片操作时（如“开始阶段”、“发送错误以引导修复”），UI 服务端直接将预制指令（`/run scene-forge validate` 和 handoff 数据）写入终端 stdin 会话以驱动 Agent 运行。
 
 ## 验收标准
 
-- [ ] Node 服务能够正常 spawn 并管理 CLI 终端进程。
-- [ ] 终端里的流式字符能够被 parser 正确提取为 Chat Bubble。
-- [ ] 能向子进程的 stdin 成功注入模拟指令并获取预期 stdout 反馈。
+- [ ] Node 服务能够正常派生 `claude` 终端子进程，并模拟按键发送。
+- [ ] 终端的输出数据流被 Parser 过滤掉多余的 loading 转轮和控制符后，流式合并为 Markdown Chat Bubble 发送至 WebSocket。
+- [ ] 隐式输入注入运行平稳，能正确劫持并自动调用 `/run` 相关的校验及 start 流程。
+
+## 被阻塞于
+
+- [Issue 04: 稳定化 CLI JSON API (CLI Interface Freeze)](file:///Users/tangwujun/Documents/trae_projects/scene_forge/.scratch/sceneforge-v9/issues/04-cli-json-api.md)

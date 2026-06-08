@@ -2,21 +2,25 @@ Status: ready-for-agent
 
 # Issue 06: 构建 Web Console 界面与文件监听机制 (GUI & Watcher)
 
-## 背景
+## 父问题
 
-在底层 CLI API 和后端 PTY 桥接层稳定后，需要提供直观的三栏 GUI，让用户能够通过界面查看生成阶段、聊天修正并一键推进/审核状态。
+[PRD.md](file:///Users/tangwujun/Documents/trae_projects/scene_forge/.scratch/sceneforge-v9/PRD.md)
 
-## 目标
+## 要构建什么
 
-1. 开发本地 Web Console 前端（Vite + React/Svelte），包含：
-   - **左侧 Pipeline 面板**：显示每个阶段的状态、校验结果、耗时。
-   - **中间 Chat 面板**：渲染 PTY 终端流式转译的聊天气泡，支持常规聊天输入。
-   - **右侧 Artifact 预览与 Diff 视窗**：根据当前阶段，直接读取 `outputs/` 并使用 Markdown 渲染主交付件，支持历史版本 Diff，支持 Validator 错误行高亮。
-2. 开发 `FileWatcher.js`（基于 chokidar / fs.watch）：监听工作区中的 artifacts 修改与 `PROJECT_STATE.json`。每当本地 CLI 写入新产物或改变状态，通过 WebSocket 实时通知前端进行组件局部热更新（Hot Reload）。
-3. 支持一键式动作（如“点击 Approve”，在后台调用 `complete_stage` 并更新状态）。
+在底层 CLI API 与 PTY 后台集成完毕后，构建本地三栏前端 Web UI 展现：
+1. **左侧（Pipeline看板）**：呈现状态机的完整流程图（ready -> completed），显示每一阶段 validator 红绿灯。
+2. **中间（Chat 创作面板）**：渲染流式 Chat Bubble 对话框，对接 stdin 发送输入。
+3. **右侧（Artifact/Diff 预览区）**：直接以 Markdown 呈现 outputs 下的 final 交付物，提供历史版本的 markdown 渲染与 Diff 视图，突出显示错误行。
+4. **工作区热重载 (File Watcher)**：在后台编写 `FileWatcher.ts`（使用 `chokidar`），实时监听整个工作区的 `outputs/`、`details/` 和 `PROJECT_STATE.json`。每当 CLI/Agent 写入新产物或改变状态，前端界面通过 WebSocket 推送局部无感刷新视图。
+5. **一键审批（Approve / Re-run）**：按钮直接调底层 CLI 的 validate 和 complete。
 
 ## 验收标准
 
-- [ ] Web Console 能够成功连接本地 Node 后端。
-- [ ] 工作区手动修改分镜或提示词文件时，右侧预览及 Diff 会在 500ms 内自动刷新。
-- [ ] 界面上的阶段红绿状态能与本地项目的 `PROJECT_STATE.json` 保持严格双向一致。
+- [ ] Web Console 能够无感加载、显示流式对话。
+- [ ] 工作区一旦被 Agent 或人工修改，右侧 markdown 产物预览和 Diff 会在 500ms 内自动重新渲染。
+- [ ] 界面上的状态灯状态和磁盘上的 `PROJECT_STATE.json` 保持完全的双向实时同步。
+
+## 被阻塞于
+
+- [Issue 05: 本地虚拟终端与聊天交互桥接 (PTY Terminal Bridge)](file:///Users/tangwujun/Documents/trae_projects/scene_forge/.scratch/sceneforge-v9/issues/05-claudian-pty-bridge.md)
