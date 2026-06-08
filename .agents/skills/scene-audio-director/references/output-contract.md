@@ -235,6 +235,7 @@ data:
 - `segment_audio_plan`：按视频生成 Segment 输出声音计划。
 - `expressive_audio_focus`：该 Segment 是否重点承载表现力扩展声音。
 - `video_prompt_handoff`：交给 `scene-video-prompt-builder` 的整合说明。
+- `video_prompt_handoff` 不应只停留在“需要继承声音”这类抽象提醒；下游视频提示词阶段默认应把这些信息显式展开为 pack 级声音执行摘要，以及每个 Segment 内独立的 `BGM / Foley-SFX / Ambience / Silence` 声音执行块。
 
 最终视频 Prompt 必须把声音要求整合进每段 Prompt 正文，而不是只给一个独立音频文件名。
 

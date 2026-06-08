@@ -31,7 +31,10 @@ scene-story-development
 - 目标总时长候选，例如 30 秒、40 秒、60 秒
 - 单段视频生成时长候选，例如 10 秒、15 秒或混合分段
 - 改编档位候选
-- 演绎风格候选
+- 演绎风格候选（Performance Style Candidates）
+- 导演风格包候选（Director Style Package Candidates）
+- 风格大类（Style Family）
+- 当前风格确认状态（Style Confirmation Status）
 - Story Beat 草案
 - 关键保留点
 - 主动重写点
@@ -98,6 +101,24 @@ next_action:
 
 ---
 
+# 四点五、导演风格包
+
+默认由上游已确认并由本阶段继承：
+
+- `project_config.director_style_id`
+- `project_config.director_style_version`
+- `project_config.style_family`
+- `project_config.style_profile_path`
+
+规则：
+
+- 若 `confirmations.style_family_confirmed.status != confirmed`、`confirmations.style_confirmed.status != confirmed` 或风格字段为空，本阶段必须阻塞并返回上游风格确认；若为历史项目且四个风格字段齐全，可按 `legacy confirmed` 兼容。
+- 若上游已确认导演风格包，本阶段默认继承，不重新发明第一版正式选择。
+- 若用户明确要求改风格，本阶段可以提出新的候选，但只有在用户再次确认后，才允许覆盖正式字段。
+- 若正式产物使用默认回退，必须记录 `used_default_fallback: true`。
+
+---
+
 # 五、阶段正文结构
 
 下文结构用于剧本阶段 primary / handoff 正文文件；不得直接作为黑板正文回写。黑板只写 `board_updates`、文件索引和摘要。
@@ -120,6 +141,14 @@ data:
     confirmation_note:
   adaptation_level:
   performance_style:
+  director_style_package:
+    confirmation_status:
+    director_style_id:
+    director_style_version:
+    style_family:
+    style_profile_path:
+    used_default_fallback: false
+    fallback_note:
   target_total_duration_seconds:
   segment_strategy:
     segment_duration_seconds:
@@ -249,9 +278,10 @@ data:
 - `creative_direction_context`：剧本阶段必须继承的统一创作方向上下文。
 - `adaptation_level`：本次最终改编档位。
 - `performance_style`：本次最终演绎风格，同时回写 `board_updates.project_config.performance_style`。
+- `director_style_package`：默认继承当前已确认的导演风格包；若用户在本阶段明确改风格，再回写 `board_updates.project_config.director_style_id`、`director_style_version`、`style_family` 和 `style_profile_path`。
 - `target_total_duration_seconds`：整条视频目标总时长，不等于单个 Segment 时长。
 - `segment_strategy`：剧本阶段确认的分段策略，供分镜和视频提示词继承。
-- `expressive_animation_inheritance`：继承设计/上游阶段提供的表现力扩展摘要，说明本阶段使用的动画风格化档位、伤害尺度和反差喜剧开关。
+- `expressive_animation_inheritance`：继承设计/上游阶段提供的表现力扩展摘要，说明本阶段使用的风格化档位、伤害尺度和反差喜剧开关。它不是默认必启字段：`3d_animation`、`2d_animation` 可正常启用，`motion_comic`、`hybrid` 仅在当前风格包明确支持时局部启用，`live_action_cinematic` 默认关闭动画物理和卡通伤害。
 - `script_summary`：供黑板与后续阶段读取的剧本摘要。
 - `script_source_mode`：`rewrite_adaptation` 表示改写型剧本；`preserve_original` 表示原始剧本标准化结果。
 - `preserved_elements`：必须保留的内容列表。
@@ -354,7 +384,7 @@ story_beats:
 - `rhythm_hint`：节奏、停顿、加速或释放提示。
 - `sound_hint`：声音、音乐、拟音或静默提示。
 - `payoff_seed`：该 Beat 是否埋下后续看点、反转或 Hero Moment。
-- `expressive_animation_hint`：该 Beat 是否需要表现力扩展，必须说明理由，不能默认每个 Beat 都启用。
+- `expressive_animation_hint`：该 Beat 是否需要表现力扩展，必须说明理由，并说明它为何适配当前 `style_family`，不能默认每个 Beat 都启用。
 
 ## 剧本模式规则
 
@@ -443,6 +473,7 @@ creative_direction_context:
 - 用户是否确认剧本方案
 - 整片目标时长和分段策略
 - 最终改编档位和演绎风格
+- 最终导演风格包（Director Style Package）与风格大类（Style Family）
 - Story Beat 数量和核心节奏
 - 是否已产出 `beat_table_v*.md` 与 `video_generation_unit_plan_v*.md`
 - 是否启用 `expressive_animation`

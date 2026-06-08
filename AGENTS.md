@@ -25,6 +25,12 @@
 - 历史项目输出
 - 与当前阶段无关的目录或资产
 
+硬限制补充：
+
+- 未经用户明确要求，严禁检索、比较、扫描或引用当前项目之外的任何 `projects/*` 兄弟项目。
+- 不得为了“找类似项目”“看之前有没有做过”“参考历史实现”而读取其他项目黑板、`details/`、`outputs/` 或 `inputs/`。
+- 即使仓库里存在高度相似项目，默认也必须视为不可见，不得把它们当作运行时参考库。
+
 只有在以下情况才允许越界读取：
 
 - 用户明确要求参考某个历史项目
@@ -43,6 +49,7 @@
 
 默认优先读取：
 
+- `projects/PROJECT_INDEX.md`
 - 当前项目 `PROJECT_BOARD.md`
 - 当前命中的 skill
 - 当前 skill 的 `references/output-contract.md`
@@ -55,6 +62,23 @@
 - 不默认读取长文件全文
 - 不默认读取历史 source 解析全文
 - 不默认读取与本阶段无关的资产库
+- 不默认扫描全部 `style_profiles/*` 目录
+- 不默认读取单个风格包的全部 7 个文件
+
+风格包读取规则：
+
+- 风格候选阶段优先读取 `style_profiles/style_registry.md`，不通过扫描全部风格目录构造候选池。
+- 当前项目一旦已确认 `director_style_id`，优先读取 `project_config.style_profile_path` 指向的 `profile.md` 作为风格索引入口。
+- 进入具体阶段后，只允许按 `profile.md` 中的 `required_profile_files` 和当前阶段职责，按需读取必需的 1 到 4 个风格文件。
+- 未经明确理由，不得把当前风格包 7 个文件一次性全读入上下文。
+
+项目发现规则：
+
+- 当用户只给一句新需求、片段想法或续写意图时，先读 `projects/PROJECT_INDEX.md` 做项目发现，不默认扫描全部 `projects/*/PROJECT_BOARD.md`。
+- 只有当全局索引命中某个高相关项目时，才允许继续读取该项目的 `projects/<project>/PROJECT_INDEX.md`。
+- 只有在用户明确说“继续这个项目”或项目命中已足够明确时，才允许读取该项目的 `PROJECT_BOARD.md`。
+- 没有 `projects/<project>/PROJECT_INDEX.md` 的项目，默认不参与自动命中；只有用户明确点名该项目时，才允许直接读取它的 `PROJECT_BOARD.md`。
+- `PROJECT_INDEX.md` 只是发现层和路由层，不是状态源；正式状态仍以 `PROJECT_BOARD.md` 为准。
 
 如果确实需要读取长文件或扩展资产，应该：
 

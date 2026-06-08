@@ -46,6 +46,7 @@ runtime_policy:
       - 会话记录_*.md
       - 历史项目输出
       - 其他无关项目目录
+      - projects/ 下当前项目之外的任何兄弟项目目录
     token_budget:
       default_stage_budget: compact
       require_reason_for_extra_reads: true
@@ -63,12 +64,22 @@ project_config:
   production_level:
   reference_type:
   adaptation_level:
+  director_style_id:
+  director_style_version:
+  style_family:
+  style_profile_path:
   performance_style:
   target_total_duration_seconds:
   segment_duration_seconds:
 
 confirmations:
   topic_confirmed:
+    status: pending
+    note:
+  style_family_confirmed:
+    status: pending
+    note:
+  style_confirmed:
     status: pending
     note:
   reference_confirmed:
@@ -337,7 +348,14 @@ cross_stage_summary:
 read_policy:
   default_read:
     - PROJECT_BOARD.md
+    - projects/PROJECT_INDEX.md
+    - style_profiles/style_registry.md
   stage_specific_reads: {}
+  style_profile_resolution_order:
+    - project_config.style_profile_path
+    - style_profile.required_profile_files
+  style_profile_bulk_scan_allowed: false
+  cross_project_scan_allowed: false
   deep_read_requires_reason: true
 
 stage_patches: []
@@ -349,6 +367,7 @@ stage_patches: []
   - `state.next_stage` 改为 `scene-video-intake`
   - `routing.current_stage` 改为 `scene-video-intake`
   - `routing.allowed_next_stages` 改为 `[scene-video-intake]`
+- 新建项目时应同时创建 `projects/<project>/PROJECT_INDEX.md`，并同步更新 `projects/PROJECT_INDEX.md`
 - 若项目进入 v8 故事板方法论阶段，只允许把 `assets/storyboard-methodology/*` 中实际需要的文件加入 `runtime_policy.context_policy.allowed_runtime_asset_paths`，不得整目录默认深读。
 - 不得预先创建 `source_intake`、`expressive_animation`、`storyboard_director_v5` 等旧顶层大字段。
 - 不得把 `docs/`、`.handoff/`、历史产出目录写入任何默认读取白名单。

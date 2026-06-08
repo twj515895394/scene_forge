@@ -6,3 +6,75 @@
 - 已开始第二阶段 skill 轻瘦身
 - 已为主链与相关 skill 增加“根 `AGENTS.md` 是通用入口”的短提示
 - 已移除同一 skill 内重复两次以上的部分通用说明，准备做全量复查
+- 已新增 [docs/SceneForge-风格体系总表.md](/Users/tangwujun/Documents/trae_projects/scene_forge/docs/SceneForge-风格体系总表.md)
+- 已新增 [docs/SceneForge-多风格适配实施计划.md](/Users/tangwujun/Documents/trae_projects/scene_forge/docs/SceneForge-多风格适配实施计划.md)
+- 已补充 `Phase 2.5：pixar_like 资产与枚举归属盘点`
+- 已完成首轮 `pixar_like` 资产归属盘点，并新增 [docs/SceneForge-pixar_like-资产归属盘点.md](/Users/tangwujun/Documents/trae_projects/scene_forge/docs/SceneForge-pixar_like-资产归属盘点.md)
+- 已根据用户纠偏将盘点范围收窄为“`assets/` 运行时资产 + SOP 主链 skill 引用关系”，移除把 `docs/` 当资产对象的混淆口径
+- 已新增 [docs/SceneForge-pixar_like-Skill口径迁移清单.md](/Users/tangwujun/Documents/trae_projects/scene_forge/docs/SceneForge-pixar_like-Skill口径迁移清单.md)，明确第一轮显式 Pixar-like 口径迁移点主要集中在 `scene-design-builder`
+- 已新增 `style_profiles/pixar_like/` 最小骨架（`profile.md`、`visual_language.md`、`performance_language.md`、`camera_language.md`、`rhythm_language.md`、`lighting_language.md`、`negative_constraints.md`）
+- 已完成 `scene-design-builder` 第一轮改造：优先读取当前风格包，缺失时显式回退到 `pixar_like`
+- 已完成定向自查：本轮未改动 `assets/storyboard-methodology/*`、`assets/animation-stylization/*`、`assets/cinematic-language/*` 等共享资产
+- 已完成 `scene-storyboard-director` 第一轮改造：接入 `camera_language`、`rhythm_language`、`lighting_language`，并显式记录默认回退
+- 已完成 `scene-video-prompt-builder` 第一轮改造：接入 `visual_language`、`camera_language`、`lighting_language`、`negative_constraints`，并保留品牌规避规则
+- 已补齐 `scene-forge` 的 `PROJECT_BOARD` 模板与轻黑板协议字段：`director_style_id`、`director_style_version`、`style_family`、`style_profile_path`
+- 已完成整体定向自查：三条关键主链与 `PROJECT_BOARD` 风格字段已对齐，共享资产目录仍未被误动
+- 已完成全链路 review：确认当前 SOP 中尚无真实风格确认阶段，多风格运行仍停留在 `pixar_like` 默认回退链
+- 已获得用户确认：第一版不新增独立 `scene-style-selector`，而是将风格确认闭环收进 `scene-topic-gate -> scene-script-adapter`
+- 已补充实施计划与执行追踪，明确用户可见确认文案统一为“中文描述（English Term）”
+- 已完成 `scene-topic-gate` 协议增强：加入 `director_style_suggestion` 与风格建议显示规则，且不直接回写黑板风格字段
+- 已完成 `scene-script-adapter` 协议增强：加入导演风格包正式确认职责、`director_style_package` 结构和 `used_default_fallback` 记录要求
+- 已完成 `scene-forge` 总控口径增强：明确未确认风格时仅允许 fallback 兼容运行，不算多风格确认完成
+- 已完成定向自查：计划文档、Topic Gate、Script Adapter、Scene Forge 的字段与职责已重新对齐
+- 已新增 `style_profiles/dreamworks_like/` 最小骨架，明确与 `pixar_like` 的差异方向为“外放喜剧冲突 3D（Outward Comedic 3D）”
+- 已同步 `scene-topic-gate` 风格建议口径：第一版建议值不再只限 `pixar_like`
+- 已新增 `style_profiles/stylized_chinese_3d/` 与 `style_profiles/comic_action_3d/` 最小骨架，`Phase 1` 四个 3D 风格包现已全部落地
+- 已完成 `Phase 1` 四个 3D 风格包结构检查：每个目录均含 7 个核心文件，上游建议口径已覆盖四个风格包，下游三条主链继续按统一风格包读取口径工作
+- 用户明确表示：`Phase 1` 四个已落地风格包的真实测试将自行执行，本轮重点转为“未落地风格包梳理”
+- 已新增 [docs/SceneForge-未落地风格包详细梳理.md](/Users/tangwujun/Documents/trae_projects/scene_forge/docs/SceneForge-未落地风格包详细梳理.md)，完成 26 个未落地风格包盘点，并补齐 `Phase 2` 高完整度与 `Exploration Pool` 中等细度风格卡
+- 已新增 [docs/SceneForge-未落地风格包落地实施计划.md](/Users/tangwujun/Documents/trae_projects/scene_forge/docs/SceneForge-未落地风格包落地实施计划.md)，明确 `Batch 1 -> Batch 3` 的建包顺序、升级规则和建包门槛
+- 已完成风格确认闭环规则前移：`scene-topic-gate` 改为第一版正式风格确认点，`scene-design-builder` 未确认风格即阻塞，`scene-script-adapter` 改为默认继承已确认风格
+- 已补齐风格选择候选结构 `director_style_candidates`，供前台在 `scene-topic-gate` 展示推荐项与可选项
+- 已补充 `legacy confirmed` 兼容语义，避免已有完整风格字段的旧项目被新规则误阻塞
+- 已将 `scene-storyboard-director` 与 `scene-video-prompt-builder` 的风格缺失处理改为阻塞返回风格确认，不再默认 fallback 到 `pixar_like`
+- 已将 `scene-topic-gate` 候选池口径扩展为覆盖总表全部风格包，并新增 `maturity / maturity_label / selectable_status` 分层字段；`Exploration Pool` 以实验候选方式暴露
+- 已一次性补齐剩余 26 个 `style_profiles/<director_style_id>/` 风格包目录，共新增 182 个文件；当前 `style_profiles/` 总量达到 30 个目录、210 个核心文件
+- 已为 11 个 `Phase 2` 风格与 15 个 `Exploration Pool` 风格统一补齐 `profile / visual / performance / camera / rhythm / lighting / negative_constraints` 七件套
+- 已为全部 `Exploration Pool` 风格包在 `profile.md` 和 `negative_constraints.md` 中明确实验身份、验证不足点与禁止默认回退规则
+- 已完成结构验收：30 个风格目录均存在，且每个目录恰好包含 7 个核心文件
+- 已完成抽样自查：`wild_comedy_2d` 的 `profile.md` 已具备 experimental 说明与完整 `required_profile_files`；`noir_detective` 的负向边界已明确与 `social_realist_tension` 的区分
+- 已新增 [style_profiles/style_registry.md](/Users/tangwujun/Documents/trae_projects/scene_forge/style_profiles/style_registry.md)，汇总 30 个风格包的运行时最小元数据，供 `scene-topic-gate` 直接构造候选池
+- 已将仓库根 [AGENTS.md](/Users/tangwujun/Documents/trae_projects/scene_forge/AGENTS.md)、[scene-forge/SKILL.md](/Users/tangwujun/Documents/trae_projects/scene_forge/.agents/skills/scene-forge/SKILL.md) 与 [board-protocol.md](/Users/tangwujun/Documents/trae_projects/scene_forge/.agents/skills/scene-forge/references/board-protocol.md) 统一收口为“严禁扫描当前项目之外的任何 `projects/*` 兄弟项目”
+- 已把主链风格读取顺序统一为“`style_registry -> project_config.style_profile_path -> 当前阶段必需的 required_profile_files`”，避免默认整包读取 7 个风格文件
+- 已同步更新 `scene-topic-gate`、`scene-design-builder`、`scene-storyboard-director`、`scene-video-prompt-builder` 的读取口径：默认不扫描全部风格目录，不顺手整包读取当前风格文件
+- 已新增 [project-index-template.md](/Users/tangwujun/Documents/trae_projects/scene_forge/.agents/skills/scene-forge/references/project-index-template.md) 与 [projects/_template/PROJECT_INDEX.md](/Users/tangwujun/Documents/trae_projects/scene_forge/projects/_template/PROJECT_INDEX.md)，建立项目轻索引模板
+- 已新增全局 [projects/PROJECT_INDEX.md](/Users/tangwujun/Documents/trae_projects/scene_forge/projects/PROJECT_INDEX.md)，将项目发现默认入口改为总索引而非全量黑板扫描
+- 已为现有 10 个项目初始化 `projects/<project>/PROJECT_INDEX.md`，用于续写识别、阶段判断和低成本路由
+- 已将 `scene-forge` 总控改为“全局索引 -> 项目级索引 -> 项目黑板”的三级读取顺序，并要求每次阶段推进后同步刷新两级索引
+- 已进一步收紧兼容退路：没有 `projects/<project>/PROJECT_INDEX.md` 的项目，不再参与自动命中；只有用户明确点名时才允许直读该项目黑板
+- 已将 `scene-topic-gate` 入口评分维度从“动画化适配度”改为“风格转译适配度”，并新增 `style_family_candidates` 结构，改为先判风格大类再判具体风格包
+- 已移除 `scene-topic-gate` 协议里“优先从 4 个 3D 风格包建议”的旧口径，避免入口默认偏向动画家族
+- 已将 `scene-script-adapter` 与 `scene-design-builder` 的核心职责描述改为“服从已确认风格家族”，不再把“动画电影化”当默认总目标
+- 已为风格确认闭环补入第一确认层：新增 `confirmations.style_family_confirmed`，并同步 `scene-topic-gate`、`scene-forge`、`board-protocol`、`project-board-template`、`scene-script-adapter`、`scene-design-builder`
+- 已将 `scene-design-builder` 与 `scene-script-adapter` 的阻塞条件升级为“双闸门”：既要求 `style_family_confirmed`，也要求 `style_confirmed`
+- 已将 `expressive_animation` 收口为按 `style_family` 条件启用的扩展层：`3d_animation / 2d_animation` 可正常启用，`motion_comic / hybrid` 仅允许局部启用，`live_action_cinematic` 默认关闭动画物理和卡通伤害
+- 已为 `动画化适配度 -> 风格转译适配度` 补入正式兼容读取规则；读取旧 topic 产物与旧黑板时视为 alias，新产物统一只写 `风格转译适配度`
+- 已为 `director_style_suggestion` 补入 tie-break 规则：先排 `style_family_candidates`，再在首选家族内部排序具体风格包；全局最优包不得跨家族抢占默认建议位
+- 已完成本轮协议收口后的最终静态自查：入口闸门、黑板协议、script/design 两阶段和旧字段兼容语义已对齐
+- 已完成 `scene-video-prompt-builder` 第二轮去动画默认化：`expressive_animation` 只在 `style_family` 允许时继承，非动画家族不再默认写入动画物理、卡通伤害和反差喜剧扩展
+- 已完成 `scene-storyboard-director` 第二轮去动画默认化：技能描述、执行步骤与关键规则统一改为服从当前 `style_family` 的镜头语言，不再把“动画电影感”作为默认总目标
+- 已将 `.agents/skills/scene-forge/references/expressive-animation-protocol.md` 明确标记为历史协议摘要，现行主链以阶段 `output-contract.md` 和 `style_family` 条件启用边界为准
+- 已补齐 `scene-video-prompt-builder` / `scene-storyboard-director` 的风格包输入声明和缺失时阻塞规则，避免末端继续伪装成全局 Pixar-like 默认
+- 已完成本轮追加静态复查：`video-prompt`、`storyboard`、`expressive-animation-protocol` 三处剩余动画默认口径已收口；当前未发现新的 P1 回归
+- 已修复总控确认语义：阶段确认只绑定当前阶段，不再允许一句“确认/继续”跨阶段吞掉后续 `audio / video-prompts / publish-review` 的独立确认闸门
+- 已为 `scene-storyboard-director` 增加故事板拆包硬校验：`total_shots > 12` 时，预览必须显式给出 `multi_pack_recommended`，正式落盘不得继续写成 `single_pack`
+- 已为 `scene-video-prompt-builder` 增加前置阻塞规则：若上游故事板未正式确认，或仅处于 `multi_pack_recommended` 未确认拆包状态，本阶段必须返回故事板阶段，不得直接生成视频提示词
+- 已完成针对 `huafei-wall-crash` 暴露问题的专项静态复查：规则未被删除，问题来源于执行层绕过确认闸门与未执行故事板拆包校验；本轮已在总控、故事板协议和视频提示词协议三处补硬限制
+- 已完成故事板主交付体裁纠偏：再次确认旧的“控制版 / 风格版整板 Prompt 包”仍是现行主规范，并将 `Seg / Shot / Prompt (EN) / Prompt (CN) / 连续性` 逐镜头文稿明确降级为中间层，不得替代正式 `storyboard_prompt_files`
+- 已完成视频提示词主交付体裁纠偏：正式 `video_prompt_files` 重新钉回“导演长版正文 + 每段可直接复制使用块 + 多包时 pack 对齐文件”，并将“全局设定 + 参数表 + 编译 Prompt”文体明确降级为中间层/草稿，不得再标记为最终完成
+- 已为 `stage_index.video_prompts` 补入阶段专属 `quality_check` 约定：若 `video_prompt_review.final_delivery_ready` 作为完成闸门，则必须同步落 review / auto-fix 结果路径，否则不得写成 `completed`
+- 已将视频提示词默认交付方式收口为“按 storyboard `pack` 对齐的中英文件为主、Segment copy-ready 默认内嵌在 pack 文件内”；按段独立文件仅在用户明确要求时才额外生成
+- 已为视频提示词预览增加强制 `video_prompt_pack_plan`：必须先列清每个视频提示词包对应哪个 storyboard pack、覆盖哪些 segments/shots，缺此计划不得进入正式落盘确认
+- 已为故事板阶段补入 `storyboard_prompt_pack_plan` 与 `storyboard_quality_check.final_delivery_ready`：预览必须先列清 pack 计划，正式 completed 必须绑定 quality_check 与正式主交付体裁
+- 已统一 storyboard / video_prompts 两阶段的自动 review 与 auto-fix 闸门：缺 pack plan、缺正式主交付、缺关键结构字段或仍为中间稿时，不得 completed，也不得挂 `primary/default_read`
+- 已增强视频提示词声音层呈现：默认在每个视频提示词 `pack` 内加入包级声音执行摘要，并要求每个 Segment 显式输出 `BGM / Foley-SFX / Ambience / Silence` 声音执行块，不新增独立声音文件

@@ -5,3 +5,63 @@
 - 多个 SceneForge skill 重复定义了相同的运行期读取边界、紧凑上下文预算、轻黑板纪律、确认后落盘规则和产物诚实性规则。
 - 用户明确要求这些关键边界仍保留在 skill 内，避免长上下文时仅靠根 `AGENTS.md` 提醒不够。
 - 第二阶段最合适的处理方式是“压缩重复解释，不删除关键提醒”。
+- `pixar_like` 真正的高风险残留不只在文档命名上，也在 `scene-design-builder` 运行时允许使用的强风格锚词上。
+- `assets/animation-stylization/`、`assets/cinematic-language/animation-film-shot-patterns.md`、`assets/storyboard-methodology/*` 更像动画/3D 家族共享资产，而不是 `pixar_like` 专属资产。
+- `docs/风险与版权边界.md` 属于全局共享合规文档，但内部包含 Pixar-like 示例语句，后续适合补充多风格中性示例，而不是整体迁走。
+- 历史 Pixar 路线文档（如 `docs/皮克斯电影风格路线实施计划.md`、`docs/SceneForge-Pixar-Production-System-Enhancement-Plan.md`）更适合作为 `pixar_like` 的设计来源与历史参考，不宜继续充当默认运行时规则入口。
+- 用户已明确纠偏：资产盘点只看 `assets/` 与 SOP skill 引用关系，`docs/` 不算运行时资产盘点对象。
+- 按严格口径重盘后，第一轮多风格适配中最需要优先拆的不是 `assets/` 共享库，而是 Skill 层默认 Pixar-like 风格锚词。
+- 用户进一步确认：`assets/storyboard-methodology/*` 必须视为通用资产，不能在叙述上混入 Pixar-like 风格资产范围。
+- 当前多风格链路的真实缺口不在下游读取，而在上游缺少“正式确认导演风格包并写回黑板”的执行环节。
+- `scene-topic-gate` 目前只提供 `performance_style_suggestion`，没有 `director_style_id` 级别的建议字段。
+- `scene-script-adapter` 目前只负责最终确认 `performance_style`，尚未承担导演风格包确认职责。
+- 用户明确确认：后续所有用户可见确认信息都应使用“中文描述（English Term）”格式。
+- 当前未落地风格包共 26 个，其中 `Phase 2` 11 个、`Exploration Pool` 15 个。
+- `Phase 2` 风格在总表中已有名称、家族、核心方向和代表作品，但多数尚未补到可直接建 `style_profiles/` 的完整度。
+- `Exploration Pool` 更适合作为受控候选池，当前不宜直接并入正式建包 backlog。
+- 若下一轮要继续扩风格，最稳的方式是先按批次推进，而不是同时建完全部未落地风格包。
+- 高风险相邻边界主要集中在：`coming_of_age_3d` vs `pixar_like`、`classic_studio_wuxia` vs `neo_wuxia_cinematic`、`noir_detective` vs `social_realist_tension`。
+- 当前真实流程缺口不是“没有风格包”，而是“风格确认点过后且不强制”，导致 `scene-design-builder` 之前可能没有显式风格确认。
+- 若设计阶段允许在无确认状态下继续并默认回退，会直接污染角色、场景、灯光和后续提示词基线。
+- 若只增加单个 `director_style_suggestion` 而不增加候选列表结构，前台仍可能无法做成真正的风格选择交互。
+- 若不为历史项目定义 `legacy confirmed` 兼容语义，已有风格字段的旧 `PROJECT_BOARD.md` 会被新规则误阻塞。
+- 若要把总表里的全部风格接入前台候选池，最稳的方式不是只开放 `Phase 1 / Phase 2`，而是“全部展示，但对 `Exploration Pool` 显式标记 experimental”。
+- 现有 `style_profiles/` 最小稳定结构已经固化为 7 文件：`profile.md`、`visual_language.md`、`performance_language.md`、`camera_language.md`、`rhythm_language.md`、`lighting_language.md`、`negative_constraints.md`。
+- 全量补齐 26 个未落地风格包后，主链已不再存在“可被 topic gate 选中、但 `style_profiles/<id>/` 目录缺失”的结构性断点。
+- `Exploration Pool` 若补成可运行包，最关键的不是少写内容，而是显式保留三层边界：`experimental` 身份、不得默认回退、必须写清当前验证不足点。
+- 高风险相邻边界在建包后仍需重点人工观察：`coming_of_age_3d` vs `pixar_like`、`classic_studio_wuxia` vs `neo_wuxia_cinematic`、`noir_detective` vs `social_realist_tension`、`heroic_motion_comic` vs `social_fastcut_motion_comic`、`two_d_character_three_d_world` vs `anime_cinematic`。
+- 单靠“按需读取当前风格包”这句口径还不够，运行时必须再补一个可直接消费的总索引；否则入口阶段仍会倾向于扫描全部 `style_profiles/*` 来组候选池。
+- 对 SceneForge 这类项目型流水线，`projects/` 兄弟目录不只是“通常不该读”，而是应视为默认不可见；否则 agent 很容易为了“找类似项目”擅自越界。
+- 最稳的读取顺序是三段式：先读 `style_profiles/style_registry.md`，再读 `project_config.style_profile_path`，最后只读当前阶段真正需要的 `required_profile_files`。
+- 仅靠“禁止读取其他项目”还不够，因为项目发现本身仍可能通过全量黑板扫描来实现；要真正降 token，必须把“项目发现层”和“项目状态源”拆开。
+- 对 SceneForge 来说，`projects/PROJECT_INDEX.md` 更适合作为全局发现层，`projects/<project>/PROJECT_INDEX.md` 更适合作为项目级路由层；`PROJECT_BOARD.md` 继续只承担真实状态源。
+- 最省 token 的项目识别顺序应为：“全局项目索引 -> 命中的项目级索引 -> 被确认后的项目黑板”，而不是“先扫全部黑板再判断命中关系”。
+- 如果保留“缺索引也可自动命中再读黑板”的兼容退路，长期看还是会把 token 问题重新引回来；更稳的做法是直接把无索引项目视为默认不可自动命中。
+- SceneForge 当前更深层的历史偏置不只在推荐列表，而在入口评分维度、主链职责描述和共享能力命名都源自早期动画导演系统；这轮优先拆入口与主链默认口径。
+- 要避免“风雪山神庙”这类题材被自动往动画上带，必须先判 `style_family`，再判 `director_style_id`；如果顺序反过来，候选池再全也会被 3D/2D 动画包吸走。
+- `expressive_animation` 仍是动画血统较重的共享能力命名；本轮先不改字段名，后续如要继续中性化，可考虑只改对外解释和适用边界，而不是立即做协议字段迁移。
+- `style_family` 不能只停留在候选提示层，必须升为正式第一确认层；否则“先判家族”仍会在执行时退化成弱建议。
+- 最稳的 `director_style_suggestion` 规则不是“全局风格包混排后取第 1”，而是“先排 `style_family_candidates`，再在首选家族内部排序具体风格包”；否则会重新把家族判断架空。
+- 旧字段 `动画化适配度` 仍然广泛存在于历史 `PROJECT_BOARD.md` 和旧 `topic_gate_output_v*.md` 中；最安全的修法是补读取兼容，而不是批量重写历史产物。
+- 上轮最终总 review 发现的三处残余动画偏置已收口：
+  - `scene-storyboard-director` 已改为服从当前 `style_family` 的镜头语言，不再把“动画电影感”作为默认总目标。
+  - `scene-video-prompt-builder` 已改为仅在 `style_family` 允许时继承 `expressive_animation` 扩展，非动画家族不再默认写入动画物理、卡通伤害和反差喜剧。
+  - `.agents/skills/scene-forge/references/expressive-animation-protocol.md` 已被显式标记为历史协议摘要，避免旧版 `enabled: true` 语义回流为主链默认规则。
+- 当前仍保留一个低风险观察点：`expressive_animation` 作为字段名本身仍然带动画血统，但本轮已通过“条件启用 + 中性解释”控制其运行时影响；是否做字段级中性重命名应另起兼容迁移，不适合在当前主链稳定阶段直接动。
+- `huafei-wall-crash` 暴露出一个更严重的执行层问题：即使协议层已要求“故事板预览确认后再落盘”“视频提示词方案需单独确认”，执行时仍可能把一次故事板确认放大成跨阶段授权，并一路推进到 `scene-publish-review`。
+- 故事板拆包规则并未丢失；协议一直要求 `total_shots > 12` 时不得继续使用 `single_pack`。问题在于执行层没有把这条规则当作正式落盘前的硬校验。
+- 最稳的修法不是只补文案，而是三处同时加硬限制：
+  - 总控：确认只绑定当前阶段，不得跨阶段复用
+  - 故事板阶段：`total_shots > 12` 时，预览必须给出拆包方案，正式落盘不得继续单包
+  - 视频提示词阶段：若故事板未正式确认，或仅处于 `multi_pack_recommended` 未确认拆包状态，必须阻塞返回故事板阶段
+- 当前 `projects/huafei-wall-crash/PROJECT_BOARD.md` 的阶段状态已与现行更严格规则不一致：它显示故事板、音频、视频提示词全部已确认并已推进到发布审查，但这不应被视为“新规则下的正确样本”，更接近一次应回溯纠偏的旧执行结果。
+- `huaqiang-watermelon-animal` 证明旧的“控制版 / 风格版整板 Prompt 包”样式仍是有效成功样本；`huafei-wall-crash` 当前的 `storyboard_pack_a/b/c/d` 跑偏，不是因为规范被删，而是因为执行时把逐镜头 `Seg / Shot / Prompt (EN) / Prompt (CN) / 连续性` 文稿误当成了正式 `storyboard_prompt_files` 主交付。
+- 为防止再次跑偏，故事板协议需要显式区分两层产物：`storyboard_prompt_files` 只允许整板双版 Prompt 包；逐镜头 shotlist / 导演稿最多只能作为中间层或附录。
+- `huafei-wall-crash` 的视频提示词跑偏与故事板是同一类问题：当前文件退化成“全局设定 + 每段参数表 + 编译 Prompt”的说明稿，且在上游故事板已多包的情况下没有继续按 pack 对齐输出；这不是新规范，而是中间层文体误当主交付。
+- `scene-video-prompt-builder` 需要像故事板阶段一样，把“正式主交付”和“中间层导演稿/说明稿”显式拆开，并把缺少 copy-ready、缺少 pack 对齐文件、正文含版权直指词，统一视为自动 review 失败条件。
+- 仅靠“未过 review 的文件不能挂 `primary/default_read`”这条通用规则还不够；视频提示词阶段还需要阶段专属的 `quality_check` 路径约束，否则执行方仍可能只写摘要宣称 review 通过，却不留下可核对的 review / auto-fix 产物。
+- 视频提示词协议里同时暴露 `zh_full / en_full`、`zh_pack_files / en_pack_files` 和 `zh_segment_copy_ready / en_segment_copy_ready` 时，如果不明确默认主交付层级，执行方很容易把“逻辑结构”误解成“都要物理落成独立文件”，导致文件数爆炸且偏离故事板 pack 对齐方式。
+- 即便已经把默认主交付收口为 pack，对执行层仍不够；如果预览阶段没有强制要求先给“视频提示词包计划”，执行方仍可能跳过 pack 对齐关系，直接用“2 个长版文件”来替代真正的 pack 主交付。
+- 即便视频提示词已经继承了 audio plan，如果声音信息只埋在导演长版正文里，用户在实际消费时仍会觉得声音层“缩水”或“不专业”；更稳的方式是在 pack 文件里显式增加包级声音执行摘要，并在每个 Segment 内拆出独立的 `BGM / Foley-SFX / Ambience / Silence` 声音执行块，同时保持文件数量不膨胀。
+- 故事板阶段原本已有质量检查概念，但缺少和 `completed / primary / default_read` 的硬绑定；如果不把 `storyboard_quality_check.final_delivery_ready`、pack 计划和正式主交付体裁一起绑定，执行方仍可能用逐镜头中间稿绕过正式交付。
+- 视频提示词阶段即便已有 `Prompt Draft -> Prompt Review -> Auto Fix -> Final Delivery` 链路，如果 review 规则没有字面检查 `video_prompt_pack_plan`、`segment_technical_control_block`、`shot_plan`、`continuity / blocking / prop_state`，执行方仍可能产出压缩版 pack 文稿并误判为合格。

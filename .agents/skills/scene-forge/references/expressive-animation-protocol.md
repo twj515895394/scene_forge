@@ -1,5 +1,11 @@
 # SceneForge v4 表现力扩展协议摘要
 
+状态说明：
+
+- 本文件为历史协议摘要，保留用于理解旧项目和旧字段来源。
+- 当前主链运行期不应再把本文中的顶层 `expressive_animation.enabled: true` 视为默认启用规则。
+- 现行规则以各阶段 `output-contract.md` 和当前 `style_family` 条件启用边界为准。
+
 本文件给 `scene-forge` 总控 Skill 和各子 Skill 使用，用于在运行时识别和继承 v4 表现力扩展字段。
 
 该协议不是设计说明，而是执行期可读取的最小规则摘要。
@@ -8,7 +14,7 @@
 
 ## 1. 顶层字段
 
-v4 新增顶层项目记忆字段：
+v4 历史版本曾使用以下顶层项目记忆字段：
 
 ```yaml
 expressive_animation:
@@ -73,7 +79,7 @@ confirmation_status: pending_design_confirmation | confirmed | disabled
 - `confirmed`：用户已在设计方向确认中接受项目级 v4 表现力策略。
 - `disabled`：用户明确要求不使用动画物理、轻伤尺度或反差喜剧扩展。
 
-模板默认 `enabled: true` 不代表自动强行使用强特效或反差喜剧，只表示后续阶段可以在确认后的边界内使用该能力。
+历史模板默认 `enabled: true` 不代表自动强行使用强特效或反差喜剧；但现行主链已经改为“按 `style_family` 条件启用”，不再建议把该顶层默认值当作运行时总开关。
 
 ---
 
@@ -169,7 +175,7 @@ asset_read_policy:
     - 当前阶段需要选择动画物理效果
     - 当前阶段需要校准轻中度卡通伤害尺度
     - 当前阶段需要设计反差喜剧
-    - PROJECT_BOARD.md 中 expressive_animation.enabled 为 true
+    - 当前阶段协议明确允许表现力扩展，且当前 `style_family` 支持或当前风格包显式支持
   forbidden_when:
     - 当前阶段不涉及表现力扩展
     - 只是为了泛泛了解项目背景
@@ -231,7 +237,7 @@ scene-audio-director:
 
 scene-video-prompt-builder:
   responsibility:
-    - 把动画物理、伤害尺度、反差喜剧和负向边界写入最终 Segment Prompt
+    - 仅在当前 `style_family` 允许时，把风格化动作物理、伤害尺度、反差喜剧和负向边界写入最终 Segment Prompt
 ```
 
 ---

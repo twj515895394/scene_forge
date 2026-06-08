@@ -9,7 +9,11 @@
 - `scene-reference-decider`：参考边界、`must_keep`、`must_avoid`、`creative_direction_context`
 - `scene-story-development`：`story_beats`、`character_functions`、`core_scene_functions`、`key_prop_functions`、`hero_moment_candidates`
 - `scene-asset-checker`：`character_assets`、`scene_assets`、`prop_assets`、`design_actions`、`asset_lock_file`、`asset_lock_summary`
-- 项目配置索引：`project_config.production_level`、`project_config.performance_style`（若已在后续流程中确认则继承；未确认时仅参考建议）
+- 项目配置索引：`project_config.production_level`、`project_config.director_style_id`、`project_config.director_style_version`、`project_config.style_family`、`project_config.style_profile_path`、`project_config.performance_style`、`confirmations.style_family_confirmed.status`、`confirmations.style_confirmed.status`（未确认风格家族或导演风格包时不得直接进入正式设计；若为历史项目且四个风格字段齐全，可按 `legacy confirmed` 兼容）
+- 风格包输入（若项目已确认导演风格包则按需读取）：
+  - `style_profiles/<director_style_id>/profile.md`
+  - `style_profiles/<director_style_id>/visual_language.md`
+  - `style_profiles/<director_style_id>/lighting_language.md`
 - 黑板与阶段索引：`runtime_policy.context_policy`、`confirmations`、既有阶段产物中的 `blocking_map` / `faction_layout` / `prop_state_machines`、既有表现力扩展摘要（如有）
 - 表现力扩展资产库（仅在需要定义表现力扩展策略时按需读取）：
   - `assets/animation-stylization/effect-library.md`
@@ -41,7 +45,8 @@
 - 是否需要全场景资产总参考图
 - 初版 `blocking_map` / `faction_layout` 设计原则
 - 核心道具是否需要 `prop_state_machines`
-- `expressive_animation` 项目级策略：动画风格化档位、轻中度卡通伤害尺度和反差喜剧启用密度
+- `expressive_animation` 项目级策略：仅在当前 `style_family` 允许时展示其风格化档位、轻中度卡通伤害尺度和反差喜剧启用密度；不适配家族应明确写关闭或局部启用
+- 当前已确认的导演风格包（Director Style Package）
 - 需要用户确认的问题
 
 用户纠错、补充偏好或指出问题，不等于授权落盘。只有用户明确表达确认、采用、按此生成、落盘或写入时，才能输出正式文件并推进阶段。
@@ -82,6 +87,14 @@ next_action:
 ```yaml
 data:
   design_mode:
+  style_profile:
+    confirmation_status:
+    director_style_id:
+    director_style_version:
+    style_family:
+    style_profile_path:
+    used_default_fallback: false
+    fallback_note:
   script_strategy:
     status:
     mode:
@@ -271,7 +284,7 @@ data:
 - `design_confirmation`：记录用户是否确认设计方向。正式落盘时应为 `confirmed_by_user: true`。
 - `story_design_mapping`：说明哪些角色、场景和道具分别服务哪些 Story Beat，防止设计脱离剧情功能。
 - `visual_language`：本次项目的统一视觉语言基线，角色、场景、核心道具都必须继承这组约束。
-- `expressive_animation_design`：表现力扩展设计，定义项目级动画风格化、轻中度卡通伤害尺度和反差喜剧策略。正式落盘后应同步更新 `stage_index.design` 摘要与相关文件索引。
+- `expressive_animation_design`：表现力扩展设计，属于按 `style_family` 条件启用的扩展层，而不是默认项目框架；可定义项目级风格化动作、轻中度卡通伤害尺度和反差喜剧策略。正式落盘后应同步更新 `stage_index.design` 摘要与相关文件索引。
 - `animation_stylization`：动画物理、VFX、特效密度和高风险动作转译策略。设计阶段只定义允许范围，不写具体镜头。
 - `injury_tone_policy`：动画动作喜剧伤害尺度，允许轻中度卡通伤害，禁止严重写实创伤。
 - `contrast_comedy`：反差喜剧策略，定义是否启用、核心反差类型、密度规则和调性边界。
@@ -424,7 +437,7 @@ creative_direction_context:
 - 本次走的是完整设定还是轻量锁定卡
 - 用户是否已经确认设计方向
 - 本次统一视觉语言基线是什么
-- `expressive_animation` 是否启用、默认档位、伤害尺度和反差喜剧密度
+- `expressive_animation` 是否启用、为何适配当前 `style_family`、默认档位、伤害尺度和反差喜剧密度
 - 角色参考强度和场景参考强度
 - 哪些内容来自资产复用，哪些内容是新建
 - 锁定卡写入了哪些 `details/` 文件
@@ -467,14 +480,14 @@ creative_direction_context:
 
 ## 生成 prompt 与对外文案的风格口径
 
-生成 prompt 允许使用强风格锚词，例如：
+生成 prompt 时允许使用强风格锚词，但这些锚词应来自当前 `director_style_id` 对应风格包，而不是由本协议写死内置示例。
 
-- 皮克斯电影级动画风格
-- 超高质量 3D 角色动画
-- 电影级灯光与镜头语言
-- feature animation character sheet
+本协议只定义机制，不再内置具体品牌倾向锚词。运行时应：
 
-这些锚词的作用是把模型拉向动画长片级角色设计，而不是普通写实人物图。
+1. 优先读取当前 `style_profile`
+2. 继承对应的 `visual_language` 与 `lighting_language`
+3. 将其中适合直接投喂模型的锚词写入最终 prompt
+4. 若风格家族或风格包字段缺失，或 `confirmations.style_family_confirmed.status != confirmed`、`confirmations.style_confirmed.status != confirmed` 且不满足历史项目兼容条件，本阶段应阻塞并返回风格确认，不得静默回退到 `pixar_like`
 
 发布文案、对外介绍和复盘摘要仍尽量使用通用表述，不直接写“Pixar 官方风格”“皮克斯同款”等措辞。
 

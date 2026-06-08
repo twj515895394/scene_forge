@@ -27,6 +27,8 @@ scene-performance-director
 # 一、确认闸门
 
 本阶段默认不能直接落盘正式分镜和故事板 prompt。必须先输出分镜方案预览，并等待用户确认。
+故事板阶段的确认只绑定当前阶段，不自动授权 `scene-audio-director`、`scene-video-prompt-builder` 或 `scene-publish-review`。
+若用户只说“确认”而未点名阶段，运行时只允许将其解释为确认当前分镜 / 故事板预览，不得把它扩展为后续阶段连续执行授权。
 
 分镜方案预览至少包含：
 
@@ -92,7 +94,12 @@ next_action:
 - `scene-story-development`：已确认的 `story_beats`、`character_functions`、`core_scene_functions`、`key_prop_functions`
 - `scene-performance-director`：`performance_sheet_path`、角色表演档案、Beat 表演重点、`physical_comedy_performance`、`contrast_performance`、`injury_reaction_performance`、`action_continuity_chains`、`emotion_continuity_chains`、表演连续性规则
 - `scene-design-builder`：角色与场景设定摘要、视觉语言和一致性锚点、`expressive_animation_design`、`space_continuity_seed`、`space_blocking_reference`、`blocking_map`、`faction_layout`、`prop_state_machines`
-- 项目配置与阶段索引：`project_config.performance_style`、`project_config.segment_duration_seconds`、`project_config.target_total_duration_seconds`、上游阶段产出的 `segment_strategy`、表现力扩展摘要和分镜方法论摘要
+- 项目配置与阶段索引：`project_config.director_style_id`、`project_config.director_style_version`、`project_config.style_family`、`project_config.style_profile_path`、`project_config.performance_style`、`project_config.segment_duration_seconds`、`project_config.target_total_duration_seconds`、上游阶段产出的 `segment_strategy`、表现力扩展摘要和分镜方法论摘要
+- 风格包输入（若项目已确认导演风格包则按需读取）：
+  - `style_profiles/<director_style_id>/profile.md`
+  - `style_profiles/<director_style_id>/camera_language.md`
+  - `style_profiles/<director_style_id>/rhythm_language.md`
+  - `style_profiles/<director_style_id>/lighting_language.md`
 - 表现力扩展资产库（仅在需要镜头化动画物理、轻伤尺度或反差 reveal 时按需读取）：
   - `assets/animation-stylization/effect-library.md`
   - `assets/animation-stylization/contrast-comedy-library.md`
@@ -122,12 +129,16 @@ next_action:
 - `exaggerated_comedy`：强化夸张反应、反差停顿和喜剧节奏
 - `absurd_chaotic`：强化鬼畜式节奏推进、离谱升级和高反差调度
 
-当前动画电影化路线下，分镜还必须继承：
+若项目已确认 `director_style_id`，分镜还必须继承当前风格包中的：
 
-- 角色魅力优先
-- 表演先于台词
-- 情绪先于动作
-- 停顿服务喜剧和情绪释放
+- `camera_language`
+- `rhythm_language`
+- `lighting_language`
+
+若风格包字段缺失，或风格确认状态不满足正式确认/历史兼容条件，本阶段必须阻塞并返回风格确认，不得回退到 `pixar_like` 继续分镜。
+
+无论使用哪个风格包，分镜都必须满足以下通用导演约束：
+
 - 声音意图必须提前进入镜头设计
 - 表现力扩展必须服务角色、情绪、动作安全转译或视觉 payoff
 - 镜头语言必须服务叙事功能、情绪功能、动作可读性、喜剧节奏或世界观信息
@@ -177,6 +188,7 @@ Segment Duration
 - `segment_duration_seconds` 是技术生成分段，不是镜头数量上限
 - 当故事板主交付为“中文整板故事板总板 prompt”时，默认单板最大承载量为 `12` 格；`total_shots > 12` 时必须拆成多个故事板 prompt 包
 - 当 `total_shots > 20`，或 `target_total_duration_seconds > 90` 时，默认推荐进一步拆成更多故事板 prompt 包
+- 若 `total_shots > 12` 但用户尚未确认拆包方案，正式落盘时不得把 `storyboard_prompt_pack_mode` 写成 `single_pack`
 
 ---
 
@@ -217,6 +229,13 @@ Segment Duration
 
 ```yaml
 data:
+  style_profile:
+    director_style_id:
+    director_style_version:
+    style_family:
+    style_profile_path:
+    used_default_fallback: false
+    fallback_note:
   script_strategy:
     status:
     mode:
@@ -277,6 +296,14 @@ data:
   total_shots:
   total_segments:
   storyboard_prompt_pack_mode: single_pack | multi_pack_recommended | multi_pack_confirmed
+  storyboard_prompt_pack_plan:
+    delivery_mode: single_pack_primary | multi_pack_primary
+    packs:
+      - pack_id:
+        covered_segments:
+        covered_shots:
+        covered_story_function:
+        delivery_role: primary
   methodology_config_file:
   storyboard_summary:
   beat_skeleton:
@@ -633,7 +660,10 @@ data:
   shotlist_file:
   storyboard_quality_check:
     file:
-    status:
+    status: pending | failed | fixed | passed
+    review_round:
+    auto_fixes_applied:
+    final_delivery_ready: false
     key_findings:
   storyboard_prompt_files:
     - file:
@@ -723,7 +753,7 @@ data:
 - `storyboard_confirmation`：记录用户是否确认分镜方案。正式落盘时应为 `confirmed_by_user: true`。
 - `cinematic_language_inheritance`：继承分镜阶段方法论、资产路径和默认镜头语言策略摘要。
 - `storyboard_methodology_inheritance`：继承 Beat Skeleton、视频生成单元、镜头交接、四线连续性、双版故事板和质量检查方法论摘要。
-- `expressive_animation_inheritance`：继承设计或剧本阶段沉淀的表现力扩展摘要。
+- `expressive_animation_inheritance`：继承设计或剧本阶段沉淀的表现力扩展摘要。它属于按 `style_family` 条件启用的扩展层：`3d_animation`、`2d_animation` 可正常继承，`motion_comic`、`hybrid` 仅在当前风格包明确支持时局部继承，`live_action_cinematic` 默认不写入动画物理和卡通伤害。
 - `beat_skeleton`：v8 主骨架。先定义每个 Beat 的功能、时长范围、动作推进、情绪推进、信息释放和建议镜头数，再向下游派生内容单元和镜头。
 - `storyboard_content_breakdown`：核心字段。把 Story Beat 拆成可拍内容单元。
 - `cinematic_language_plan`：核心字段。把内容单元转换成影视级镜头语言。
@@ -736,6 +766,7 @@ data:
 - `selected_shot_pattern`：若使用资产库 pattern，必须记录 pattern ID、来源资产、选择原因和适配说明。
 - `segments`：技术交付切片。负责把上游 Beat / VGU / Shot 组织成最终视频分段，不再充当分镜主驱动。
 - `storyboard_prompt_pack_mode`：故事板总板 prompt 是单包还是多包；进入中文整板总板模式后，单板默认上限为 `12` 格，超过时不应默认单包。
+- `storyboard_prompt_pack_plan`：故事板 prompt 包计划。预览阶段必须先明确主交付将拆成几个故事板包、每个包覆盖哪些 `segments / shots / story_function`，以及为何单包或多包；不得跳过该计划直接预览镜头正文。
 - `segments.blocking_execution`：交给视频提示词阶段的段级站位执行结构，不再只是阅读说明。
 - `segments.prop_state_execution`：交给视频提示词阶段的段级道具状态执行结构。
 - `segments.faction_execution`：交给视频提示词阶段的角色阵营空间分配。
@@ -754,7 +785,7 @@ data:
 - `hero_moments`：最终确认的看点镜头。
 - `bridge_shots`：Segment 之间用于动作、视线、空间、声音和镜头语言衔接的桥接分镜。
 - `continuity_rules`：运行期摘要规则；其中 rhythm / action / emotion / space 应与 `continuity_control_system` 保持同源。
-- `storyboard_quality_check`：故事板阶段的结构化质量检查结果。必须检查镜头职责、动作交接、空间交接、连续性四线和双版故事板一致性。
+- `storyboard_quality_check`：故事板阶段的结构化质量检查结果。必须检查镜头职责、动作交接、空间交接、连续性四线、pack 计划、正式主交付体裁和双版故事板一致性；只有 `final_delivery_ready: true` 时，才允许视为故事板正式交付完成。
 - `control_storyboard_file` / `styled_storyboard_file`：同源双版故事板主产物。控制版负责 VGU、Beat、Shot、Anchor、Space、Action、Emotion 等控制信息；风格版负责材质、光感、氛围和风格层表达，但不得改变叙事结构和镜头职责。
 - `control_storyboard_prompt_file` / `styled_storyboard_prompt_file`：生成上述双版故事板时使用的同源 prompt 文件；它们不是双版故事板本体的替代品。
 - `storyboard_prompt_files`：最终交付给生图模型的中文整板故事板总板 prompt 文件。它们应是一整份可直接复制给 `gpt-image2` 的长版文档，而不是 `Midjourney / Flux` 式的单镜头平台 prompt 清单。
@@ -762,6 +793,8 @@ data:
 - `storyboard_prompt_files[*].control_tracks`：故事板总板底部必须包含的中文控制轨道。默认至少包含节拍线、镜头路径、动作路径、节奏轨、升级曲线、状态轨、风格轨；若上游存在对白设计，则额外加入对白轨。
 - `storyboard_prompt_files[*].preferred_panel_grid`：当单板承载 12 格时，推荐使用 `3 x 4` 镜头区布局，让每格镜头画面保有足够可读性。
 - `storyboard_prompt_files[*].visual_area_priority`：整板纵向空间应优先给镜头画面区。默认镜头区占 `70% ~ 80%`，底部控制轨道区占 `20% ~ 30%`；若两者冲突，优先保证镜头画面清晰可读。
+- `storyboard_prompt_files[*].delivery_sections`：正式交付至少包含三个固定层次：`复制专用主 Prompt`、`控制版故事板（Control-Oriented Storyboard Board）`、`风格版故事板（Style & Rendering Storyboard Board）`。多 pack 交付时，每个 pack 都必须保持相同章节结构。
+- `storyboard_prompt_files[*].forbidden_substitutions`：不得用 `Seg / Shot / Prompt (EN) / Prompt (CN) / 连续性` 这类逐镜头说明稿替代正式整板故事板 prompt。此类内容若存在，只能归入 `shotlist`、`storyboard_content_breakdown`、导演稿附录或其他内部中间层文件。
 - `audio_handoff`：交给 `scene-audio-director` 的声音设计提示。
 - `prompt_hints`：交给视频提示词阶段的重点。
 - `downstream_video_prompt_handoff`：显式告诉视频提示词阶段必须交付什么结构，重点保证 Beat / VGU / shot continuity 不在末端退化成说明型大 Prompt。
@@ -1011,11 +1044,66 @@ outputs/storyboard_prompts/故事板提示词_pack_02_v*.md
 6. 镜头画面区必须明显大于底部控制轨道区，优先保证镜头可读性
 ```
 
+正式故事板 prompt 包的推荐骨架如下：
+
+```text
+1. 文件标题（说明当前 pack 覆盖哪些镜头，可直接复制给 gpt-image2）
+2. 复制专用主 Prompt
+3. 控制版故事板（Control-Oriented Storyboard Board）
+   - 单个长代码块
+   - 明确整板布局、镜头区比例、底部中文控制轨
+4. 风格版故事板（Style & Rendering Storyboard Board）
+   - 单个长代码块
+   - 与控制版同源，只提升材质/光感/氛围/风格层表达
+```
+
+以下结构不属于 `storyboard_prompt_files` 主交付：
+
+```text
+Seg1
+Shot01
+Prompt (EN)
+Prompt (CN)
+连续性
+```
+
+这类逐镜头文本最多只能作为中间层导演稿或 shotlist 附录，不能直接写入 `outputs/storyboard_prompts/*.md` 作为正式用户主交付。
+
 本阶段不得声称已经生成故事板图片，只能说明已经生成用于外部平台制作故事板图的 prompt。
 
 ---
 
-# 十九、阶段推进建议
+# 十九、自动 review 与 auto-fix 规则
+
+自动 review 至少检查：
+
+- `storyboard_prompt_pack_plan` 是否存在，且是否先于正式落盘确认给出
+- `total_shots > 12` 时，`storyboard_prompt_pack_mode` 是否仍错误写成 `single_pack`
+- 若为多包模式，是否已生成按 `pack` 对齐的正式故事板 prompt 文件
+- `storyboard_prompt_files[*].delivery_sections` 是否真实覆盖“复制专用主 Prompt / 控制版故事板 / 风格版故事板”
+- 正式主交付是否仍退化成 `Seg / Shot / Prompt (EN) / Prompt (CN) / 连续性` 这类逐镜头中间稿
+- `storyboard_quality_check` 是否存在、是否真实覆盖镜头职责、动作交接、空间交接、连续性四线、pack 计划和双版一致性
+- 若 `storyboard_quality_check.final_delivery_ready != true`，是否仍尝试把本阶段写成 `completed`
+- 黑板中的 `files.primary` 与 `read_policy.default_read` 是否仍错误指向未过审文件或错误体裁文件
+
+自动修复只允许修：
+
+- 补缺失的 `storyboard_prompt_pack_plan`
+- 补双版整板章节结构
+- 将错误的中间稿体裁重排回正式整板 Prompt 包骨架
+- 补 `storyboard_quality_check` 缺失的结构化检查项
+
+自动修复不得：
+
+- 偷偷改变用户已确认的创作方向
+- 偷偷改变总时长、Segment 策略或 pack 规划
+- 用中间稿冒充正式主交付来换取 `completed`
+
+若 auto-fix 后仍缺正式主交付必需元素，本阶段必须维持 `failed` 或 `pending_confirmation`，不得推进到下一阶段。
+
+---
+
+# 二十、阶段推进建议
 
 完成后建议推进：
 
