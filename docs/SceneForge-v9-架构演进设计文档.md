@@ -1321,6 +1321,8 @@ scene-forge rules --stage video_prompts --project huafei-wall-crash --json
 
 为了将 Codex CLI / Claude CLI 嵌入到 GUI 界面中并提供无感知的聊天协作体验，本章详细设计了基于 Claudian 风格的终端子进程代理与解析架构。
 
+> **参考开源项目**：[YishenTu/claudian](https://github.com/YishenTu/claudian) - Obsidian 的 Claude Code / Codex CLI 界面化集成桥接插件。
+
 ## 17.1 终端虚拟化架构 (PTY Bridge)
 
 系统不要求 Agent 支持 MCP 协议，而是通过在 Web Console（本地 Node 服务）中构建一个 Pseudo-Terminal (PTY) 桥接器来运行 `claude` 或 `codex` 命令行客户端：
