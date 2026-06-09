@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import './App.css';
-import VariantA from './VariantA';
 import VariantB from './VariantB';
-import VariantC from './VariantC';
-import PrototypeSwitcher from './PrototypeSwitcher';
+import Lobby from './Lobby';
 
 
 interface ChatBubble {
@@ -29,46 +26,145 @@ interface ProjectState {
   stages: Record<string, StageState>;
 }
 
-const STAGES = [
-  'topic_gate',
-  'script',
-  'performance',
-  'audio',
-  'storyboard',
-  'video_prompts',
-  'publish_review'
-];
-
-const STAGE_NAMES: Record<string, string> = {
-  topic_gate: 'Topic Gate (选题/吸入)',
-  script: 'Script (剧本开发)',
-  performance: 'Performance (表演导演)',
-  audio: 'Audio (声音导演)',
-  storyboard: 'Storyboard (分镜故事板)',
-  video_prompts: 'Video Prompts (视频提示词)',
-  publish_review: 'Publish Review (发布评审)'
-};
-
 export default function App() {
   const [projectState, setProjectState] = useState<ProjectState | null>(null);
   const [bubbles, setBubbles] = useState<ChatBubble[]>([]);
   const [inputVal, setInputVal] = useState('');
-  const [activeStage, setActiveStage] = useState<string>('storyboard');
+  // activeStage 自动跟随项目状态，不允许手动选择
+  const activeStage = projectState?.current_stage
+    || (projectState ? Object.entries(projectState.stages).find(([,s]) => s.status !== 'completed')?.[0] : null)
+    || 'topic_gate';
   const [previewContent, setPreviewContent] = useState<string>('');
   const [previewPath, setPreviewPath] = useState<string>('');
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'open' | 'closed'>('connecting');
   const [expandedThoughts, setExpandedThoughts] = useState<Record<string, boolean>>({});
+  const [agentRunning, setAgentRunning] = useState(false);
 
-  const [variant, setVariant] = useState<string>(() => {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('variant') || 'A';
-  });
+  const [activeProject, setActiveProject] = useState<{ active: boolean; projectSlug?: string } | null>(null);
 
-  const handleVariantChange = (newVariant: string) => {
-    setVariant(newVariant);
-    const params = new URLSearchParams(window.location.search);
-    params.set('variant', newVariant);
-    window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+  // Session history
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+
+  const fetchSessions = async () => {
+    setSessionsLoading(true);
+    try {
+      const res = await fetch('/api/sessions');
+      if (res.ok) setSessions(await res.json());
+    } catch { /* */ }
+    finally { setSessionsLoading(false); }
+  };
+
+  // Load sessions when entering workspace
+  useEffect(() => {
+    if (activeProject?.active) fetchSessions();
+  }, [activeProject?.active, activeProject?.projectSlug]);
+
+  const handleLoadSession = async (sessionId: string) => {
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      // Convert session messages to ChatBubble format
+      const loaded: ChatBubble[] = [];
+      for (const msg of data.messages) {
+        if (msg.role === 'user') {
+          loaded.push({
+            id: `hist-u-${Date.now()}-${loaded.length}`,
+            type: 'text',
+            content: `> ${msg.content}`,
+            timestamp: msg.timestamp
+          });
+        } else {
+          // Parse <thought> blocks from assistant content
+          const parts = msg.content.split(/(<thought>[\s\S]*?<\/thought>)/g);
+          for (const part of parts) {
+            if (part.startsWith('<thought>')) {
+              loaded.push({
+                id: `hist-t-${Date.now()}-${loaded.length}`,
+                type: 'thought',
+                content: part.replace(/<\/?thought>/g, ''),
+                timestamp: msg.timestamp
+              });
+            } else if (part.trim()) {
+              loaded.push({
+                id: `hist-a-${Date.now()}-${loaded.length}`,
+                type: 'text',
+                content: part.trim(),
+                timestamp: msg.timestamp
+              });
+            }
+          }
+        }
+      }
+      setBubbles(loaded);
+      setShowHistory(false);
+    } catch (err) {
+      console.error('Failed to load session:', err);
+    }
+  };
+
+  // Check initial active project on mount
+  useEffect(() => {
+    let cancelled = false;
+    const checkActive = async () => {
+      try {
+        const res = await fetch('/api/projects/active');
+        if (!cancelled) {
+          if (res.ok) {
+            const data = await res.json();
+            setActiveProject(data);
+            if (data.active && data.state) {
+              setProjectState(data.state);
+            }
+          } else {
+            setActiveProject({ active: false });
+          }
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setActiveProject({ active: false });
+        }
+      }
+    };
+    checkActive();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleLaunchProject = async (slug: string) => {
+    try {
+      const res = await fetch('/api/projects/active', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectSlug: slug })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setActiveProject({ active: true, projectSlug: slug });
+        if (data.state) {
+          setProjectState(data.state);
+        }
+        setBubbles([]); // Reset bubbles for the new project context
+      }
+    } catch (err) {
+      console.error('Failed to launch project:', err);
+    }
+  };
+
+  const handleReturnToLobby = async () => {
+    try {
+      await fetch('/api/projects/active', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectSlug: null })
+      });
+      setActiveProject({ active: false });
+      setProjectState(null);
+      setBubbles([]);
+    } catch (err) {
+      console.error('Failed to return to lobby:', err);
+    }
   };
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -76,8 +172,10 @@ export default function App() {
 
   // 1. Establish WebSocket Connection
   useEffect(() => {
+    if (!activeProject || !activeProject.active) return;
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.hostname === 'localhost' ? 'localhost:3000' : window.location.host;
+    const host = window.location.hostname === 'localhost' ? 'localhost:4399' : window.location.host;
     const wsUrl = `${protocol}//${host}`;
 
     const ws = new WebSocket(wsUrl);
@@ -86,8 +184,6 @@ export default function App() {
     ws.onopen = () => {
       setConnectionStatus('open');
       console.log('WS Connection Open');
-      // Fetch initial status
-      ws.send(JSON.stringify({ type: 'stdin', data: 'npx scene-forge status --json\n' }));
     };
 
     ws.onmessage = (event) => {
@@ -103,6 +199,8 @@ export default function App() {
               return Array.from(bubbleMap.values());
             });
           }
+        } else if (payload.type === 'run_status') {
+          setAgentRunning(payload.running === true);
         } else if (payload.type === 'workspace_update') {
           console.log('Workspace update notified:', payload.file);
           if (payload.projectState) {
@@ -126,7 +224,7 @@ export default function App() {
     return () => {
       ws.close();
     };
-  }, [activeStage]);
+  }, [activeStage, activeProject]);
 
   // Scroll chat bottom
   useEffect(() => {
@@ -139,19 +237,24 @@ export default function App() {
       const res = await fetch(`/api/file?path=${encodeURIComponent(filePath)}`);
       if (res.ok) {
         const text = await res.text();
-        setPreviewContent(text);
+        if (text.trim().startsWith('<!DOCTYPE html>')) {
+          setPreviewContent(`*此阶段的物理产物文件尚未正式生成。*\n\n您可以在当前阶段点击 **[确认提交 (Complete)]**，或者与 AI 导演对话将产物写盘，然后在此处预览。`);
+        } else {
+          setPreviewContent(text);
+        }
         setPreviewPath(filePath);
       } else {
-        setPreviewContent(`*Artifact file is not physically written yet.*\nPath: ${filePath}`);
+        setPreviewContent(`*此阶段的物理产物文件尚未生成。*\n\n您可以在当前阶段点击 **[确认提交 (Complete)]**，或者与 AI 导演对话将产物写盘，然后在此处预览。\n\n物理路径: ${filePath}`);
         setPreviewPath(filePath);
       }
     } catch (err) {
-      setPreviewContent(`Failed to load preview document: ${(err as Error).message}`);
+      setPreviewContent(`加载预览文档失败: ${(err as Error).message}`);
     }
   };
 
   // Switch preview stage
   useEffect(() => {
+    if (!activeProject || !activeProject.active) return;
     let isMounted = true;
     const loadArtifact = async () => {
       try {
@@ -211,6 +314,22 @@ export default function App() {
     }
   };
 
+  // Cancel current Claude operation (Ctrl+C — keeps session alive)
+  const handleCancel = () => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'cancel' }));
+    }
+  };
+
+  // Start a fresh Claude session
+  const handleNewSession = () => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'new_session' }));
+    }
+    setBubbles([]);
+    fetchSessions(); // Refresh history list
+  };
+
   // Keystroke stdin
   const handleSend = () => {
     if (!inputVal.trim()) return;
@@ -261,7 +380,6 @@ export default function App() {
     inputVal,
     setInputVal,
     activeStage,
-    setActiveStage,
     previewContent,
     previewPath,
     connectionStatus,
@@ -269,25 +387,30 @@ export default function App() {
     toggleThought,
     sendMacro,
     handleSend,
-    renderMarkdown
+    handleCancel,
+    handleNewSession,
+    agentRunning,
+    sessions,
+    sessionsLoading,
+    showHistory,
+    setShowHistory,
+    onLoadSession: handleLoadSession,
+    renderMarkdown,
+    onReturnLobby: handleReturnToLobby
   };
 
-  const variantsList = [
-    { key: 'A', name: 'Cinema Classic Dark' },
-    { key: 'B', name: 'Swiss Neo-Geek Grid' },
-    { key: 'C', name: 'Director\'s Multi-track' }
-  ];
+  if (activeProject === null) {
+    return (
+      <div className="lobby-loading" style={{ height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: '#050508' }}>
+        <div className="apple-spinner"></div>
+        <p style={{ color: '#fff', textAlign: 'center', marginTop: '20px', fontFamily: 'SF Pro Text, sans-serif', fontSize: '13px' }}>正在加载 SceneForge 工作区...</p>
+      </div>
+    );
+  }
 
-  return (
-    <>
-      {variant === 'A' && <VariantA {...variantProps} />}
-      {variant === 'B' && <VariantB {...variantProps} />}
-      {variant === 'C' && <VariantC {...variantProps} />}
-      <PrototypeSwitcher
-        variants={variantsList}
-        current={variant}
-        onChange={handleVariantChange}
-      />
-    </>
-  );
+  if (!activeProject.active) {
+    return <Lobby onSelectProject={handleLaunchProject} />;
+  }
+
+  return <VariantB {...variantProps} />;
 }
