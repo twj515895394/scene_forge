@@ -4,8 +4,8 @@
 set -e
 
 # Port release check (idempotency)
-echo "🔍 Checking and freeing development ports (3000, 5173)..."
-for PORT in 3000 5173; do
+echo "🔍 Checking and freeing development ports (4398, 4399)..."
+for PORT in 4398 4399; do
   PID=$(lsof -t -i :$PORT || true)
   if [ ! -z "$PID" ]; then
     echo "⚠️ Terminating existing process $PID occupying port $PORT..."

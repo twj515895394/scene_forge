@@ -5,9 +5,11 @@ import Lobby from './Lobby';
 
 interface ChatBubble {
   id: string;
-  type: 'thought' | 'tool_call' | 'text' | 'system';
+  type: 'thought' | 'tool_call' | 'text' | 'system' | 'prompt_ui';
   content: string;
   timestamp: string;
+  answered?: boolean;
+  selectedOptionLabel?: string;
 }
 
 interface StageState {
@@ -46,6 +48,19 @@ export default function App() {
   const [sessions, setSessions] = useState<any[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+
+  // Permission bypass preference
+  const [bypassPermissions, setBypassPermissions] = useState<boolean>(() => {
+    return localStorage.getItem('bypassPermissions') === 'true';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('bypassPermissions', String(bypassPermissions));
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ bypassPermissions }));
+    }
+  }, [bypassPermissions]);
 
   const fetchSessions = async () => {
     setSessionsLoading(true);
@@ -66,12 +81,13 @@ export default function App() {
       const res = await fetch(`/api/sessions/${sessionId}`);
       if (!res.ok) return;
       const data = await res.json();
+      console.log('[loadSession]', data.messages?.length, 'messages from API');
       // Convert session messages to ChatBubble format
       const loaded: ChatBubble[] = [];
       for (const msg of data.messages) {
         if (msg.role === 'user') {
           loaded.push({
-            id: `hist-u-${Date.now()}-${loaded.length}`,
+            id: `hist-u-${sessionId.slice(0,4)}-${loaded.length}`,
             type: 'text',
             content: `> ${msg.content}`,
             timestamp: msg.timestamp
@@ -82,15 +98,16 @@ export default function App() {
           for (const part of parts) {
             if (part.startsWith('<thought>')) {
               loaded.push({
-                id: `hist-t-${Date.now()}-${loaded.length}`,
+                id: `hist-t-${loaded.length}`,
                 type: 'thought',
                 content: part.replace(/<\/?thought>/g, ''),
                 timestamp: msg.timestamp
               });
             } else if (part.trim()) {
+              const isToolCall = part.trim().startsWith('[tool_call:');
               loaded.push({
-                id: `hist-a-${Date.now()}-${loaded.length}`,
-                type: 'text',
+                id: `hist-a-${loaded.length}`,
+                type: isToolCall ? 'tool_call' : 'text',
                 content: part.trim(),
                 timestamp: msg.timestamp
               });
@@ -98,8 +115,14 @@ export default function App() {
           }
         }
       }
+      console.log('[loadSession]', loaded.length, 'bubbles created:', loaded.map(b => b.type).join(','));
       setBubbles(loaded);
+      setCurrentSessionId(sessionId);
       setShowHistory(false);
+
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'load_session', sessionId }));
+      }
     } catch (err) {
       console.error('Failed to load session:', err);
     }
@@ -184,13 +207,17 @@ export default function App() {
     ws.onopen = () => {
       setConnectionStatus('open');
       console.log('WS Connection Open');
+      // Sync dynamic settings on connect
+      ws.send(JSON.stringify({ bypassPermissions }));
     };
 
     ws.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
 
-        if (payload.type === 'output') {
+        if (payload.type === 'session_init') {
+          setCurrentSessionId(payload.sessionId);
+        } else if (payload.type === 'output') {
           if (payload.bubbles && payload.bubbles.length > 0) {
             setBubbles((prev) => {
               // Merge bubbles based on id
@@ -199,6 +226,17 @@ export default function App() {
               return Array.from(bubbleMap.values());
             });
           }
+        } else if (payload.type === 'prompt_ui') {
+          setBubbles((prev) => {
+            const bubbleMap = new Map(prev.map(b => [b.id, b]));
+            bubbleMap.set(payload.id, {
+              id: payload.id,
+              type: 'prompt_ui',
+              content: JSON.stringify(payload),
+              timestamp: new Date().toISOString()
+            });
+            return Array.from(bubbleMap.values());
+          });
         } else if (payload.type === 'run_status') {
           setAgentRunning(payload.running === true);
         } else if (payload.type === 'workspace_update') {
@@ -309,10 +347,33 @@ export default function App() {
       wsRef.current.send(JSON.stringify({
         type: 'macro',
         action,
-        stage
+        stage,
+        bypassPermissions
       }));
     }
   };
+
+  const handlePromptSubmit = (bubbleId: string, optionId: string, optionLabel: string) => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'prompt_response', value: optionId }));
+      
+      // Update bubble state locally to mark it answered
+      setBubbles((prev) =>
+        prev.map((b) => {
+          if (b.id === bubbleId) {
+            return {
+              ...b,
+              answered: true,
+              selectedOptionLabel: optionLabel,
+            };
+          }
+          return b;
+        })
+      );
+    }
+  };
+
+  const hasPendingPrompt = bubbles.some(b => b.type === 'prompt_ui' && !b.answered);
 
   // Cancel current Claude operation (Ctrl+C — keeps session alive)
   const handleCancel = () => {
@@ -331,12 +392,16 @@ export default function App() {
   };
 
   // Keystroke stdin
-  const handleSend = () => {
-    if (!inputVal.trim()) return;
+  const handleSend = (overrideText?: string | React.MouseEvent) => {
+    const text = typeof overrideText === 'string' ? overrideText : inputVal;
+    if (!text || !text.trim()) return;
+    const textToSend = text.trim();
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      const forceBypass = typeof overrideText === 'string' ? true : bypassPermissions;
       wsRef.current.send(JSON.stringify({
         type: 'stdin',
-        data: inputVal + '\n'
+        data: textToSend + '\n',
+        bypassPermissions: forceBypass
       }));
       // Echo user message to local chat bubble list
       setBubbles((prev) => [
@@ -344,11 +409,13 @@ export default function App() {
         {
           id: `user-${Date.now()}`,
           type: 'text',
-          content: `> ${inputVal}`,
+          content: `> ${textToSend}`,
           timestamp: new Date().toISOString()
         }
       ]);
-      setInputVal('');
+      if (typeof overrideText !== 'string') {
+        setInputVal('');
+      }
     }
   };
 
@@ -364,13 +431,43 @@ export default function App() {
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
-      .replace(/^## (.*$)/gim, '<h2 class="md-h2">$1</h2>')
+      // Code blocks first (before other transformations)
+      .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="md-code-block"><code>$2</code></pre>')
+      // Headings
       .replace(/^### (.*$)/gim, '<h3 class="md-h3">$1</h3>')
+      .replace(/^## (.*$)/gim, '<h2 class="md-h2">$1</h2>')
       .replace(/^# (.*$)/gim, '<h1 class="md-h1">$1</h1>')
-      .replace(/^\- (.*$)/gim, '<li class="md-li">$1</li>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/`(.*?)`/g, '<code class="md-code">$1</code>');
-    
+      // Bold and italic
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      // Inline code
+      .replace(/`([^`]+)`/g, '<code class="md-code">$1</code>')
+      // Unordered lists — wrap consecutive <li> in <ul>
+      .replace(/^- (.*$)/gim, '<li class="md-li">$1</li>')
+      // Tables: match one or more table rows (lines starting and ending with |)
+      .replace(/((?:^\|.*\|$\n?)+)/gm, (tableBlock: string) => {
+        const rows = tableBlock.trim().split('\n');
+        if (rows.length < 2) return tableBlock;
+        let tableHtml = '<table class="md-table">';
+        // First row = header
+        tableHtml += '<thead><tr>' + rows[0]
+          .split('|').filter(c => c.trim())
+          .map(c => `<th>${c.trim()}</th>`).join('') + '</tr></thead>';
+        // Skip separator row (|---|---|), render remaining as body
+        const bodyRows = rows.filter((_, i) => i > 0 && !/^[\|\-\s:]+$/.test(rows[i]));
+        if (bodyRows.length > 0) {
+          tableHtml += '<tbody>' + bodyRows.map(row =>
+            '<tr>' + row.split('|').filter(c => c.trim())
+              .map(c => `<td>${c.trim()}</td>`).join('') + '</tr>'
+          ).join('') + '</tbody>';
+        }
+        tableHtml += '</table>';
+        return tableHtml;
+      })
+      // Line breaks
+      .replace(/\n\n/g, '<br/><br/>')
+      .replace(/\n/g, '<br/>');
+
     return <div dangerouslySetInnerHTML={{ __html: html }} />;
   };
 
@@ -394,9 +491,15 @@ export default function App() {
     sessionsLoading,
     showHistory,
     setShowHistory,
+    currentSessionId,
     onLoadSession: handleLoadSession,
     renderMarkdown,
-    onReturnLobby: handleReturnToLobby
+    onReturnLobby: handleReturnToLobby,
+    bypassPermissions,
+    setBypassPermissions,
+    chatEndRef,
+    hasPendingPrompt,
+    onPromptSubmit: handlePromptSubmit
   };
 
   if (activeProject === null) {

@@ -9,6 +9,7 @@ import { randomUUID } from 'crypto';
 import { OutputParser } from './OutputParser.js';
 import { FileWatcher } from './FileWatcher.js';
 import { engineVersion, Project, StateMachine } from '@scene-forge/engine';
+import { AcpSubprocess, AcpJsonRpcTransport, AcpClientConnection } from './acp/index.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -157,6 +158,13 @@ app.get('/api/projects/active', (req, res) => {
   }
 });
 
+const STYLE_MAP: Record<string, string> = {
+  disney_3d: 'pixar_like',
+  classic_film: 'realist_cinematic_3d',
+  pixar_sci_fi: 'dreamworks_like',
+  cyberpunk_neon: 'comic_action_3d'
+};
+
 // 5. Create New Project API
 app.post('/api/projects', (req, res) => {
   try {
@@ -175,6 +183,10 @@ app.post('/api/projects', (req, res) => {
       return res.status(409).json({ error: `项目 '${cleanSlug}' 已经存在` });
     }
 
+    // Map style ID
+    const resolvedStyleId = STYLE_MAP[directorStyleId] || directorStyleId || 'pixar_like';
+    const styleFamily = '3d_animation';
+
     // Create directory structure
     fs.mkdirSync(newProjectPath, { recursive: true });
     fs.mkdirSync(path.join(newProjectPath, 'outputs'), { recursive: true });
@@ -187,7 +199,7 @@ app.post('/api/projects', (req, res) => {
     const state = stateMachine.readState(); // Auto-initializes
 
     // Inject director_style_id and concept into state
-    (state as any).director_style_id = directorStyleId || 'disney_3d';
+    (state as any).director_style_id = resolvedStyleId;
     if (concept) {
       (state as any).concept = concept;
     }
@@ -197,9 +209,89 @@ app.post('/api/projects', (req, res) => {
       'utf8'
     );
 
+    const nowStr = new Date().toISOString();
+
+    // 1. Initialize PROJECT_BOARD.md
+    const boardTemplatePath = path.join(workspaceRoot, '.agents', 'skills', 'scene-forge', 'references', 'project-board-template.md');
+    if (fs.existsSync(boardTemplatePath)) {
+      const templateContent = fs.readFileSync(boardTemplatePath, 'utf8');
+      const yamlMatch = templateContent.match(/```yaml([\s\S]*?)```/);
+      if (yamlMatch) {
+        let boardYaml = yamlMatch[1].trim();
+        boardYaml = boardYaml
+          .replace(/(\s+)name:\s*$/m, `$1name: ${cleanSlug}`)
+          .replace(/(\s+)slug:\s*$/m, `$1slug: ${cleanSlug}`)
+          .replace(/(\s+)created_at:\s*$/m, `$1created_at: "${nowStr}"`)
+          .replace(/(\s+)updated_at:\s*$/m, `$1updated_at: "${nowStr}"`)
+          .replace(/(\s+)director_style_id:\s*$/m, `$1director_style_id: ${resolvedStyleId}`)
+          .replace(/(\s+)director_style_version:\s*$/m, `$1director_style_version: v1`)
+          .replace(/(\s+)style_family:\s*$/m, `$1style_family: ${styleFamily}`)
+          .replace(/(\s+)style_profile_path:\s*$/m, `$1style_profile_path: style_profiles/${resolvedStyleId}/profile.md`);
+
+        fs.writeFileSync(path.join(newProjectPath, 'PROJECT_BOARD.md'), boardYaml, 'utf8');
+      }
+    }
+
+    // 2. Initialize PROJECT_INDEX.md for this project
+    const indexTemplatePath = path.join(workspaceRoot, '.agents', 'skills', 'scene-forge', 'references', 'project-index-template.md');
+    if (fs.existsSync(indexTemplatePath)) {
+      const templateContent = fs.readFileSync(indexTemplatePath, 'utf8');
+      const yamlMatch = templateContent.match(/```yaml([\s\S]*?)```/);
+      if (yamlMatch) {
+        let indexYaml = yamlMatch[1].trim();
+        indexYaml = indexYaml
+          .replace(/(\s+)project_slug:\s*$/m, `$1project_slug: ${cleanSlug}`)
+          .replace(/(\s+)project_name:\s*$/m, `$1project_name: ${cleanSlug}`)
+          .replace(/(\s+)updated_at:\s*$/m, `$1updated_at: "${nowStr}"`)
+          .replace(/(\s+)lifecycle_flag:\s*$/m, `$1lifecycle_flag: active`)
+          .replace(/(\s+)project_status:\s*$/m, `$1project_status: draft`)
+          .replace(/(\s+)next_stage:\s*$/m, `$1next_stage: scene-topic-gate`)
+          .replace(/(\s+)current_stage:\s*$/m, `$1current_stage: scene-topic-gate`)
+          .replace(/(\s+)topic_summary:\s*$/m, `$1topic_summary: ${JSON.stringify(concept || '')}`)
+          .replace(/(\s+)style_summary:\s*$/m, `$1style_summary: ${resolvedStyleId}`)
+          .replace(/(\s+)aliases:\s*\[\]/m, `$1aliases: [${cleanSlug}]`)
+          .replace(/(\s+)tags:\s*\[\]/m, `$1tags: [active, scene-topic-gate]`)
+          .replace(/(\s+)board_path:\s*$/m, `$1board_path: projects/${cleanSlug}/PROJECT_BOARD.md`)
+          .replace(/(\s+)route_reason:\s*$/m, `$1route_reason: 新项目初始化，等待进入选题闸门。`);
+
+        fs.writeFileSync(path.join(newProjectPath, 'PROJECT_INDEX.md'), indexYaml, 'utf8');
+      }
+    }
+
+    // 3. Register in global projects/PROJECT_INDEX.md
+    const globalIndexPath = path.join(workspaceRoot, 'projects', 'PROJECT_INDEX.md');
+    if (fs.existsSync(globalIndexPath)) {
+      let content = fs.readFileSync(globalIndexPath, 'utf8');
+      const indentedConcept = concept ? concept.trim().replace(/\n/g, '\n        ') : '';
+      const newEntry = `    - project_slug: ${cleanSlug}
+      project_name: ${cleanSlug}
+      updated_at: ${nowStr}
+      lifecycle_flag: active
+      project_status: draft
+      next_stage: scene-topic-gate
+      current_stage: scene-topic-gate
+      topic_summary: >
+        ${indentedConcept}
+      style_summary: ${resolvedStyleId}
+      aliases:
+        - ${cleanSlug}
+      tags:
+        - active
+        - scene-topic-gate
+      project_index_path: projects/${cleanSlug}/PROJECT_INDEX.md
+      project_board_path: projects/${cleanSlug}/PROJECT_BOARD.md
+`;
+      const lastFenceIndex = content.lastIndexOf('```');
+      if (lastFenceIndex !== -1) {
+        content = content.slice(0, lastFenceIndex) + newEntry + content.slice(lastFenceIndex);
+        content = content.replace(/updated_at:\s*\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/, `updated_at: ${nowStr.split('.')[0]}`);
+        fs.writeFileSync(globalIndexPath, content, 'utf8');
+      }
+    }
+
     // Set as active project
     activeProjectPath = newProjectPath;
-    console.log(`New project created and activated: ${cleanSlug}`);
+    console.log(`New project created, initialized with board & index, and activated: ${cleanSlug}`);
 
     res.status(201).json({
       success: true,
@@ -251,9 +343,13 @@ function parseSessionPreview(jsonlPath: string): { id: string; preview: string; 
         const entry = JSON.parse(line);
         if (entry.type === 'user' && entry.message?.content) {
           if (!firstUserMessage) {
-            firstUserMessage = typeof entry.message.content === 'string'
+            let raw = typeof entry.message.content === 'string'
               ? entry.message.content
               : JSON.stringify(entry.message.content);
+            // 剥离注入上下文，只显示用户真正输入的内容
+            const sep = '\n\n---\n用户: ';
+            const idx = raw.indexOf(sep);
+            firstUserMessage = idx !== -1 ? raw.slice(idx + sep.length) : raw;
             timestamp = entry.timestamp || '';
           }
           messageCount++;
@@ -277,7 +373,8 @@ function parseSessionPreview(jsonlPath: string): { id: string; preview: string; 
 }
 
 app.get('/api/sessions', (req, res) => {
-  const projectPath = activeProjectPath || workspaceRoot;
+  // Claude 的 cwd 是 workspaceRoot，session 文件始终存在该目录下
+  const projectPath = workspaceRoot;
   try {
     const sessionDir = getClaudeSessionDir(projectPath);
     if (!fs.existsSync(sessionDir)) return res.json([]);
@@ -295,7 +392,7 @@ app.get('/api/sessions', (req, res) => {
 });
 
 app.get('/api/sessions/:id', (req, res) => {
-  const projectPath = activeProjectPath || workspaceRoot;
+  const projectPath = workspaceRoot;
   try {
     const sessionDir = getClaudeSessionDir(projectPath);
     const jsonlPath = path.join(sessionDir, `${req.params.id}.jsonl`);
@@ -311,11 +408,16 @@ app.get('/api/sessions/:id', (req, res) => {
       try {
         const entry = JSON.parse(line);
         if (entry.type === 'user') {
-          messages.push({
-            role: 'user',
-            content: typeof entry.message?.content === 'string' ? entry.message.content : '',
-            timestamp: entry.timestamp
-          });
+          let content = typeof entry.message?.content === 'string' ? entry.message.content : '';
+          // 剥离我们注入的上下文，只保留用户真正的输入
+          const sep = '\n\n---\n用户: ';
+          const idx = content.indexOf(sep);
+          if (idx !== -1) {
+            content = content.slice(idx + sep.length);
+          }
+          if (content.trim()) {
+            messages.push({ role: 'user', content, timestamp: entry.timestamp });
+          }
         } else if (entry.type === 'assistant') {
           const blocks = entry.message?.content;
           const textParts: string[] = [];
@@ -330,11 +432,10 @@ app.get('/api/sessions/:id', (req, res) => {
               }
             }
           }
-          messages.push({
-            role: 'assistant',
-            content: textParts.join('\n'),
-            timestamp: entry.timestamp
-          });
+          const joined = textParts.join('\n');
+          if (joined.trim()) {
+            messages.push({ role: 'assistant', content: joined, timestamp: entry.timestamp });
+          }
         }
       } catch { /* skip */ }
     }
@@ -346,53 +447,82 @@ app.get('/api/sessions/:id', (req, res) => {
 });
 
 
-// Build project context for Claude's first message
+// Build minimal routing context for Claude's first message
 function buildProjectContext(projectPath: string): string {
   const slug = path.basename(projectPath);
-  const statePath = path.join(projectPath, 'PROJECT_STATE.json');
-  let stateSummary = '未初始化';
-  let currentStage = '';
+  return `读取 ./AGENTS.md（不是根目录 the CLAUDE.md）。当前项目: ${slug}，目录 projects/${slug}/。`;
+}
 
-  if (fs.existsSync(statePath)) {
-    try {
-      const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
-      currentStage = state.current_stage || '';
-      const stages = Object.entries(state.stages || {}) as [string, any][];
-      const lines = stages.map(([name, s]) => {
-        const statusIcon = s.status === 'completed' ? '✅' : s.status === 'in_progress' ? '🔄' : s.status === 'ready' ? '⬜' : '❌';
-        return `  ${statusIcon} ${name}: ${s.status}`;
-      });
-      stateSummary = lines.join('\n');
-      if (currentStage) {
-        stateSummary += `\n\n当前活跃阶段: ${currentStage}`;
-      }
-    } catch {}
+// Helper to parse Claude's raw session JSONL log into ChatBubbles
+function getSessionBubbles(sessionId: string): any[] {
+  const sessionDir = getClaudeSessionDir(workspaceRoot);
+  const jsonlPath = path.join(sessionDir, `${sessionId}.jsonl`);
+  if (!fs.existsSync(jsonlPath)) return [];
+  try {
+    const content = fs.readFileSync(jsonlPath, 'utf8');
+    const lines = content.trim().split('\n');
+    const bubbles: any[] = [];
+    for (const line of lines) {
+      try {
+        const entry = JSON.parse(line);
+        if (entry.type === 'user') {
+          let text = typeof entry.message?.content === 'string' ? entry.message.content : '';
+          const sep = '\n\n---\n用户: ';
+          const idx = text.indexOf(sep);
+          if (idx !== -1) {
+            text = text.slice(idx + sep.length);
+          }
+          if (text.trim()) {
+            bubbles.push({
+              id: `hist-u-${sessionId.slice(0, 4)}-${bubbles.length}`,
+              type: 'text',
+              content: `> ${text}`,
+              timestamp: entry.timestamp || new Date().toISOString()
+            });
+          }
+        } else if (entry.type === 'assistant') {
+          const blocks = entry.message?.content;
+          const textParts: string[] = [];
+          if (Array.isArray(blocks)) {
+            for (const block of blocks) {
+              if (block.type === 'text' && block.text) {
+                textParts.push(block.text);
+              } else if (block.type === 'thinking' && block.thinking) {
+                textParts.push(`<thought>${block.thinking}</thought>`);
+              } else if (block.type === 'tool_use') {
+                textParts.push(`[tool_call: ${block.name || 'unknown'}]`);
+              }
+            }
+          }
+          const joined = textParts.join('\n');
+          if (joined.trim()) {
+            const parts = joined.split(/(<thought>[\s\S]*?<\/thought>)/g);
+            for (const part of parts) {
+              if (part.startsWith('<thought>')) {
+                bubbles.push({
+                  id: `hist-t-${bubbles.length}`,
+                  type: 'thought',
+                  content: part.replace(/<\/?thought>/g, ''),
+                  timestamp: entry.timestamp || new Date().toISOString()
+                });
+              } else if (part.trim()) {
+                const isToolCall = part.trim().startsWith('[tool_call:');
+                bubbles.push({
+                  id: `hist-a-${bubbles.length}`,
+                  type: isToolCall ? 'tool_call' : 'text',
+                  content: part.trim(),
+                  timestamp: entry.timestamp || new Date().toISOString()
+                });
+              }
+            }
+          }
+        }
+      } catch { /* skip */ }
+    }
+    return bubbles;
+  } catch {
+    return [];
   }
-
-  return `你是 SceneForge v9 的视频制作管线 AI 导演。
-
-## 首要任务
-**立即读取仓库根目录的运行规则文件 ./AGENTS.md**
-该文件定义了上下文读取边界、紧凑预算、黑板纪律、预览先行等硬性约束，必须在执行任何操作前理解并遵守。
-
-## 当前项目
-- 项目名: ${slug}
-- 路径: projects/${slug}/
-
-## 管线阶段（严格按顺序执行，不可跳过）
-topic_gate(选题) → script(剧本) → performance(表演) → audio(声音) → storyboard(分镜) → video_prompts(提示词) → publish_review(发布)
-
-## 当前项目状态
-${stateSummary}
-
-## 执行顺序
-1. 读取 ./AGENTS.md 理解全局约束
-2. 读取 projects/${slug}/PROJECT_STATE.json 核对当前阶段
-3. 读取 projects/${slug}/PROJECT_BOARD.md 了解项目详情和规则
-4. 严格按阶段依赖顺序推进，上游未完成不开下游
-5. 产物写 projects/${slug}/outputs/，草稿放 projects/${slug}/details/<stage>/
-6. 完成后更新 projects/${slug}/PROJECT_STATE.json
-7. 用中文回复，引导创作过程`;
 }
 
 wss.on('connection', (ws: WebSocket) => {
@@ -403,6 +533,40 @@ wss.on('connection', (ws: WebSocket) => {
   let currentProcess: ChildProcess | null = null;
   let sessionId: string = randomUUID();
   let isFirstMessage = true;
+  let bypassPermissions = false;
+
+  // Restore or persist session ID for the active target
+  const activeSessionFile = path.join(targetPath, '.active_session_id');
+  if (fs.existsSync(activeSessionFile)) {
+    const storedId = fs.readFileSync(activeSessionFile, 'utf8').trim();
+    if (storedId && storedId.length > 10) {
+      sessionId = storedId;
+      const sessionDir = getClaudeSessionDir(workspaceRoot);
+      const jsonlPath = path.join(sessionDir, `${sessionId}.jsonl`);
+      if (fs.existsSync(jsonlPath) && fs.statSync(jsonlPath).size > 0) {
+        isFirstMessage = false;
+        console.log(`[Session] Restored active session: ${sessionId} (resuming: true)`);
+      } else {
+        console.log(`[Session] Stored session ID found but empty on disk: ${sessionId}`);
+      }
+    }
+  } else {
+    try {
+      fs.writeFileSync(activeSessionFile, sessionId, 'utf8');
+      console.log(`[Session] Persisted new active session ID: ${sessionId}`);
+    } catch (err) {
+      console.warn(`Failed to write .active_session_id: ${(err as Error).message}`);
+    }
+  }
+
+  // Immediately push session history to the connected client
+  const initialBubbles = getSessionBubbles(sessionId);
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'session_init', sessionId }));
+    if (initialBubbles.length > 0) {
+      ws.send(JSON.stringify({ type: 'output', bubbles: initialBubbles }));
+    }
+  }
 
   // Set up FileWatcher for hot reload push
   const watcher = new FileWatcher(targetPath, (msg: any) => {
@@ -411,7 +575,7 @@ wss.on('connection', (ws: WebSocket) => {
     }
   });
 
-  const runClaude = (prompt: string) => {
+  const runClaude = async (prompt: string) => {
     if (currentProcess) {
       try { currentProcess.kill('SIGINT'); } catch (_) {}
       currentProcess = null;
@@ -420,6 +584,9 @@ wss.on('connection', (ws: WebSocket) => {
     // 首次消息：注入项目上下文作为 system context
     let finalPrompt = prompt;
     const args = ['--print'];
+    if (bypassPermissions) {
+      args.push('--dangerously-skip-permissions');
+    }
     if (isFirstMessage) {
       const ctx = buildProjectContext(targetPath);
       finalPrompt = `${ctx}\n\n---\n用户: ${prompt}`;
@@ -429,7 +596,24 @@ wss.on('connection', (ws: WebSocket) => {
       args.push(prompt, '--resume', sessionId);
     }
 
-    const proc = spawn('claude', args, { cwd: workspaceRoot, env: process.env });
+    console.log(`[runClaude] Spawn command: claude ${args.join(' ')}`);
+
+    let claudeBin = 'claude';
+    try {
+      if (fs.existsSync('/opt/homebrew/bin/claude')) {
+        claudeBin = '/opt/homebrew/bin/claude';
+      } else if (fs.existsSync('/usr/local/bin/claude')) {
+        claudeBin = '/usr/local/bin/claude';
+      }
+    } catch (_) {}
+
+    const proc = spawn(claudeBin, args, {
+      cwd: workspaceRoot,
+      env: {
+        ...process.env,
+        PATH: `/opt/homebrew/bin:/usr/local/bin:${process.env.PATH || ''}`
+      }
+    });
     currentProcess = proc;
 
     if (ws.readyState === WebSocket.OPEN) {
@@ -437,7 +621,30 @@ wss.on('connection', (ws: WebSocket) => {
     }
 
     proc.stdout.on('data', (data: Buffer) => {
-      const bubbles = parser.feed(data.toString());
+      const text = data.toString();
+      
+      // 检测是否有提权等待：包含 '[y/N]' 或者 '(y/n)'，以及以 'Allow ' 开头。
+      const cleanText = text.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '');
+      const isPermissionRequest = cleanText.includes('[y/N]') || cleanText.includes('(y/n)') || cleanText.includes('Allow ') || cleanText.includes('批准');
+
+      if (isPermissionRequest && !bypassPermissions) {
+        console.log(`[Permission Intercepted] Captured question text: ${cleanText.trim()}`);
+        
+        const id = `prompt-${Date.now()}`;
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'prompt_ui',
+            id,
+            title: cleanText.trim() || '系统检测到 Claude CLI 正在请求授权，是否批准？',
+            options: [
+              { label: '批准写入/执行 (Yes)', value: 'y', kind: 'allow' },
+              { label: '拒绝操作 (No)', value: 'n', kind: 'deny' }
+            ]
+          }));
+        }
+      }
+
+      const bubbles = parser.feed(text);
       if (ws.readyState === WebSocket.OPEN && bubbles.length > 0) {
         ws.send(JSON.stringify({ type: 'output', bubbles }));
       }
@@ -451,14 +658,37 @@ wss.on('connection', (ws: WebSocket) => {
     });
   };
 
-  ws.on('message', (message: string) => {
+  ws.on('message', async (message: string) => {
     try {
       const payload = JSON.parse(message);
+      if (payload.bypassPermissions !== undefined) {
+        bypassPermissions = !!payload.bypassPermissions;
+      }
 
       switch (payload.type) {
+        case 'load_session':
+          if (payload.sessionId) {
+            sessionId = payload.sessionId;
+            isFirstMessage = false;
+            try {
+              fs.writeFileSync(activeSessionFile, sessionId, 'utf8');
+              console.log(`[Session] Synced active session ID to: ${sessionId}`);
+            } catch (err) {
+              console.warn(`Failed to sync .active_session_id: ${(err as Error).message}`);
+            }
+          }
+          break;
+
         case 'stdin':
           if (typeof payload.data === 'string' && payload.data.trim()) {
-            runClaude(payload.data.trim());
+            await runClaude(payload.data.trim());
+          }
+          break;
+
+        case 'prompt_response':
+          if (currentProcess && currentProcess.stdin) {
+            console.log(`[Permission Response] Writing User response: ${payload.value} to stdin`);
+            currentProcess.stdin.write(`${payload.value}\n`);
           }
           break;
 
@@ -482,8 +712,15 @@ wss.on('connection', (ws: WebSocket) => {
           parser.clear();
           sessionId = randomUUID();
           isFirstMessage = true;
+          try {
+            fs.writeFileSync(activeSessionFile, sessionId, 'utf8');
+            console.log(`[Session] Created new active session ID: ${sessionId}`);
+          } catch (err) {
+            console.warn(`Failed to write new .active_session_id: ${(err as Error).message}`);
+          }
           if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'run_status', running: false }));
+            ws.send(JSON.stringify({ type: 'session_init', sessionId }));
           }
           break;
 
@@ -491,11 +728,11 @@ wss.on('connection', (ws: WebSocket) => {
           const { action, stage } = payload;
           if (action && stage) {
             const prompts: Record<string, string> = {
-              start: `请开始执行 ${stage} 阶段的制作工作。先检查上游依赖是否完成，然后按照 Project Board 中的规范生成产物。`,
+              start: `请开始执行 ${stage} 阶段 learnings 对应的管线制作工作。先检查上游依赖是否完成，然后按照 Project Board 中的规范生成产物。`,
               validate: `请对 ${stage} 阶段的产物执行格式校验（Lint/Validator），并输出校验结果。`,
               complete: `请确认 ${stage} 阶段的工作已完成，执行 Complete 流程：生成 Handoff 文件，更新 PROJECT_STATE.json 状态。`
             };
-            if (prompts[action]) runClaude(prompts[action]);
+            if (prompts[action]) await runClaude(prompts[action]);
           }
           break;
         }
@@ -505,7 +742,7 @@ wss.on('connection', (ws: WebSocket) => {
       }
     } catch (err) {
       if (typeof message === 'string' && message.trim()) {
-        runClaude(message.trim());
+        await runClaude(message.trim());
       }
     }
   });

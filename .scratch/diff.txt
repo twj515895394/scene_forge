@@ -1,0 +1,2094 @@
+diff --git a/.scratch/sceneforge-v9/PRD.md b/.scratch/sceneforge-v9/PRD.md
+index dbed02b..90c9b00 100644
+--- a/.scratch/sceneforge-v9/PRD.md
++++ b/.scratch/sceneforge-v9/PRD.md
+@@ -25,3 +25,7 @@
+ - [ ] [04-cli-json-api.md](file:///Users/tangwujun/Documents/trae_projects/scene_forge/.scratch/sceneforge-v9/issues/04-cli-json-api.md)
+ - [ ] [05-claudian-pty-bridge.md](file:///Users/tangwujun/Documents/trae_projects/scene_forge/.scratch/sceneforge-v9/issues/05-claudian-pty-bridge.md)
+ - [ ] [06-web-console-ui.md](file:///Users/tangwujun/Documents/trae_projects/scene_forge/.scratch/sceneforge-v9/issues/06-web-console-ui.md)
++- [ ] [07-board-state-alignment.md](file:///Users/tangwujun/Documents/trae_projects/scene_forge/.scratch/sceneforge-v9/issues/07-board-state-alignment.md)
++- [x] [08-chat-history-persistence.md](file:///Users/tangwujun/Documents/trae_projects/scene_forge/.scratch/sceneforge-v9/issues/08-chat-history-persistence.md)
++- [x] [09-streaming-rendering-loading.md](file:///Users/tangwujun/Documents/trae_projects/scene_forge/.scratch/sceneforge-v9/issues/09-streaming-rendering-loading.md)
++- [x] [10-permission-configuration-actions.md](file:///Users/tangwujun/Documents/trae_projects/scene_forge/.scratch/sceneforge-v9/issues/10-permission-configuration-actions.md)
+diff --git a/AGENTS.md b/AGENTS.md
+index 31c622d..ab3d4ee 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -140,3 +140,28 @@ SceneForge 默认输出的是结构化资料、提示词、说明文档和阶段
+ - skill 内规则负责在长上下文中再次提醒
+ 
+ 如果未来要继续瘦身，优先压缩重复解释，不删除关键边界提醒。
++
++## 7. 视频制作 SOP 管线 CLI 状态推进 (SOP Pipeline Commands)
++
++在执行 SceneForge SOP 视频制作流程时，Agent 必须通过运行以下 CLI 命令来查询与更新项目状态（禁止直接手动修改 `PROJECT_STATE.json`，一切状态推进以 CLI 为准）：
++
++- **查看当前管线状态**: `node packages/engine/dist/cli.js status`
++- **开启一个管线阶段**: `node packages/engine/dist/cli.js start --stage <stage>`
++- **校验当前阶段产物**: `node packages/engine/dist/cli.js validate --stage <stage>`
++- **完成当前管线阶段**: `node packages/engine/dist/cli.js complete --stage <stage>` (此命令会自动触发校验、生成 Handoff 并推进状态机，成功后方可解锁下游)
++- **查看可继承的最终产物**: `node packages/engine/dist/cli.js artifacts --from <stage>`
++- **查看阶段校验规则**: `node packages/engine/dist/cli.js rules --stage <stage>`
++
++## 8. AI 导演执行指导原则 (Guidelines for AI Director)
++
++1. **角色认知**: 你的身份是 SceneForge SOP 的 AI 导演，负责引导用户按照流程完成剧本、表演、分镜、声音和提示词的制作。
++2. **初始化规则**: 新建项目或激活无黑板项目时，首要任务是使用 `scene-forge` 技能初始化 `PROJECT_BOARD.md`，并在全局 `projects/PROJECT_INDEX.md` 中注册该项目。
++3. **管线推进步骤**:
++   - 运行状态查询命令获取当前项目状态：`node packages/engine/dist/cli.js status`。
++   - 确认当前需要推进的阶段 `next_stage`。
++   - 启动该阶段：`node packages/engine/dist/cli.js start --stage <stage>`。
++   - 读取该阶段的技能规范文件 `.agents/skills/<stage-name>/SKILL.md`，理解输出协议和硬限制。
++   - 与用户充分对话讨论，生成该阶段的**预览方案**，待用户显式确认。
++   - 用户确认后，正式落盘产物（写 `outputs/`，草稿放 `details/`，注册到 `artifacts.manifest.yaml`）。
++   - 完成该阶段：`node packages/engine/dist/cli.js complete --stage <stage>`，正式推进状态机至下一阶段。
++
+diff --git a/apps/web-console/server/server.ts b/apps/web-console/server/server.ts
+index 8c4c7d6..89bf1c8 100644
+--- a/apps/web-console/server/server.ts
++++ b/apps/web-console/server/server.ts
+@@ -9,6 +9,7 @@ import { randomUUID } from 'crypto';
+ import { OutputParser } from './OutputParser.js';
+ import { FileWatcher } from './FileWatcher.js';
+ import { engineVersion, Project, StateMachine } from '@scene-forge/engine';
++import { AcpSubprocess, AcpJsonRpcTransport, AcpClientConnection } from './acp/index.js';
+ 
+ const app = express();
+ const server = http.createServer(app);
+@@ -157,6 +158,13 @@ app.get('/api/projects/active', (req, res) => {
+   }
+ });
+ 
++const STYLE_MAP: Record<string, string> = {
++  disney_3d: 'pixar_like',
++  classic_film: 'realist_cinematic_3d',
++  pixar_sci_fi: 'dreamworks_like',
++  cyberpunk_neon: 'comic_action_3d'
++};
++
+ // 5. Create New Project API
+ app.post('/api/projects', (req, res) => {
+   try {
+@@ -175,6 +183,10 @@ app.post('/api/projects', (req, res) => {
+       return res.status(409).json({ error: `项目 '${cleanSlug}' 已经存在` });
+     }
+ 
++    // Map style ID
++    const resolvedStyleId = STYLE_MAP[directorStyleId] || directorStyleId || 'pixar_like';
++    const styleFamily = '3d_animation';
++
+     // Create directory structure
+     fs.mkdirSync(newProjectPath, { recursive: true });
+     fs.mkdirSync(path.join(newProjectPath, 'outputs'), { recursive: true });
+@@ -187,7 +199,7 @@ app.post('/api/projects', (req, res) => {
+     const state = stateMachine.readState(); // Auto-initializes
+ 
+     // Inject director_style_id and concept into state
+-    (state as any).director_style_id = directorStyleId || 'disney_3d';
++    (state as any).director_style_id = resolvedStyleId;
+     if (concept) {
+       (state as any).concept = concept;
+     }
+@@ -197,9 +209,89 @@ app.post('/api/projects', (req, res) => {
+       'utf8'
+     );
+ 
++    const nowStr = new Date().toISOString();
++
++    // 1. Initialize PROJECT_BOARD.md
++    const boardTemplatePath = path.join(workspaceRoot, '.agents', 'skills', 'scene-forge', 'references', 'project-board-template.md');
++    if (fs.existsSync(boardTemplatePath)) {
++      const templateContent = fs.readFileSync(boardTemplatePath, 'utf8');
++      const yamlMatch = templateContent.match(/```yaml([\s\S]*?)```/);
++      if (yamlMatch) {
++        let boardYaml = yamlMatch[1].trim();
++        boardYaml = boardYaml
++          .replace(/(\s+)name:\s*$/m, `$1name: ${cleanSlug}`)
++          .replace(/(\s+)slug:\s*$/m, `$1slug: ${cleanSlug}`)
++          .replace(/(\s+)created_at:\s*$/m, `$1created_at: "${nowStr}"`)
++          .replace(/(\s+)updated_at:\s*$/m, `$1updated_at: "${nowStr}"`)
++          .replace(/(\s+)director_style_id:\s*$/m, `$1director_style_id: ${resolvedStyleId}`)
++          .replace(/(\s+)director_style_version:\s*$/m, `$1director_style_version: v1`)
++          .replace(/(\s+)style_family:\s*$/m, `$1style_family: ${styleFamily}`)
++          .replace(/(\s+)style_profile_path:\s*$/m, `$1style_profile_path: style_profiles/${resolvedStyleId}/profile.md`);
++
++        fs.writeFileSync(path.join(newProjectPath, 'PROJECT_BOARD.md'), boardYaml, 'utf8');
++      }
++    }
++
++    // 2. Initialize PROJECT_INDEX.md for this project
++    const indexTemplatePath = path.join(workspaceRoot, '.agents', 'skills', 'scene-forge', 'references', 'project-index-template.md');
++    if (fs.existsSync(indexTemplatePath)) {
++      const templateContent = fs.readFileSync(indexTemplatePath, 'utf8');
++      const yamlMatch = templateContent.match(/```yaml([\s\S]*?)```/);
++      if (yamlMatch) {
++        let indexYaml = yamlMatch[1].trim();
++        indexYaml = indexYaml
++          .replace(/(\s+)project_slug:\s*$/m, `$1project_slug: ${cleanSlug}`)
++          .replace(/(\s+)project_name:\s*$/m, `$1project_name: ${cleanSlug}`)
++          .replace(/(\s+)updated_at:\s*$/m, `$1updated_at: "${nowStr}"`)
++          .replace(/(\s+)lifecycle_flag:\s*$/m, `$1lifecycle_flag: active`)
++          .replace(/(\s+)project_status:\s*$/m, `$1project_status: draft`)
++          .replace(/(\s+)next_stage:\s*$/m, `$1next_stage: scene-topic-gate`)
++          .replace(/(\s+)current_stage:\s*$/m, `$1current_stage: scene-topic-gate`)
++          .replace(/(\s+)topic_summary:\s*$/m, `$1topic_summary: ${JSON.stringify(concept || '')}`)
++          .replace(/(\s+)style_summary:\s*$/m, `$1style_summary: ${resolvedStyleId}`)
++          .replace(/(\s+)aliases:\s*\[\]/m, `$1aliases: [${cleanSlug}]`)
++          .replace(/(\s+)tags:\s*\[\]/m, `$1tags: [active, scene-topic-gate]`)
++          .replace(/(\s+)board_path:\s*$/m, `$1board_path: projects/${cleanSlug}/PROJECT_BOARD.md`)
++          .replace(/(\s+)route_reason:\s*$/m, `$1route_reason: 新项目初始化，等待进入选题闸门。`);
++
++        fs.writeFileSync(path.join(newProjectPath, 'PROJECT_INDEX.md'), indexYaml, 'utf8');
++      }
++    }
++
++    // 3. Register in global projects/PROJECT_INDEX.md
++    const globalIndexPath = path.join(workspaceRoot, 'projects', 'PROJECT_INDEX.md');
++    if (fs.existsSync(globalIndexPath)) {
++      let content = fs.readFileSync(globalIndexPath, 'utf8');
++      const indentedConcept = concept ? concept.trim().replace(/\n/g, '\n        ') : '';
++      const newEntry = `    - project_slug: ${cleanSlug}
++      project_name: ${cleanSlug}
++      updated_at: ${nowStr}
++      lifecycle_flag: active
++      project_status: draft
++      next_stage: scene-topic-gate
++      current_stage: scene-topic-gate
++      topic_summary: >
++        ${indentedConcept}
++      style_summary: ${resolvedStyleId}
++      aliases:
++        - ${cleanSlug}
++      tags:
++        - active
++        - scene-topic-gate
++      project_index_path: projects/${cleanSlug}/PROJECT_INDEX.md
++      project_board_path: projects/${cleanSlug}/PROJECT_BOARD.md
++`;
++      const lastFenceIndex = content.lastIndexOf('```');
++      if (lastFenceIndex !== -1) {
++        content = content.slice(0, lastFenceIndex) + newEntry + content.slice(lastFenceIndex);
++        content = content.replace(/updated_at:\s*\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/, `updated_at: ${nowStr.split('.')[0]}`);
++        fs.writeFileSync(globalIndexPath, content, 'utf8');
++      }
++    }
++
+     // Set as active project
+     activeProjectPath = newProjectPath;
+-    console.log(`New project created and activated: ${cleanSlug}`);
++    console.log(`New project created, initialized with board & index, and activated: ${cleanSlug}`);
+ 
+     res.status(201).json({
+       success: true,
+@@ -251,9 +343,13 @@ function parseSessionPreview(jsonlPath: string): { id: string; preview: string;
+         const entry = JSON.parse(line);
+         if (entry.type === 'user' && entry.message?.content) {
+           if (!firstUserMessage) {
+-            firstUserMessage = typeof entry.message.content === 'string'
++            let raw = typeof entry.message.content === 'string'
+               ? entry.message.content
+               : JSON.stringify(entry.message.content);
++            // 剥离注入上下文，只显示用户真正输入的内容
++            const sep = '\n\n---\n用户: ';
++            const idx = raw.indexOf(sep);
++            firstUserMessage = idx !== -1 ? raw.slice(idx + sep.length) : raw;
+             timestamp = entry.timestamp || '';
+           }
+           messageCount++;
+@@ -277,7 +373,8 @@ function parseSessionPreview(jsonlPath: string): { id: string; preview: string;
+ }
+ 
+ app.get('/api/sessions', (req, res) => {
+-  const projectPath = activeProjectPath || workspaceRoot;
++  // Claude 的 cwd 是 workspaceRoot，session 文件始终存在该目录下
++  const projectPath = workspaceRoot;
+   try {
+     const sessionDir = getClaudeSessionDir(projectPath);
+     if (!fs.existsSync(sessionDir)) return res.json([]);
+@@ -295,7 +392,7 @@ app.get('/api/sessions', (req, res) => {
+ });
+ 
+ app.get('/api/sessions/:id', (req, res) => {
+-  const projectPath = activeProjectPath || workspaceRoot;
++  const projectPath = workspaceRoot;
+   try {
+     const sessionDir = getClaudeSessionDir(projectPath);
+     const jsonlPath = path.join(sessionDir, `${req.params.id}.jsonl`);
+@@ -311,11 +408,16 @@ app.get('/api/sessions/:id', (req, res) => {
+       try {
+         const entry = JSON.parse(line);
+         if (entry.type === 'user') {
+-          messages.push({
+-            role: 'user',
+-            content: typeof entry.message?.content === 'string' ? entry.message.content : '',
+-            timestamp: entry.timestamp
+-          });
++          let content = typeof entry.message?.content === 'string' ? entry.message.content : '';
++          // 剥离我们注入的上下文，只保留用户真正的输入
++          const sep = '\n\n---\n用户: ';
++          const idx = content.indexOf(sep);
++          if (idx !== -1) {
++            content = content.slice(idx + sep.length);
++          }
++          if (content.trim()) {
++            messages.push({ role: 'user', content, timestamp: entry.timestamp });
++          }
+         } else if (entry.type === 'assistant') {
+           const blocks = entry.message?.content;
+           const textParts: string[] = [];
+@@ -330,11 +432,10 @@ app.get('/api/sessions/:id', (req, res) => {
+               }
+             }
+           }
+-          messages.push({
+-            role: 'assistant',
+-            content: textParts.join('\n'),
+-            timestamp: entry.timestamp
+-          });
++          const joined = textParts.join('\n');
++          if (joined.trim()) {
++            messages.push({ role: 'assistant', content: joined, timestamp: entry.timestamp });
++          }
+         }
+       } catch { /* skip */ }
+     }
+@@ -346,53 +447,82 @@ app.get('/api/sessions/:id', (req, res) => {
+ });
+ 
+ 
+-// Build project context for Claude's first message
++// Build minimal routing context for Claude's first message
+ function buildProjectContext(projectPath: string): string {
+   const slug = path.basename(projectPath);
+-  const statePath = path.join(projectPath, 'PROJECT_STATE.json');
+-  let stateSummary = '未初始化';
+-  let currentStage = '';
++  return `读取 ./AGENTS.md（不是根目录 the CLAUDE.md）。当前项目: ${slug}，目录 projects/${slug}/。`;
++}
+ 
+-  if (fs.existsSync(statePath)) {
+-    try {
+-      const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+-      currentStage = state.current_stage || '';
+-      const stages = Object.entries(state.stages || {}) as [string, any][];
+-      const lines = stages.map(([name, s]) => {
+-        const statusIcon = s.status === 'completed' ? '✅' : s.status === 'in_progress' ? '🔄' : s.status === 'ready' ? '⬜' : '❌';
+-        return `  ${statusIcon} ${name}: ${s.status}`;
+-      });
+-      stateSummary = lines.join('\n');
+-      if (currentStage) {
+-        stateSummary += `\n\n当前活跃阶段: ${currentStage}`;
+-      }
+-    } catch {}
++// Helper to parse Claude's raw session JSONL log into ChatBubbles
++function getSessionBubbles(sessionId: string): any[] {
++  const sessionDir = getClaudeSessionDir(workspaceRoot);
++  const jsonlPath = path.join(sessionDir, `${sessionId}.jsonl`);
++  if (!fs.existsSync(jsonlPath)) return [];
++  try {
++    const content = fs.readFileSync(jsonlPath, 'utf8');
++    const lines = content.trim().split('\n');
++    const bubbles: any[] = [];
++    for (const line of lines) {
++      try {
++        const entry = JSON.parse(line);
++        if (entry.type === 'user') {
++          let text = typeof entry.message?.content === 'string' ? entry.message.content : '';
++          const sep = '\n\n---\n用户: ';
++          const idx = text.indexOf(sep);
++          if (idx !== -1) {
++            text = text.slice(idx + sep.length);
++          }
++          if (text.trim()) {
++            bubbles.push({
++              id: `hist-u-${sessionId.slice(0, 4)}-${bubbles.length}`,
++              type: 'text',
++              content: `> ${text}`,
++              timestamp: entry.timestamp || new Date().toISOString()
++            });
++          }
++        } else if (entry.type === 'assistant') {
++          const blocks = entry.message?.content;
++          const textParts: string[] = [];
++          if (Array.isArray(blocks)) {
++            for (const block of blocks) {
++              if (block.type === 'text' && block.text) {
++                textParts.push(block.text);
++              } else if (block.type === 'thinking' && block.thinking) {
++                textParts.push(`<thought>${block.thinking}</thought>`);
++              } else if (block.type === 'tool_use') {
++                textParts.push(`[tool_call: ${block.name || 'unknown'}]`);
++              }
++            }
++          }
++          const joined = textParts.join('\n');
++          if (joined.trim()) {
++            const parts = joined.split(/(<thought>[\s\S]*?<\/thought>)/g);
++            for (const part of parts) {
++              if (part.startsWith('<thought>')) {
++                bubbles.push({
++                  id: `hist-t-${bubbles.length}`,
++                  type: 'thought',
++                  content: part.replace(/<\/?thought>/g, ''),
++                  timestamp: entry.timestamp || new Date().toISOString()
++                });
++              } else if (part.trim()) {
++                const isToolCall = part.trim().startsWith('[tool_call:');
++                bubbles.push({
++                  id: `hist-a-${bubbles.length}`,
++                  type: isToolCall ? 'tool_call' : 'text',
++                  content: part.trim(),
++                  timestamp: entry.timestamp || new Date().toISOString()
++                });
++              }
++            }
++          }
++        }
++      } catch { /* skip */ }
++    }
++    return bubbles;
++  } catch {
++    return [];
+   }
+-
+-  return `你是 SceneForge v9 的视频制作管线 AI 导演。
+-
+-## 首要任务
+-**立即读取仓库根目录的运行规则文件 ./AGENTS.md**
+-该文件定义了上下文读取边界、紧凑预算、黑板纪律、预览先行等硬性约束，必须在执行任何操作前理解并遵守。
+-
+-## 当前项目
+-- 项目名: ${slug}
+-- 路径: projects/${slug}/
+-
+-## 管线阶段（严格按顺序执行，不可跳过）
+-topic_gate(选题) → script(剧本) → performance(表演) → audio(声音) → storyboard(分镜) → video_prompts(提示词) → publish_review(发布)
+-
+-## 当前项目状态
+-${stateSummary}
+-
+-## 执行顺序
+-1. 读取 ./AGENTS.md 理解全局约束
+-2. 读取 projects/${slug}/PROJECT_STATE.json 核对当前阶段
+-3. 读取 projects/${slug}/PROJECT_BOARD.md 了解项目详情和规则
+-4. 严格按阶段依赖顺序推进，上游未完成不开下游
+-5. 产物写 projects/${slug}/outputs/，草稿放 projects/${slug}/details/<stage>/
+-6. 完成后更新 projects/${slug}/PROJECT_STATE.json
+-7. 用中文回复，引导创作过程`;
+ }
+ 
+ wss.on('connection', (ws: WebSocket) => {
+@@ -403,6 +533,40 @@ wss.on('connection', (ws: WebSocket) => {
+   let currentProcess: ChildProcess | null = null;
+   let sessionId: string = randomUUID();
+   let isFirstMessage = true;
++  let bypassPermissions = false;
++
++  // Restore or persist session ID for the active target
++  const activeSessionFile = path.join(targetPath, '.active_session_id');
++  if (fs.existsSync(activeSessionFile)) {
++    const storedId = fs.readFileSync(activeSessionFile, 'utf8').trim();
++    if (storedId && storedId.length > 10) {
++      sessionId = storedId;
++      const sessionDir = getClaudeSessionDir(workspaceRoot);
++      const jsonlPath = path.join(sessionDir, `${sessionId}.jsonl`);
++      if (fs.existsSync(jsonlPath) && fs.statSync(jsonlPath).size > 0) {
++        isFirstMessage = false;
++        console.log(`[Session] Restored active session: ${sessionId} (resuming: true)`);
++      } else {
++        console.log(`[Session] Stored session ID found but empty on disk: ${sessionId}`);
++      }
++    }
++  } else {
++    try {
++      fs.writeFileSync(activeSessionFile, sessionId, 'utf8');
++      console.log(`[Session] Persisted new active session ID: ${sessionId}`);
++    } catch (err) {
++      console.warn(`Failed to write .active_session_id: ${(err as Error).message}`);
++    }
++  }
++
++  // Immediately push session history to the connected client
++  const initialBubbles = getSessionBubbles(sessionId);
++  if (ws.readyState === WebSocket.OPEN) {
++    ws.send(JSON.stringify({ type: 'session_init', sessionId }));
++    if (initialBubbles.length > 0) {
++      ws.send(JSON.stringify({ type: 'output', bubbles: initialBubbles }));
++    }
++  }
+ 
+   // Set up FileWatcher for hot reload push
+   const watcher = new FileWatcher(targetPath, (msg: any) => {
+@@ -411,7 +575,7 @@ wss.on('connection', (ws: WebSocket) => {
+     }
+   });
+ 
+-  const runClaude = (prompt: string) => {
++  const runClaude = async (prompt: string) => {
+     if (currentProcess) {
+       try { currentProcess.kill('SIGINT'); } catch (_) {}
+       currentProcess = null;
+@@ -429,7 +593,24 @@ wss.on('connection', (ws: WebSocket) => {
+       args.push(prompt, '--resume', sessionId);
+     }
+ 
+-    const proc = spawn('claude', args, { cwd: workspaceRoot, env: process.env });
++    console.log(`[runClaude] Spawn command: claude ${args.join(' ')}`);
++
++    let claudeBin = 'claude';
++    try {
++      if (fs.existsSync('/opt/homebrew/bin/claude')) {
++        claudeBin = '/opt/homebrew/bin/claude';
++      } else if (fs.existsSync('/usr/local/bin/claude')) {
++        claudeBin = '/usr/local/bin/claude';
++      }
++    } catch (_) {}
++
++    const proc = spawn(claudeBin, args, {
++      cwd: workspaceRoot,
++      env: {
++        ...process.env,
++        PATH: `/opt/homebrew/bin:/usr/local/bin:${process.env.PATH || ''}`
++      }
++    });
+     currentProcess = proc;
+ 
+     if (ws.readyState === WebSocket.OPEN) {
+@@ -437,7 +618,30 @@ wss.on('connection', (ws: WebSocket) => {
+     }
+ 
+     proc.stdout.on('data', (data: Buffer) => {
+-      const bubbles = parser.feed(data.toString());
++      const text = data.toString();
++      
++      // 检测是否有提权等待：包含 '[y/N]' 或者 '(y/n)'，以及以 'Allow ' 开头。
++      const cleanText = text.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '');
++      const isPermissionRequest = cleanText.includes('[y/N]') || cleanText.includes('(y/n)') || cleanText.includes('Allow ') || cleanText.includes('批准');
++
++      if (isPermissionRequest && !bypassPermissions) {
++        console.log(`[Permission Intercepted] Captured question text: ${cleanText.trim()}`);
++        
++        const id = `prompt-${Date.now()}`;
++        if (ws.readyState === WebSocket.OPEN) {
++          ws.send(JSON.stringify({
++            type: 'prompt_ui',
++            id,
++            title: cleanText.trim() || '系统检测到 Claude CLI 正在请求授权，是否批准？',
++            options: [
++              { label: '批准写入/执行 (Yes)', value: 'y', kind: 'allow' },
++              { label: '拒绝操作 (No)', value: 'n', kind: 'deny' }
++            ]
++          }));
++        }
++      }
++
++      const bubbles = parser.feed(text);
+       if (ws.readyState === WebSocket.OPEN && bubbles.length > 0) {
+         ws.send(JSON.stringify({ type: 'output', bubbles }));
+       }
+@@ -451,14 +655,37 @@ wss.on('connection', (ws: WebSocket) => {
+     });
+   };
+ 
+-  ws.on('message', (message: string) => {
++  ws.on('message', async (message: string) => {
+     try {
+       const payload = JSON.parse(message);
++      if (payload.bypassPermissions !== undefined) {
++        bypassPermissions = !!payload.bypassPermissions;
++      }
+ 
+       switch (payload.type) {
++        case 'load_session':
++          if (payload.sessionId) {
++            sessionId = payload.sessionId;
++            isFirstMessage = false;
++            try {
++              fs.writeFileSync(activeSessionFile, sessionId, 'utf8');
++              console.log(`[Session] Synced active session ID to: ${sessionId}`);
++            } catch (err) {
++              console.warn(`Failed to sync .active_session_id: ${(err as Error).message}`);
++            }
++          }
++          break;
++
+         case 'stdin':
+           if (typeof payload.data === 'string' && payload.data.trim()) {
+-            runClaude(payload.data.trim());
++            await runClaude(payload.data.trim());
++          }
++          break;
++
++        case 'prompt_response':
++          if (currentProcess && currentProcess.stdin) {
++            console.log(`[Permission Response] Writing User response: ${payload.value} to stdin`);
++            currentProcess.stdin.write(`${payload.value}\n`);
+           }
+           break;
+ 
+@@ -482,8 +709,15 @@ wss.on('connection', (ws: WebSocket) => {
+           parser.clear();
+           sessionId = randomUUID();
+           isFirstMessage = true;
++          try {
++            fs.writeFileSync(activeSessionFile, sessionId, 'utf8');
++            console.log(`[Session] Created new active session ID: ${sessionId}`);
++          } catch (err) {
++            console.warn(`Failed to write new .active_session_id: ${(err as Error).message}`);
++          }
+           if (ws.readyState === WebSocket.OPEN) {
+             ws.send(JSON.stringify({ type: 'run_status', running: false }));
++            ws.send(JSON.stringify({ type: 'session_init', sessionId }));
+           }
+           break;
+ 
+@@ -491,11 +725,11 @@ wss.on('connection', (ws: WebSocket) => {
+           const { action, stage } = payload;
+           if (action && stage) {
+             const prompts: Record<string, string> = {
+-              start: `请开始执行 ${stage} 阶段的制作工作。先检查上游依赖是否完成，然后按照 Project Board 中的规范生成产物。`,
++              start: `请开始执行 ${stage} 阶段 learnings 对应的管线制作工作。先检查上游依赖是否完成，然后按照 Project Board 中的规范生成产物。`,
+               validate: `请对 ${stage} 阶段的产物执行格式校验（Lint/Validator），并输出校验结果。`,
+               complete: `请确认 ${stage} 阶段的工作已完成，执行 Complete 流程：生成 Handoff 文件，更新 PROJECT_STATE.json 状态。`
+             };
+-            if (prompts[action]) runClaude(prompts[action]);
++            if (prompts[action]) await runClaude(prompts[action]);
+           }
+           break;
+         }
+@@ -505,7 +739,7 @@ wss.on('connection', (ws: WebSocket) => {
+       }
+     } catch (err) {
+       if (typeof message === 'string' && message.trim()) {
+-        runClaude(message.trim());
++        await runClaude(message.trim());
+       }
+     }
+   });
+diff --git a/apps/web-console/src/App.tsx b/apps/web-console/src/App.tsx
+index fd2d6ab..f8e0bcb 100644
+--- a/apps/web-console/src/App.tsx
++++ b/apps/web-console/src/App.tsx
+@@ -5,9 +5,11 @@ import Lobby from './Lobby';
+ 
+ interface ChatBubble {
+   id: string;
+-  type: 'thought' | 'tool_call' | 'text' | 'system';
++  type: 'thought' | 'tool_call' | 'text' | 'system' | 'prompt_ui';
+   content: string;
+   timestamp: string;
++  answered?: boolean;
++  selectedOptionLabel?: string;
+ }
+ 
+ interface StageState {
+@@ -46,6 +48,19 @@ export default function App() {
+   const [sessions, setSessions] = useState<any[]>([]);
+   const [sessionsLoading, setSessionsLoading] = useState(false);
+   const [showHistory, setShowHistory] = useState(false);
++  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
++
++  // Permission bypass preference
++  const [bypassPermissions, setBypassPermissions] = useState<boolean>(() => {
++    return localStorage.getItem('bypassPermissions') === 'true';
++  });
++
++  useEffect(() => {
++    localStorage.setItem('bypassPermissions', String(bypassPermissions));
++    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
++      wsRef.current.send(JSON.stringify({ bypassPermissions }));
++    }
++  }, [bypassPermissions]);
+ 
+   const fetchSessions = async () => {
+     setSessionsLoading(true);
+@@ -66,12 +81,13 @@ export default function App() {
+       const res = await fetch(`/api/sessions/${sessionId}`);
+       if (!res.ok) return;
+       const data = await res.json();
++      console.log('[loadSession]', data.messages?.length, 'messages from API');
+       // Convert session messages to ChatBubble format
+       const loaded: ChatBubble[] = [];
+       for (const msg of data.messages) {
+         if (msg.role === 'user') {
+           loaded.push({
+-            id: `hist-u-${Date.now()}-${loaded.length}`,
++            id: `hist-u-${sessionId.slice(0,4)}-${loaded.length}`,
+             type: 'text',
+             content: `> ${msg.content}`,
+             timestamp: msg.timestamp
+@@ -82,15 +98,16 @@ export default function App() {
+           for (const part of parts) {
+             if (part.startsWith('<thought>')) {
+               loaded.push({
+-                id: `hist-t-${Date.now()}-${loaded.length}`,
++                id: `hist-t-${loaded.length}`,
+                 type: 'thought',
+                 content: part.replace(/<\/?thought>/g, ''),
+                 timestamp: msg.timestamp
+               });
+             } else if (part.trim()) {
++              const isToolCall = part.trim().startsWith('[tool_call:');
+               loaded.push({
+-                id: `hist-a-${Date.now()}-${loaded.length}`,
+-                type: 'text',
++                id: `hist-a-${loaded.length}`,
++                type: isToolCall ? 'tool_call' : 'text',
+                 content: part.trim(),
+                 timestamp: msg.timestamp
+               });
+@@ -98,8 +115,14 @@ export default function App() {
+           }
+         }
+       }
++      console.log('[loadSession]', loaded.length, 'bubbles created:', loaded.map(b => b.type).join(','));
+       setBubbles(loaded);
++      setCurrentSessionId(sessionId);
+       setShowHistory(false);
++
++      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
++        wsRef.current.send(JSON.stringify({ type: 'load_session', sessionId }));
++      }
+     } catch (err) {
+       console.error('Failed to load session:', err);
+     }
+@@ -184,13 +207,17 @@ export default function App() {
+     ws.onopen = () => {
+       setConnectionStatus('open');
+       console.log('WS Connection Open');
++      // Sync dynamic settings on connect
++      ws.send(JSON.stringify({ bypassPermissions }));
+     };
+ 
+     ws.onmessage = (event) => {
+       try {
+         const payload = JSON.parse(event.data);
+ 
+-        if (payload.type === 'output') {
++        if (payload.type === 'session_init') {
++          setCurrentSessionId(payload.sessionId);
++        } else if (payload.type === 'output') {
+           if (payload.bubbles && payload.bubbles.length > 0) {
+             setBubbles((prev) => {
+               // Merge bubbles based on id
+@@ -199,6 +226,17 @@ export default function App() {
+               return Array.from(bubbleMap.values());
+             });
+           }
++        } else if (payload.type === 'prompt_ui') {
++          setBubbles((prev) => {
++            const bubbleMap = new Map(prev.map(b => [b.id, b]));
++            bubbleMap.set(payload.id, {
++              id: payload.id,
++              type: 'prompt_ui',
++              content: JSON.stringify(payload),
++              timestamp: new Date().toISOString()
++            });
++            return Array.from(bubbleMap.values());
++          });
+         } else if (payload.type === 'run_status') {
+           setAgentRunning(payload.running === true);
+         } else if (payload.type === 'workspace_update') {
+@@ -309,11 +347,34 @@ export default function App() {
+       wsRef.current.send(JSON.stringify({
+         type: 'macro',
+         action,
+-        stage
++        stage,
++        bypassPermissions
+       }));
+     }
+   };
+ 
++  const handlePromptSubmit = (bubbleId: string, optionId: string, optionLabel: string) => {
++    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
++      wsRef.current.send(JSON.stringify({ type: 'prompt_response', value: optionId }));
++      
++      // Update bubble state locally to mark it answered
++      setBubbles((prev) =>
++        prev.map((b) => {
++          if (b.id === bubbleId) {
++            return {
++              ...b,
++              answered: true,
++              selectedOptionLabel: optionLabel,
++            };
++          }
++          return b;
++        })
++      );
++    }
++  };
++
++  const hasPendingPrompt = bubbles.some(b => b.type === 'prompt_ui' && !b.answered);
++
+   // Cancel current Claude operation (Ctrl+C — keeps session alive)
+   const handleCancel = () => {
+     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+@@ -331,12 +392,16 @@ export default function App() {
+   };
+ 
+   // Keystroke stdin
+-  const handleSend = () => {
+-    if (!inputVal.trim()) return;
++  const handleSend = (overrideText?: string | React.MouseEvent) => {
++    const text = typeof overrideText === 'string' ? overrideText : inputVal;
++    if (!text || !text.trim()) return;
++    const textToSend = text.trim();
+     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
++      const forceBypass = typeof overrideText === 'string' ? true : bypassPermissions;
+       wsRef.current.send(JSON.stringify({
+         type: 'stdin',
+-        data: inputVal + '\n'
++        data: textToSend + '\n',
++        bypassPermissions: forceBypass
+       }));
+       // Echo user message to local chat bubble list
+       setBubbles((prev) => [
+@@ -344,11 +409,13 @@ export default function App() {
+         {
+           id: `user-${Date.now()}`,
+           type: 'text',
+-          content: `> ${inputVal}`,
++          content: `> ${textToSend}`,
+           timestamp: new Date().toISOString()
+         }
+       ]);
+-      setInputVal('');
++      if (typeof overrideText !== 'string') {
++        setInputVal('');
++      }
+     }
+   };
+ 
+@@ -364,13 +431,43 @@ export default function App() {
+       .replace(/&/g, '&amp;')
+       .replace(/</g, '&lt;')
+       .replace(/>/g, '&gt;')
+-      .replace(/^## (.*$)/gim, '<h2 class="md-h2">$1</h2>')
++      // Code blocks first (before other transformations)
++      .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="md-code-block"><code>$2</code></pre>')
++      // Headings
+       .replace(/^### (.*$)/gim, '<h3 class="md-h3">$1</h3>')
++      .replace(/^## (.*$)/gim, '<h2 class="md-h2">$1</h2>')
+       .replace(/^# (.*$)/gim, '<h1 class="md-h1">$1</h1>')
+-      .replace(/^\- (.*$)/gim, '<li class="md-li">$1</li>')
+-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+-      .replace(/`(.*?)`/g, '<code class="md-code">$1</code>');
+-    
++      // Bold and italic
++      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
++      .replace(/\*(.+?)\*/g, '<em>$1</em>')
++      // Inline code
++      .replace(/`([^`]+)`/g, '<code class="md-code">$1</code>')
++      // Unordered lists — wrap consecutive <li> in <ul>
++      .replace(/^- (.*$)/gim, '<li class="md-li">$1</li>')
++      // Tables: match one or more table rows (lines starting and ending with |)
++      .replace(/((?:^\|.*\|$\n?)+)/gm, (tableBlock: string) => {
++        const rows = tableBlock.trim().split('\n');
++        if (rows.length < 2) return tableBlock;
++        let tableHtml = '<table class="md-table">';
++        // First row = header
++        tableHtml += '<thead><tr>' + rows[0]
++          .split('|').filter(c => c.trim())
++          .map(c => `<th>${c.trim()}</th>`).join('') + '</tr></thead>';
++        // Skip separator row (|---|---|), render remaining as body
++        const bodyRows = rows.filter((_, i) => i > 0 && !/^[\|\-\s:]+$/.test(rows[i]));
++        if (bodyRows.length > 0) {
++          tableHtml += '<tbody>' + bodyRows.map(row =>
++            '<tr>' + row.split('|').filter(c => c.trim())
++              .map(c => `<td>${c.trim()}</td>`).join('') + '</tr>'
++          ).join('') + '</tbody>';
++        }
++        tableHtml += '</table>';
++        return tableHtml;
++      })
++      // Line breaks
++      .replace(/\n\n/g, '<br/><br/>')
++      .replace(/\n/g, '<br/>');
++
+     return <div dangerouslySetInnerHTML={{ __html: html }} />;
+   };
+ 
+@@ -394,9 +491,15 @@ export default function App() {
+     sessionsLoading,
+     showHistory,
+     setShowHistory,
++    currentSessionId,
+     onLoadSession: handleLoadSession,
+     renderMarkdown,
+-    onReturnLobby: handleReturnToLobby
++    onReturnLobby: handleReturnToLobby,
++    bypassPermissions,
++    setBypassPermissions,
++    chatEndRef,
++    hasPendingPrompt,
++    onPromptSubmit: handlePromptSubmit
+   };
+ 
+   if (activeProject === null) {
+diff --git a/apps/web-console/src/VariantB.tsx b/apps/web-console/src/VariantB.tsx
+index f24a8ae..0fd6d38 100644
+--- a/apps/web-console/src/VariantB.tsx
++++ b/apps/web-console/src/VariantB.tsx
+@@ -1,4 +1,4 @@
+-import React from 'react';
++import React, { useRef, useEffect } from 'react';
+ import { Home, History } from 'lucide-react';
+ import { Button } from '@/components/ui/button';
+ import { ScrollArea } from '@/components/ui/scroll-area';
+@@ -6,9 +6,11 @@ import ChatHistory from './ChatHistory';
+ 
+ interface ChatBubble {
+   id: string;
+-  type: 'thought' | 'tool_call' | 'text' | 'system';
++  type: 'thought' | 'tool_call' | 'text' | 'system' | 'prompt_ui';
+   content: string;
+   timestamp: string;
++  answered?: boolean;
++  selectedOptionLabel?: string;
+ }
+ 
+ interface StageState {
+@@ -39,7 +41,7 @@ interface VariantProps {
+   expandedThoughts: Record<string, boolean>;
+   toggleThought: (id: string) => void;
+   sendMacro: (action: 'start' | 'validate' | 'complete', stage: string) => void;
+-  handleSend: () => void;
++  handleSend: (overrideText?: string) => void;
+   handleCancel: () => void;
+   handleNewSession: () => void;
+   agentRunning: boolean;
+@@ -47,9 +49,15 @@ interface VariantProps {
+   sessionsLoading: boolean;
+   showHistory: boolean;
+   setShowHistory: (v: boolean) => void;
++  currentSessionId: string | null;
+   onLoadSession: (id: string) => void;
+   renderMarkdown: (text: string) => React.ReactNode;
+   onReturnLobby?: () => void;
++  bypassPermissions: boolean;
++  setBypassPermissions: (v: boolean) => void;
++  chatEndRef: React.RefObject<HTMLDivElement>;
++  hasPendingPrompt: boolean;
++  onPromptSubmit: (bubbleId: string, optionId: string, optionLabel: string) => void;
+ }
+ 
+ const STAGES = [
+@@ -93,11 +101,36 @@ export default function VariantB(props: VariantProps) {
+     sessionsLoading,
+     showHistory,
+     setShowHistory,
++    currentSessionId,
+     onLoadSession,
+     renderMarkdown,
+-    onReturnLobby
++    onReturnLobby,
++    bypassPermissions,
++    setBypassPermissions,
++    chatEndRef,
++    hasPendingPrompt,
++    onPromptSubmit
+   } = props;
+ 
++  const textareaRef = useRef<HTMLTextAreaElement>(null);
++  const [collapsedTools, setCollapsedTools] = React.useState<Record<string, boolean>>({});
++
++  const toggleToolCollapse = (id: string) => {
++    setCollapsedTools(prev => ({
++      ...prev,
++      [id]: !prev[id]
++    }));
++  };
++
++  // Auto-resize textarea as content grows
++  useEffect(() => {
++    const ta = textareaRef.current;
++    if (ta) {
++      ta.style.height = 'auto';
++      ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
++    }
++  }, [inputVal]);
++
+   // Helper to check if a bubble is from user
+   const isUserBubble = (content: string) => content.startsWith('>');
+   // Helper to strip user prefix '>'
+@@ -125,6 +158,15 @@ export default function VariantB(props: VariantProps) {
+           <Button variant="ghost" size="sm" onClick={handleNewSession} title="开始新会话" className="text-xs text-muted-foreground hover:text-white">
+             + 新会话
+           </Button>
++          <Button 
++            variant="ghost" 
++            size="sm" 
++            onClick={() => setBypassPermissions(!bypassPermissions)} 
++            title={bypassPermissions ? "自动授权：子进程所有写入和执行操作自动跳过确认" : "安全授权模式：默认拦截写入/执行工具"} 
++            className={`text-xs flex items-center gap-1 ${bypassPermissions ? 'text-emerald-400 hover:text-emerald-300' : 'text-amber-400 hover:text-amber-300'}`}
++          >
++            🛡️ {bypassPermissions ? "自动授权 (Auto-Approve)" : "安全限制 (Protected)"}
++          </Button>
+           <div className="logo-square">SF</div>
+           <span className="brand-title">SceneForge</span>
+           <span className="badge-v9">V9</span>
+@@ -157,48 +199,97 @@ export default function VariantB(props: VariantProps) {
+ 
+       {/* Grid Layout */}
+       <div className="variant-b-grid">
+-        {/* Panel 1: Vertical Stages Index */}
+-        <aside className="variant-b-sidebar">
+-          <div className="section-header">
+-            <span>SOP PROCESS FLOW</span>
+-            <span className="active-count">{STAGES.length} STAGES</span>
++        {/* Panel 1: Vertical Sidebar (Claudian style) */}
++        <aside className="variant-b-sidebar flex flex-col h-full border-r border-white/5 bg-[#08080c] w-[260px] flex-shrink-0 min-w-[260px]">
++          {/* Sidebar Top: New Chat Action */}
++          <div className="p-3 border-b border-white/5">
++            <button 
++              onClick={handleNewSession} 
++              className="btn-new-chat"
++            >
++              <span>+</span> New Chat
++            </button>
+           </div>
+-          <ScrollArea className="h-full flex-1">
+-          <div className="stage-cards-container">
+-            {STAGES.map((stg, index) => {
+-              const state = projectState?.stages[stg];
+-              const status = state?.status || 'ready';
+-              const isActive = activeStage === stg;
+-              const isCurrent = projectState?.current_stage === stg;
+ 
+-              return (
+-                <div
+-                  key={stg}
+-                  className={`stage-card-b ${status} ${isActive ? 'active' : ''} ${isCurrent ? 'current' : ''}`}
+-                >
+-                  <div className="card-left-section">
+-                    <span className="step-num">{String(index + 1).padStart(2, '0')}</span>
+-                    <span className="status-bullet"></span>
+-                  </div>
+-                  
+-                  <div className="card-mid-section">
+-                    <span className="stage-title">{STAGE_NAMES[stg]}</span>
+-                    {isCurrent && <span className="active-flow-tag">ACTIVE</span>}
+-                  </div>
++          {/* Sidebar Middle: History Sessions List */}
++          <div className="flex-1 flex flex-col min-h-0">
++            <div className="section-header px-4 py-2 text-[10px] tracking-wider text-muted-foreground uppercase font-mono border-b border-white/5 flex justify-between items-center">
++              <span>Chat History</span>
++              {sessionsLoading && <span className="animate-spin text-[10px]">⌛</span>}
++            </div>
++            
++            <ScrollArea className="flex-1">
++              <div className="history-list p-2 flex flex-col gap-1">
++                {sessionsLoading ? (
++                  <div className="text-center text-xs text-muted-foreground py-8">Loading history...</div>
++                ) : sessions.length === 0 ? (
++                  <div className="text-center text-xs text-muted-foreground py-8 font-mono">No sessions yet</div>
++                ) : (
++                  sessions.map((sess) => {
++                    const isActive = sess.id === currentSessionId;
++                    return (
++                      <div
++                        key={sess.id}
++                        onClick={() => onLoadSession(sess.id)}
++                        className={`history-item group relative p-3 rounded cursor-pointer text-left transition-all ${
++                          isActive ? 'active bg-white/5' : 'hover:bg-white/5'
++                        }`}
++                      >
++                        <div className="history-item-top">
++                          <span className="history-item-date">{new Date(sess.timestamp).toLocaleDateString()} {new Date(sess.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
++                          <span className="history-item-count">{sess.count || 0} msgs</span>
++                        </div>
++                        <p className="history-item-preview">
++                          {sess.preview || 'Untitled Session'}
++                        </p>
++                      </div>
++                    );
++                  })
++                )}
++              </div>
++            </ScrollArea>
++          </div>
+ 
+-                  <div className="card-right-section">
+-                    <span className={`status-badge-b ${status}`}>
+-                      {status === 'completed' && 'COMPLETE'}
+-                      {status === 'in_progress' && 'RUNNING'}
+-                      {status === 'review_failed' && 'FAILED'}
+-                      {status === 'ready' && 'READY'}
+-                    </span>
+-                  </div>
+-                </div>
+-              );
+-            })}
++          {/* Sidebar Bottom: SOP Flow Mini Index */}
++          <div className="border-t border-white/5 bg-[#050508] max-h-[220px] flex flex-col min-h-0">
++            <div className="section-header px-4 py-2 text-[10px] tracking-wider text-muted-foreground uppercase font-mono border-b border-white/5">
++              <span>Pipeline Flow</span>
++            </div>
++            <ScrollArea className="flex-1">
++              <div className="p-2 flex flex-col gap-1">
++                {STAGES.map((stg, index) => {
++                  const state = projectState?.stages[stg];
++                  const status = state?.status || 'ready';
++                  const isActive = activeStage === stg;
++                  const isCurrent = projectState?.current_stage === stg;
++
++                  return (
++                    <div
++                      key={stg}
++                      onClick={() => sendMacro && sendMacro('start', stg)}
++                      className={`flex items-center justify-between p-2 rounded cursor-pointer text-xs transition-all ${
++                        isActive 
++                          ? 'bg-white/5 text-white border border-white/10' 
++                          : 'text-muted-foreground hover:bg-white/[0.02]'
++                      } ${isCurrent ? 'border-l-2 border-l-[#00f0ff]' : ''}`}
++                    >
++                      <div className="flex items-center gap-2 truncate">
++                        <span className="font-mono text-[9px] opacity-40">{String(index + 1).padStart(2, '0')}</span>
++                        <span className="truncate text-[11px]">{STAGE_NAMES[stg]?.split(' ')[0] || stg}</span>
++                      </div>
++                      <span className={`text-[8px] font-mono uppercase px-1 rounded ${
++                        status === 'completed' ? 'bg-emerald-500/10 text-emerald-400' :
++                        status === 'in_progress' ? 'bg-amber-500/10 text-amber-400' :
++                        'bg-white/5 text-muted-foreground'
++                      }`}>
++                        {status === 'completed' ? 'Done' : status === 'in_progress' ? 'Run' : 'Idle'}
++                      </span>
++                    </div>
++                  );
++                })}
++              </div>
++            </ScrollArea>
+           </div>
+-          </ScrollArea>
+         </aside>
+ 
+         {/* Panel 2: Center Feed (Polished Chat Bubbles + Action Dock) */}
+@@ -206,35 +297,55 @@ export default function VariantB(props: VariantProps) {
+           <div className="section-header">COLLABORATIVE FEED</div>
+           
+           {/* Chat Bubble Viewport */}
+-          <ScrollArea className="flex-1">
+           <div className="variant-b-feed-viewport">
+             {bubbles.map((b) => {
+               // 1. Thought Process Bubble
+               if (b.type === 'thought') {
+-                const expanded = expandedThoughts[b.id];
++                const expanded = expandedThoughts[b.id] !== false;
+                 return (
+-                  <div key={b.id} className={`chat-bubble-b thought ${expanded ? 'expanded' : ''}`}>
++                  <div key={b.id} className="chat-bubble-b thought">
+                     <div className="bubble-thought-header" onClick={() => toggleThought(b.id)}>
+-                      <span className="thought-icon">💡</span>
+-                      <span className="thought-title">Agent Thought Process</span>
+-                      <span className="expand-indicator">{expanded ? 'COLLAPSE ▲' : 'EXPAND ▼'}</span>
++                      <span>💡 Agent 思考中...</span>
++                      <span className="expand-indicator">{expanded ? '收起 ▲' : '展开 ▼'}</span>
+                     </div>
+                     {expanded && (
+-                      <pre className="thought-pre-b">{b.content.trim()}</pre>
++                      <pre className="thought-pre-b">{b.content}</pre>
+                     )}
+                   </div>
+                 );
+               }
+ 
+-              // 2. Tool System Call Bubble
++              // 2. Tool System Call Bubble (Claudian StatusPanel style: Collapsible & Copyable)
+               if (b.type === 'tool_call') {
++                const isCollapsed = collapsedTools[b.id] !== false;
+                 return (
+-                  <div key={b.id} className="chat-bubble-b tool">
+-                    <div className="bubble-tool-header">
+-                      <span className="tool-icon">⚙️</span>
+-                      <span className="tool-title">System Execution Log</span>
++                  <div key={b.id} className="chat-bubble-b tool border border-white/5 bg-[#050508] rounded my-1 overflow-hidden transition-all self-stretch">
++                    <div 
++                      className="bubble-tool-header px-3 py-1.5 bg-white/[0.02] border-b border-white/5 flex items-center justify-between cursor-pointer font-mono text-[9px]"
++                      onClick={() => toggleToolCollapse(b.id)}
++                    >
++                      <div className="flex items-center gap-2 text-muted-foreground">
++                        <span>⚙️</span>
++                        <span className="font-semibold text-white/80">System Command Logs</span>
++                      </div>
++                      <div className="flex items-center gap-3">
++                        <button 
++                          className="hover:text-[#00f0ff] transition-colors bg-transparent border-none p-0 cursor-pointer"
++                          onClick={(e) => {
++                            e.stopPropagation();
++                            navigator.clipboard.writeText(b.content);
++                          }}
++                        >
++                          Copy
++                        </button>
++                        <span className="opacity-40">{isCollapsed ? 'Expand ▼' : 'Collapse ▲'}</span>
++                      </div>
+                     </div>
+-                    <pre className="tool-pre-b">{b.content.trim()}</pre>
++                    {!isCollapsed && (
++                      <pre className="tool-pre-b p-3 m-0 font-mono text-[10px] leading-relaxed text-[#a3a3ac] overflow-x-auto bg-[#020204] border-none rounded-none text-left">
++                        {b.content.trim()}
++                      </pre>
++                    )}
+                   </div>
+                 );
+               }
+@@ -253,7 +364,63 @@ export default function VariantB(props: VariantProps) {
+                 );
+               }
+ 
+-              // 4. AI / Assistant / System Response Bubble
++              // 3.5. Intercepted Prompt / Permission Card
++              if (b.type === 'prompt_ui') {
++                let payload: any;
++                try {
++                  payload = JSON.parse(b.content);
++                } catch (e) {
++                  payload = { title: '授权申请 (Permission Requested)', options: [] };
++                }
++
++                return (
++                  <div key={b.id} className="chat-bubble-b prompt-ui-wrapper">
++                    <div className={`prompt-ui-card ${b.answered ? 'answered' : 'pending'}`}>
++                      <div className="prompt-ui-header">
++                        <span className="prompt-ui-icon">{b.answered ? '✓' : '🛡️'}</span>
++                        <span className="prompt-ui-title">
++                          {b.answered ? '系统授权已确认 / SYSTEM PERMISSION RESOLVED' : '系统授权申请 / SYSTEM PERMISSION REQUEST'}
++                        </span>
++                      </div>
++                      
++                      <div className="prompt-ui-body">
++                        <p className="prompt-ui-question">{payload.title}</p>
++                        
++                        {b.answered ? (
++                          <div className="prompt-ui-status-resolved">
++                            <span className="resolved-check">✓</span>
++                            <span>已授权选项：<strong>{b.selectedOptionLabel}</strong></span>
++                          </div>
++                        ) : (
++                          <div className="prompt-ui-options-grid">
++                            {payload.options?.map((opt: any) => {
++                              const isAllow = opt.kind?.includes('allow') || opt.label?.toLowerCase().includes('yes') || opt.label?.toLowerCase().includes('allow') || opt.label?.includes('批准') || opt.label?.includes('允许');
++                              const isDeny = opt.kind?.includes('deny') || opt.label?.toLowerCase().includes('no') || opt.label?.toLowerCase().includes('deny') || opt.label?.includes('拒绝') || opt.label?.includes('取消');
++                              
++                              let btnClass = "prompt-ui-btn";
++                              if (isAllow) btnClass += " allow";
++                              else if (isDeny) btnClass += " deny";
++                              else btnClass += " neutral";
++
++                              return (
++                                <button
++                                  key={opt.value}
++                                  className={btnClass}
++                                  onClick={() => onPromptSubmit(b.id, opt.value, opt.label)}
++                                >
++                                  {opt.label}
++                                </button>
++                              );
++                            })}
++                          </div>
++                        )}
++                      </div>
++                    </div>
++                  </div>
++                );
++              }
++
++              // 4. AI / Assistant / System Response Bubble (Without redundant approval buttons)
+               return (
+                 <div key={b.id} className="chat-bubble-b ai-wrapper">
+                   <div className="ai-bubble">
+@@ -266,8 +433,24 @@ export default function VariantB(props: VariantProps) {
+                 </div>
+               );
+             })}
++
++            {agentRunning && (
++              <div className="chat-bubble-b ai-wrapper active-agent-loading">
++                <div className="ai-bubble loading-state" style={{ padding: '10px 14px', minWidth: '150px' }}>
++                  <div className="bubble-sender-title flex items-center gap-1.5" style={{ fontSize: '8px', marginBottom: '4px', display: 'flex', alignItems: 'center' }}>
++                    <span className="dot-blink-blue"></span>
++                    AI DIRECTOR IS WORKING
++                  </div>
++                  <div className="bubble-content flex items-center gap-1.5 py-0.5" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
++                    <span className="typing-dot"></span>
++                    <span className="typing-dot"></span>
++                    <span className="typing-dot"></span>
++                  </div>
++                </div>
++              </div>
++            )}
++            <div ref={chatEndRef} />
+           </div>
+-          </ScrollArea>
+ 
+           {/* Current Stage Status Bar */}
+           <div className="variant-b-action-dock">
+@@ -292,25 +475,32 @@ export default function VariantB(props: VariantProps) {
+ 
+           {/* TextInput Command Line Wrapper for Floating Card style */}
+           <div className="variant-b-input-wrapper">
+-            <div className="variant-b-input-container">
++            <div className={`variant-b-input-container ${hasPendingPrompt ? 'disabled' : ''}`}>
+               <div className="input-prompt-symbol">&gt;</div>
+-              <textarea
+-                rows={4}
+-                placeholder="Inject command or message to AI director... (Enter to send, Shift+Enter to wrap)"
+-                value={inputVal}
+-                onChange={(e) => setInputVal(e.target.value)}
+-                onKeyDown={(e) => {
+-                  if (e.key === 'Enter' && !e.shiftKey) {
+-                    e.preventDefault();
+-                    handleSend();
+-                  }
+-                }}
+-              />
+-              {agentRunning ? (
+-                <button className="btn-b-send" onClick={handleCancel} style={{ background: '#FF453A' }}>⏹ STOP</button>
+-              ) : (
+-                <button className="btn-b-send" onClick={handleSend}>SEND PAYLOAD</button>
+-              )}
++              <ScrollArea className="variant-b-input-scrollarea">
++                <textarea
++                  ref={textareaRef}
++                  rows={1}
++                  placeholder={hasPendingPrompt ? "等待授权决策以继续执行管线..." : "与 AI 导演对话... (Enter 发送，Shift+Enter 换行)"}
++                  value={hasPendingPrompt ? "" : inputVal}
++                  disabled={hasPendingPrompt}
++                  onChange={(e) => setInputVal(e.target.value)}
++                  onKeyDown={(e) => {
++                    if (e.key === 'Enter' && !e.shiftKey) {
++                      e.preventDefault();
++                      handleSend();
++                    }
++                  }}
++                  className="variant-b-textarea"
++                />
++              </ScrollArea>
++              <div className="variant-b-send-group">
++                {agentRunning ? (
++                  <button className="btn-b-send stop" onClick={handleCancel}>⏹ 停止</button>
++                ) : (
++                  <button className="btn-b-send" onClick={() => handleSend()} disabled={hasPendingPrompt}>发送</button>
++                )}
++              </div>
+             </div>
+           </div>
+         </section>
+diff --git a/apps/web-console/src/index.css b/apps/web-console/src/index.css
+index 93a29fa..c41106e 100644
+--- a/apps/web-console/src/index.css
++++ b/apps/web-console/src/index.css
+@@ -1,10 +1,10 @@
++/* Google Fonts — moved from App.css */
++@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
++
+ @tailwind base;
+ @tailwind components;
+ @tailwind utilities;
+ 
+-/* Google Fonts — moved from App.css */
+-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+-
+ @layer base {
+   :root {
+     /* shadcn/ui design tokens — dark cinema theme */
+diff --git a/apps/web-console/src/styles/variant-b-chat.css b/apps/web-console/src/styles/variant-b-chat.css
+index 1e2e5c2..2d170e2 100644
+--- a/apps/web-console/src/styles/variant-b-chat.css
++++ b/apps/web-console/src/styles/variant-b-chat.css
+@@ -8,6 +8,7 @@
+   flex-direction: column;
+   gap: 16px;
+   background: #030305;
++  overflow-y: auto;
+ }
+ 
+ /* Chat Bubble Layout */
+@@ -112,6 +113,47 @@
+   font-size: 11.5px;
+ }
+ 
++.markdown-body-b .md-code-block {
++  background: rgba(0,0,0,0.4);
++  border: 1px solid var(--border-b);
++  border-radius: 6px;
++  padding: 12px;
++  margin: 8px 0;
++  font-family: 'JetBrains Mono', monospace;
++  font-size: 11px;
++  color: #e5e7eb;
++  overflow-x: auto;
++  white-space: pre-wrap;
++}
++
++.markdown-body-b strong { color: #fff; font-weight: 700; }
++.markdown-body-b em { color: #d1d5db; font-style: italic; }
++.markdown-body-b br + br { display: block; content: ''; margin-top: 8px; }
++
++.markdown-body-b .md-table {
++  width: 100%;
++  border-collapse: collapse;
++  margin: 10px 0;
++  font-size: 12px;
++}
++.markdown-body-b .md-table th {
++  text-align: left;
++  padding: 6px 10px;
++  border-bottom: 2px solid var(--border-b);
++  color: var(--accent-cyan);
++  font-weight: 700;
++  font-size: 11px;
++  text-transform: uppercase;
++}
++.markdown-body-b .md-table td {
++  padding: 5px 10px;
++  border-bottom: 1px solid rgba(255,255,255,0.04);
++  color: #d1d5db;
++}
++.markdown-body-b .md-table tr:hover td {
++  background: rgba(255,255,255,0.02);
++}
++
+ /* Agent Thought / Command Card */
+ .chat-bubble-b.thought {
+   align-self: stretch;
+@@ -147,6 +189,28 @@
+   line-height: 1.5;
+ }
+ 
++.thought-body-markdown {
++  padding: 12px 16px;
++  font-size: 12.5px;
++  line-height: 1.65;
++  color: #d1b0ff;
++  background: #060508;
++  max-height: 300px;
++  overflow-y: auto;
++  word-break: break-word;
++}
++
++.thought-body-markdown strong { color: #e8d0ff; }
++.thought-body-markdown code {
++  background: rgba(255,255,255,0.06);
++  padding: 1px 4px;
++  border-radius: 2px;
++  font-family: 'JetBrains Mono', monospace;
++  font-size: 11px;
++}
++.thought-body-markdown ul, .thought-body-markdown ol { padding-left: 20px; margin: 4px 0; }
++.thought-body-markdown li { margin: 2px 0; }
++
+ /* System Tool Calls */
+ .chat-bubble-b.tool {
+   align-self: stretch;
+@@ -282,20 +346,22 @@
+    Input Block (B)
+    ========================================== */
+ .variant-b-input-wrapper {
+-  padding: 12px 16px 16px 16px; /* 中栏底端优雅间距，形成底页安全垫 */
++  padding: 12px 16px 16px 16px;
+   background: transparent;
+   box-sizing: border-box;
+ }
+ 
+ .variant-b-input-container {
+   display: flex;
+-  align-items: flex-start;
++  align-items: stretch;
+   background: rgba(0, 0, 0, 0.45);
+   border: 1px solid var(--border-b);
+-  border-radius: 8px; /* 悬浮圆角输入盒 */
++  border-radius: 8px;
+   padding: 8px 12px;
+   box-sizing: border-box;
+   transition: border-color 0.25s, box-shadow 0.25s;
++  gap: 8px;
++  max-height: 200px;
+ }
+ 
+ .variant-b-input-container:focus-within {
+@@ -309,24 +375,34 @@
+   font-weight: 800;
+   color: var(--accent-cyan);
+   user-select: none;
+-  margin-top: 10px; /* 对齐第一行文本 */
++  padding-top: 8px;
++  flex-shrink: 0;
+ }
+ 
+-.variant-b-input-container textarea {
++.variant-b-input-scrollarea {
+   flex: 1;
++  min-height: 24px;
++}
++
++.variant-b-textarea {
++  width: 100%;
+   background: transparent;
+   border: none;
+-  padding: 8px 12px;
++  padding: 8px 4px;
+   color: #fff;
+   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+   font-size: 13px;
+   line-height: 1.6;
+   resize: none;
+-  min-height: 72px; /* 约 4 行高 */
++  overflow: hidden;
++  outline: none;
+ }
+ 
+-.variant-b-input-container textarea:focus { 
+-  outline: none; 
++.variant-b-send-group {
++  display: flex;
++  align-items: flex-end;
++  flex-shrink: 0;
++  padding-bottom: 4px;
+ }
+ 
+ .btn-b-send {
+@@ -341,8 +417,13 @@
+   cursor: pointer;
+   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+   letter-spacing: 0.5px;
+-  align-self: flex-end;
+-  margin-bottom: 6px;
++  white-space: nowrap;
++  flex-shrink: 0;
++}
++
++.btn-b-send.stop {
++  background: #FF453A;
++  color: #fff;
+ }
+ 
+ .btn-b-send:hover {
+@@ -472,38 +553,60 @@
+   border-radius: 8px;
+   cursor: pointer;
+   border: 1px solid transparent;
+-  transition: all 0.15s;
++  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
++  position: relative;
++  background: rgba(255, 255, 255, 0.01);
++  margin-bottom: 4px;
+ }
+ 
+ .history-item:hover {
+-  background: var(--bg-card-b);
+-  border-color: var(--border-b);
++  background: rgba(0, 240, 255, 0.03) !important;
++  border-color: rgba(0, 240, 255, 0.15) !important;
++  transform: translateX(4px);
++  box-shadow: 0 0 10px rgba(0, 240, 255, 0.08);
+ }
+ 
+ .history-item.active {
+-  background: rgba(10, 132, 255, 0.08);
+-  border-color: var(--border-active-b);
++  background: linear-gradient(90deg, rgba(0, 240, 255, 0.05) 0%, rgba(0, 0, 0, 0) 100%) !important;
++  border-color: rgba(0, 240, 255, 0.25) !important;
++  box-shadow: 0 0 15px rgba(0, 240, 255, 0.08);
++}
++
++.history-item.active::before {
++  content: '';
++  position: absolute;
++  left: 0;
++  top: 15%;
++  height: 70%;
++  width: 3px;
++  background: var(--accent-cyan);
++  box-shadow: 0 0 8px var(--accent-cyan);
++  border-radius: 0 4px 4px 0;
+ }
+ 
+ .history-item-top {
+   display: flex;
+   align-items: center;
+   gap: 6px;
+-  margin-bottom: 6px;
++  margin-bottom: 4px;
+   color: var(--text-muted-b);
+-  font-size: 11px;
++  font-size: 10px;
++  font-family: 'JetBrains Mono', monospace;
+ }
+ 
+ .history-item-date {
+   flex: 1;
++  opacity: 0.6;
+ }
+ 
+ .history-item-count {
+-  font-family: 'SF Mono', 'JetBrains Mono', monospace;
+-  font-size: 10px;
+-  background: var(--bg-card-b);
+-  padding: 1px 6px;
+-  border-radius: 3px;
++  font-family: 'JetBrains Mono', monospace;
++  font-size: 8px;
++  background: rgba(255, 255, 255, 0.06);
++  padding: 1px 5px;
++  border-radius: 4px;
++  color: var(--accent-cyan);
++  border: 1px solid rgba(0, 240, 255, 0.1);
+ }
+ 
+ .history-item-preview {
+@@ -516,3 +619,234 @@
+   overflow: hidden;
+ }
+ 
++/* ==========================================
++   Typing Indicator & Loading Animations
++   ========================================== */
++@keyframes typing-bounce {
++  0%, 100% {
++    transform: translateY(0);
++    opacity: 0.4;
++  }
++  50% {
++    transform: translateY(-4px);
++    opacity: 1;
++  }
++}
++
++.typing-dot {
++  width: 5px;
++  height: 5px;
++  background-color: #00f0ff;
++  border-radius: 50%;
++  display: inline-block;
++  animation: typing-bounce 1.4s infinite ease-in-out both;
++}
++
++.typing-dot:nth-child(1) {
++  animation-delay: -0.32s;
++}
++
++.typing-dot:nth-child(2) {
++  animation-delay: -0.16s;
++}
++
++@keyframes pulse-blue {
++  0% {
++    box-shadow: 0 0 0 0 rgba(0, 240, 255, 0.5);
++    transform: scale(0.95);
++  }
++  70% {
++    box-shadow: 0 0 0 5px rgba(0, 240, 255, 0);
++    transform: scale(1);
++  }
++  100% {
++    box-shadow: 0 0 0 0 rgba(0, 240, 255, 0);
++    transform: scale(0.95);
++  }
++}
++
++.dot-blink-blue {
++  width: 6px;
++  height: 6px;
++  background-color: #00f0ff;
++  border-radius: 50%;
++  display: inline-block;
++  margin-right: 6px;
++  animation: pulse-blue 1.5s infinite ease-in-out;
++}
++
++/* ==========================================
++   Prompt UI / Authorization Card (B)
++   ========================================== */
++.chat-bubble-b.prompt-ui-wrapper {
++  align-self: center;
++  width: 90%;
++  margin: 10px 0;
++}
++
++.prompt-ui-card {
++  background: rgba(23, 23, 30, 0.7);
++  border: 1px solid rgba(245, 158, 11, 0.2);
++  border-radius: 8px;
++  padding: 16px;
++  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 15px rgba(245, 158, 11, 0.05);
++  backdrop-filter: blur(10px);
++  -webkit-backdrop-filter: blur(10px);
++  transition: all 0.3s ease;
++}
++
++.prompt-ui-card.answered {
++  background: rgba(16, 20, 24, 0.6);
++  border-color: rgba(16, 185, 129, 0.25);
++  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
++}
++
++.prompt-ui-header {
++  display: flex;
++  align-items: center;
++  gap: 8px;
++  margin-bottom: 12px;
++  padding-bottom: 8px;
++  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
++}
++
++.prompt-ui-icon {
++  font-size: 16px;
++}
++
++.prompt-ui-title {
++  font-family: 'JetBrains Mono', monospace;
++  font-size: 10px;
++  font-weight: 800;
++  color: #f59e0b;
++  letter-spacing: 0.5px;
++}
++
++.prompt-ui-card.answered .prompt-ui-title {
++  color: #10b981;
++}
++
++.prompt-ui-body {
++  display: flex;
++  flex-direction: column;
++  gap: 12px;
++}
++
++.prompt-ui-question {
++  font-size: 13px;
++  line-height: 1.5;
++  color: #fff;
++  white-space: pre-wrap;
++}
++
++.prompt-ui-options-grid {
++  display: flex;
++  flex-wrap: wrap;
++  gap: 8px;
++  margin-top: 4px;
++}
++
++.prompt-ui-btn {
++  font-family: 'JetBrains Mono', monospace;
++  font-size: 11px;
++  font-weight: 600;
++  padding: 8px 16px;
++  border-radius: 6px;
++  cursor: pointer;
++  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
++  border: 1px solid transparent;
++}
++
++.prompt-ui-btn.allow {
++  background: rgba(16, 185, 129, 0.1);
++  border-color: rgba(16, 185, 129, 0.3);
++  color: #10b981;
++}
++
++.prompt-ui-btn.allow:hover {
++  background: rgba(16, 185, 129, 0.2);
++  border-color: #10b981;
++  box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
++}
++
++.prompt-ui-btn.deny {
++  background: rgba(239, 68, 68, 0.1);
++  border-color: rgba(239, 68, 68, 0.3);
++  color: #ef4444;
++}
++
++.prompt-ui-btn.deny:hover {
++  background: rgba(239, 68, 68, 0.2);
++  border-color: #ef4444;
++  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
++}
++
++.prompt-ui-btn.neutral {
++  background: rgba(255, 255, 255, 0.05);
++  border-color: rgba(255, 255, 255, 0.15);
++  color: #d1d5db;
++}
++
++.prompt-ui-btn.neutral:hover {
++  background: rgba(255, 255, 255, 0.1);
++  border-color: rgba(255, 255, 255, 0.3);
++}
++
++.prompt-ui-status-resolved {
++  display: flex;
++  align-items: center;
++  gap: 6px;
++  font-size: 12px;
++  color: #10b981;
++  background: rgba(16, 185, 129, 0.08);
++  padding: 8px 12px;
++  border-radius: 4px;
++  border: 1px solid rgba(16, 185, 129, 0.15);
++}
++
++.resolved-check {
++  font-weight: 800;
++}
++
++.variant-b-input-container.disabled {
++  background: rgba(20, 20, 25, 0.3) !important;
++  border-color: rgba(255, 255, 255, 0.05) !important;
++  cursor: not-allowed;
++}
++
++.variant-b-input-container.disabled .input-prompt-symbol {
++  color: var(--text-muted-b) !important;
++}
++
++.variant-b-textarea:disabled {
++  color: var(--text-muted-b) !important;
++  cursor: not-allowed;
++}
++
++/* Sidebar New Chat Button styling */
++.btn-new-chat {
++  width: 100%;
++  background: rgba(0, 240, 255, 0.05) !important;
++  border: 1px solid rgba(0, 240, 255, 0.2) !important;
++  color: #00f0ff !important;
++  font-family: 'JetBrains Mono', monospace !important;
++  font-size: 11px !important;
++  font-weight: 700 !important;
++  height: 36px;
++  border-radius: 6px;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  gap: 6px;
++  cursor: pointer;
++  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
++}
++
++.btn-new-chat:hover {
++  background: rgba(0, 240, 255, 0.12) !important;
++  border-color: rgba(0, 240, 255, 0.5) !important;
++  box-shadow: 0 0 12px rgba(0, 240, 255, 0.2) !important;
++  transform: translateY(-1px);
++}
++
++
+diff --git a/apps/web-console/src/styles/variant-b-layout.css b/apps/web-console/src/styles/variant-b-layout.css
+index 723149a..88accbb 100644
+--- a/apps/web-console/src/styles/variant-b-layout.css
++++ b/apps/web-console/src/styles/variant-b-layout.css
+@@ -5,18 +5,18 @@
+   flex-direction: column;
+   background-color: #050508;
+   color: #d1d5db;
+-  --accent-cyan: #0A84FF; /* Apple iOS Blue */
+-  --accent-magenta: #FF375F; /* Apple Pink */
+-  --accent-green: #30D158; /* Apple Green */
+-  --accent-yellow: #FFD60A; /* Apple Yellow */
+-  --accent-red: #FF453A; /* Apple Red */
+-  --bg-dark-b: #000000;
+-  --bg-panel-b: rgba(28, 28, 30, 0.45); /* Apple dark translucent */
+-  --bg-card-b: rgba(44, 44, 46, 0.3);
++  --accent-cyan: #00f0ff; /* Cyber Cyan */
++  --accent-magenta: #d946ef; /* Cyber Magenta */
++  --accent-green: #10b981; /* Emeral Green */
++  --accent-yellow: #f59e0b; /* Amber Yellow */
++  --accent-red: #ef4444; /* Alert Red */
++  --bg-dark-b: #030305;
++  --bg-panel-b: rgba(10, 10, 15, 0.6); /* Translucent Space Dark */
++  --bg-card-b: rgba(255, 255, 255, 0.02);
+   --border-b: rgba(255, 255, 255, 0.06);
+-  --border-active-b: rgba(10, 132, 255, 0.4);
++  --border-active-b: rgba(0, 240, 255, 0.3);
+   --text-main-b: #ffffff;
+-  --text-muted-b: #8e8e93;
++  --text-muted-b: #71717a;
+   backdrop-filter: blur(30px);
+   -webkit-backdrop-filter: blur(30px);
+   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Icons", "Helvetica Neue", sans-serif;
+diff --git a/dev.sh b/dev.sh
+index 140a29b..2b4f936 100755
+--- a/dev.sh
++++ b/dev.sh
+@@ -4,8 +4,8 @@
+ set -e
+ 
+ # Port release check (idempotency)
+-echo "🔍 Checking and freeing development ports (3000, 5173)..."
+-for PORT in 3000 5173; do
++echo "🔍 Checking and freeing development ports (4398, 4399)..."
++for PORT in 4398 4399; do
+   PID=$(lsof -t -i :$PORT || true)
+   if [ ! -z "$PID" ]; then
+     echo "⚠️ Terminating existing process $PID occupying port $PORT..."
+diff --git "a/docs/\351\241\271\347\233\256\345\210\233\345\273\272\350\247\204\350\214\203.md" "b/docs/\351\241\271\347\233\256\345\210\233\345\273\272\350\247\204\350\214\203.md"
+index 5d751f0..371bcf9 100644
+--- "a/docs/\351\241\271\347\233\256\345\210\233\345\273\272\350\247\204\350\214\203.md"
++++ "b/docs/\351\241\271\347\233\256\345\210\233\345\273\272\350\247\204\350\214\203.md"
+@@ -34,84 +34,125 @@ projects/
+ - 产物版本引用
+ - 待办事项
+ 
+-顶层 YAML 当前统一字段为：
++顶层 YAML 当前统一命名空间字段为：
+ 
+ ```yaml
+-project_name:
+-project_status:
+-next_stage:
+-lifecycle_flag:
+-blocker_note:
+-score:
+-production_level:
+-reference_type:
+-adaptation_level:
+-performance_style:
+-target_total_duration_seconds:
+-segment_duration_seconds:
+-context_policy:
+-user_confirmations:
+-segment_strategy:
+-hero_moments:
+-bridge_shots:
+-prop_state_machines:
+-blocking_map:
+-faction_layout:
+-created_at:
+-updated_at:
+-```
+-
+-建议初始化默认值：
+-
+-```yaml
+-context_policy:
+-  mode: minimal
+-  runtime_docs_access: forbidden
+-  forbidden_runtime_paths:
+-    - docs/
+-    - .handoff/
+-    - 会话记录_*.md
+-    - 历史项目输出
+-    - 其他无关项目目录
+-  token_budget:
+-    default_stage_budget: compact
+-    require_reason_for_extra_reads: true
+-
+-user_confirmations:
+-  duration_strategy_confirmed: false
+-  script_plan_confirmed: false
+-  design_direction_confirmed: false
+-  storyboard_plan_confirmed: false
+-  video_prompt_plan_confirmed: false
+-
+-segment_strategy:
++project:
++  name:
++  slug:
++  created_at:
++  updated_at:
++
++state:
++  project_status:
++  next_stage:
++  lifecycle_flag:
++  blocker_note:
++
++routing:
++  current_stage:
++  allowed_next_stages:
++  last_completed_stage:
++  route_reason:
++
++runtime_policy:
++  context_policy:
++    mode:
++    allow_docs_scan:
++    active_protocol_docs:
++    allowed_runtime_asset_paths:
++    forbidden_runtime_paths:
++    token_budget:
++  reference_policy:
++
++project_config:
++  score:
++  production_level:
++  reference_type:
++  adaptation_level:
++  director_style_id:
++  director_style_version:
++  style_family:
++  style_profile_path:
++  performance_style:
+   target_total_duration_seconds:
+-  segment_duration_seconds: 10
+-  segment_count:
+-  segmentation_mode: fixed_10s
+-  confirmation_note:
+-
+-hero_moments: []
+-bridge_shots: []
+-prop_state_machines: []
+-blocking_map:
+-  spatial_axis:
+-  zones: []
+-  continuity_rule:
+-faction_layout:
+-  factions: []
++  segment_duration_seconds:
++
++confirmations:
++  topic_confirmed:
++  style_family_confirmed:
++  style_confirmed:
++  reference_confirmed:
++  story_confirmed:
++  asset_plan_confirmed:
++  design_confirmed:
++  script_confirmed:
++  performance_confirmed:
++  storyboard_plan_confirmed:
++  audio_plan_confirmed:
++  video_prompt_plan_confirmed:
++  publish_confirmed:
++
++active_versions:
++  source_intake:
++  topic:
++  reference:
++  story:
++  assets:
++  design:
++  script:
++  performance:
++  storyboard:
++  audio:
++  video_prompts:
++  publish:
++
++stage_index:
++  source_intake:
++  topic:
++  reference:
++  story:
++  assets:
++  design:
++  script:
++  performance:
++  storyboard:
++  audio:
++  video_prompts:
++  publish:
++
++cross_stage_summary:
++  premise:
++  story_engine:
++  core_characters:
++  core_scene:
++  key_props:
++  visual_style:
++  continuity_focus:
++  source_adaptation_mode:
++  current_risks:
++
++read_policy:
++  default_read:
++  stage_specific_reads:
++
++stage_patches: []
+ ```
+ 
+ 说明：
+ 
+-- `context_policy` 是执行阶段的上下文读取边界。
+-- `docs/` 只作为人类阅读说明，不允许作为任何 Skill 或 Agent 的运行时上下文。
+-- `user_confirmations` 记录用户是否确认关键创作决策。用户纠错或补充偏好不等于授权落盘。
+-- `segment_strategy` 记录整片目标时长、单段视频生成时长和分段模式。
+-- `hero_moments` 记录当前项目自己的看点镜头，不得复用某个样例项目的固定看点。
+-- `bridge_shots` 记录当前项目 Segment 之间的桥接分镜。
+-- `prop_state_machines` 记录当前项目核心道具的状态变化。
+-- `blocking_map` 与 `faction_layout` 记录当前项目角色站位、允许区域、禁止区域和阵营关系。
++- `project`：项目基础元数据（名称、Slug、创建和更新时间）。
++- `state`：管线核心状态控制，包括当前主流程状态 `project_status`、下一步阶段 `next_stage`、生命周期 `lifecycle_flag`（`active / blocked / completed` 等）以及卡点说明 `blocker_note`。
++- `routing`：当前路由阶段及允许的后续阶段，记录跳转原因。
++- `runtime_policy`：运行期上下文读取及参考策略。限制 Agent 对 `docs/` 和 `.handoff/` 的默认读取。
++- `project_config`：当前项目确认的制作档位、导演风格 ID、风格家族及 profile 路径、时长设置等。
++- `confirmations`：阶段确认闸门。记录每一个阶段用户是否通过方案预览并进行显式确认。
++- `active_versions`：记录每一个阶段当前落盘的最终版本号。
++- `stage_index`：各阶段最终产物文件的索引映射（包含 primary/handoff 等文件路径），用于提供给下游读取。
++- `cross_stage_summary`：跨阶段核心摘要信息（故事主线、核心角色、场景道具、风格与连续性关注点）。
++- `read_policy`：定义项目级默认读取文件以及阶段定制读取策略。
++- `stage_patches`：归档各阶段成功合并的补丁记录（patch_type、version、summary、files_created、files_updated）。
++
+ 
+ 每个阶段分区统一使用结构化 YAML 补丁块，补丁壳如下：
+ 
+diff --git a/projects/PROJECT_INDEX.md b/projects/PROJECT_INDEX.md
+index 701d365..9dcd982 100644
+--- a/projects/PROJECT_INDEX.md
++++ b/projects/PROJECT_INDEX.md
+@@ -11,7 +11,7 @@
+ ```yaml
+ project_registry:
+   version: v1
+-  updated_at: 2026-06-07T12:05:00+08:00
++  updated_at: 2026-06-10T09:23:14+08:00
+   entries:
+     - project_slug: huafei-wall-crash
+       project_name: 士兰撞墙未遂事件
+@@ -226,4 +226,55 @@ project_registry:
+         - active
+       project_index_path: projects/huaqiang-watermelon/PROJECT_INDEX.md
+       project_board_path: projects/huaqiang-watermelon/PROJECT_BOARD.md
++    - project_slug: datouerzi
++      project_name: datouerzi
++      updated_at: 2026-06-10T07:49:51+08:00
++      lifecycle_flag: active
++      project_status: draft
++      next_stage: scene-topic-gate
++      current_stage: scene-topic-gate
++      topic_summary: >
++        国外版大头儿子和小头爸爸，演绎华强买瓜经典片段
++      style_summary: pixar_like
++      aliases:
++        - datouerzi
++      tags:
++        - active
++        - scene-topic-gate
++      project_index_path: projects/datouerzi/PROJECT_INDEX.md
++      project_board_path: projects/datouerzi/PROJECT_BOARD.md
++    - project_slug: acp_test_project
++      project_name: acp_test_project
++      updated_at: 2026-06-10T09:17:30.261Z
++      lifecycle_flag: active
++      project_status: draft
++      next_stage: scene-topic-gate
++      current_stage: scene-topic-gate
++      topic_summary: >
++        Test project for ACP integration.
++      style_summary: pixar_like
++      aliases:
++        - acp_test_project
++      tags:
++        - active
++        - scene-topic-gate
++      project_index_path: projects/acp_test_project/PROJECT_INDEX.md
++      project_board_path: projects/acp_test_project/PROJECT_BOARD.md
++    - project_slug: acp_test_project_success
++      project_name: acp_test_project_success
++      updated_at: 2026-06-10T09:23:14.971Z
++      lifecycle_flag: active
++      project_status: draft
++      next_stage: scene-topic-gate
++      current_stage: scene-topic-gate
++      topic_summary: >
++        test acp integration
++      style_summary: pixar_like
++      aliases:
++        - acp_test_project_success
++      tags:
++        - active
++        - scene-topic-gate
++      project_index_path: projects/acp_test_project_success/PROJECT_INDEX.md
++      project_board_path: projects/acp_test_project_success/PROJECT_BOARD.md
+ ```

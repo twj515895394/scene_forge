@@ -8,6 +8,7 @@
   flex-direction: column;
   gap: 16px;
   background: #030305;
+  overflow-y: auto;
 }
 
 /* Chat Bubble Layout */
@@ -112,6 +113,47 @@
   font-size: 11.5px;
 }
 
+.markdown-body-b .md-code-block {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid var(--border-b);
+  border-radius: 6px;
+  padding: 12px;
+  margin: 8px 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #e5e7eb;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
+.markdown-body-b strong { color: #fff; font-weight: 700; }
+.markdown-body-b em { color: #d1d5db; font-style: italic; }
+.markdown-body-b br + br { display: block; content: ''; margin-top: 8px; }
+
+.markdown-body-b .md-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+  font-size: 12px;
+}
+.markdown-body-b .md-table th {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 2px solid var(--border-b);
+  color: var(--accent-cyan);
+  font-weight: 700;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+.markdown-body-b .md-table td {
+  padding: 5px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  color: #d1d5db;
+}
+.markdown-body-b .md-table tr:hover td {
+  background: rgba(255,255,255,0.02);
+}
+
 /* Agent Thought / Command Card */
 .chat-bubble-b.thought {
   align-self: stretch;
@@ -146,6 +188,28 @@
   white-space: pre-wrap;
   line-height: 1.5;
 }
+
+.thought-body-markdown {
+  padding: 12px 16px;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: #d1b0ff;
+  background: #060508;
+  max-height: 300px;
+  overflow-y: auto;
+  word-break: break-word;
+}
+
+.thought-body-markdown strong { color: #e8d0ff; }
+.thought-body-markdown code {
+  background: rgba(255,255,255,0.06);
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+}
+.thought-body-markdown ul, .thought-body-markdown ol { padding-left: 20px; margin: 4px 0; }
+.thought-body-markdown li { margin: 2px 0; }
 
 /* System Tool Calls */
 .chat-bubble-b.tool {
@@ -282,20 +346,22 @@
    Input Block (B)
    ========================================== */
 .variant-b-input-wrapper {
-  padding: 12px 16px 16px 16px; /* 中栏底端优雅间距，形成底页安全垫 */
+  padding: 12px 16px 16px 16px;
   background: transparent;
   box-sizing: border-box;
 }
 
 .variant-b-input-container {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   background: rgba(0, 0, 0, 0.45);
   border: 1px solid var(--border-b);
-  border-radius: 8px; /* 悬浮圆角输入盒 */
+  border-radius: 8px;
   padding: 8px 12px;
   box-sizing: border-box;
   transition: border-color 0.25s, box-shadow 0.25s;
+  gap: 8px;
+  max-height: 200px;
 }
 
 .variant-b-input-container:focus-within {
@@ -309,24 +375,34 @@
   font-weight: 800;
   color: var(--accent-cyan);
   user-select: none;
-  margin-top: 10px; /* 对齐第一行文本 */
+  padding-top: 8px;
+  flex-shrink: 0;
 }
 
-.variant-b-input-container textarea {
+.variant-b-input-scrollarea {
   flex: 1;
+  min-height: 24px;
+}
+
+.variant-b-textarea {
+  width: 100%;
   background: transparent;
   border: none;
-  padding: 8px 12px;
+  padding: 8px 4px;
   color: #fff;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
   font-size: 13px;
   line-height: 1.6;
   resize: none;
-  min-height: 72px; /* 约 4 行高 */
+  overflow: hidden;
+  outline: none;
 }
 
-.variant-b-input-container textarea:focus { 
-  outline: none; 
+.variant-b-send-group {
+  display: flex;
+  align-items: flex-end;
+  flex-shrink: 0;
+  padding-bottom: 4px;
 }
 
 .btn-b-send {
@@ -341,8 +417,13 @@
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   letter-spacing: 0.5px;
-  align-self: flex-end;
-  margin-bottom: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-b-send.stop {
+  background: #FF453A;
+  color: #fff;
 }
 
 .btn-b-send:hover {
@@ -472,38 +553,60 @@
   border-radius: 8px;
   cursor: pointer;
   border: 1px solid transparent;
-  transition: all 0.15s;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  position: relative;
+  background: rgba(255, 255, 255, 0.01);
+  margin-bottom: 4px;
 }
 
 .history-item:hover {
-  background: var(--bg-card-b);
-  border-color: var(--border-b);
+  background: rgba(0, 240, 255, 0.03) !important;
+  border-color: rgba(0, 240, 255, 0.15) !important;
+  transform: translateX(4px);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.08);
 }
 
 .history-item.active {
-  background: rgba(10, 132, 255, 0.08);
-  border-color: var(--border-active-b);
+  background: linear-gradient(90deg, rgba(0, 240, 255, 0.05) 0%, rgba(0, 0, 0, 0) 100%) !important;
+  border-color: rgba(0, 240, 255, 0.25) !important;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.08);
+}
+
+.history-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 15%;
+  height: 70%;
+  width: 3px;
+  background: var(--accent-cyan);
+  box-shadow: 0 0 8px var(--accent-cyan);
+  border-radius: 0 4px 4px 0;
 }
 
 .history-item-top {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   color: var(--text-muted-b);
-  font-size: 11px;
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .history-item-date {
   flex: 1;
+  opacity: 0.6;
 }
 
 .history-item-count {
-  font-family: 'SF Mono', 'JetBrains Mono', monospace;
-  font-size: 10px;
-  background: var(--bg-card-b);
-  padding: 1px 6px;
-  border-radius: 3px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0, 240, 255, 0.1);
 }
 
 .history-item-preview {
@@ -515,4 +618,235 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* ==========================================
+   Typing Indicator & Loading Animations
+   ========================================== */
+@keyframes typing-bounce {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+.typing-dot {
+  width: 5px;
+  height: 5px;
+  background-color: #00f0ff;
+  border-radius: 50%;
+  display: inline-block;
+  animation: typing-bounce 1.4s infinite ease-in-out both;
+}
+
+.typing-dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes pulse-blue {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 240, 255, 0.5);
+    transform: scale(0.95);
+  }
+  70% {
+    box-shadow: 0 0 0 5px rgba(0, 240, 255, 0);
+    transform: scale(1);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 240, 255, 0);
+    transform: scale(0.95);
+  }
+}
+
+.dot-blink-blue {
+  width: 6px;
+  height: 6px;
+  background-color: #00f0ff;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+  animation: pulse-blue 1.5s infinite ease-in-out;
+}
+
+/* ==========================================
+   Prompt UI / Authorization Card (B)
+   ========================================== */
+.chat-bubble-b.prompt-ui-wrapper {
+  align-self: center;
+  width: 90%;
+  margin: 10px 0;
+}
+
+.prompt-ui-card {
+  background: rgba(23, 23, 30, 0.7);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 15px rgba(245, 158, 11, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.prompt-ui-card.answered {
+  background: rgba(16, 20, 24, 0.6);
+  border-color: rgba(16, 185, 129, 0.25);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.prompt-ui-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.prompt-ui-icon {
+  font-size: 16px;
+}
+
+.prompt-ui-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 800;
+  color: #f59e0b;
+  letter-spacing: 0.5px;
+}
+
+.prompt-ui-card.answered .prompt-ui-title {
+  color: #10b981;
+}
+
+.prompt-ui-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.prompt-ui-question {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #fff;
+  white-space: pre-wrap;
+}
+
+.prompt-ui-options-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.prompt-ui-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+}
+
+.prompt-ui-btn.allow {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #10b981;
+}
+
+.prompt-ui-btn.allow:hover {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: #10b981;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+}
+
+.prompt-ui-btn.deny {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.prompt-ui-btn.deny:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+}
+
+.prompt-ui-btn.neutral {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #d1d5db;
+}
+
+.prompt-ui-btn.neutral:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.prompt-ui-status-resolved {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.08);
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+.resolved-check {
+  font-weight: 800;
+}
+
+.variant-b-input-container.disabled {
+  background: rgba(20, 20, 25, 0.3) !important;
+  border-color: rgba(255, 255, 255, 0.05) !important;
+  cursor: not-allowed;
+}
+
+.variant-b-input-container.disabled .input-prompt-symbol {
+  color: var(--text-muted-b) !important;
+}
+
+.variant-b-textarea:disabled {
+  color: var(--text-muted-b) !important;
+  cursor: not-allowed;
+}
+
+/* Sidebar New Chat Button styling */
+.btn-new-chat {
+  width: 100%;
+  background: rgba(0, 240, 255, 0.05) !important;
+  border: 1px solid rgba(0, 240, 255, 0.2) !important;
+  color: #00f0ff !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  height: 36px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+.btn-new-chat:hover {
+  background: rgba(0, 240, 255, 0.12) !important;
+  border-color: rgba(0, 240, 255, 0.5) !important;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.2) !important;
+  transform: translateY(-1px);
+}
+
 

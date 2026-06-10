@@ -25,3 +25,7 @@
 - [ ] [04-cli-json-api.md](file:///Users/tangwujun/Documents/trae_projects/scene_forge/.scratch/sceneforge-v9/issues/04-cli-json-api.md)
 - [ ] [05-claudian-pty-bridge.md](file:///Users/tangwujun/Documents/trae_projects/scene_forge/.scratch/sceneforge-v9/issues/05-claudian-pty-bridge.md)
 - [ ] [06-web-console-ui.md](file:///Users/tangwujun/Documents/trae_projects/scene_forge/.scratch/sceneforge-v9/issues/06-web-console-ui.md)
+- [ ] [07-board-state-alignment.md](file:///Users/tangwujun/Documents/trae_projects/scene_forge/.scratch/sceneforge-v9/issues/07-board-state-alignment.md)
+- [x] [08-chat-history-persistence.md](file:///Users/tangwujun/Documents/trae_projects/scene_forge/.scratch/sceneforge-v9/issues/08-chat-history-persistence.md)
+- [x] [09-streaming-rendering-loading.md](file:///Users/tangwujun/Documents/trae_projects/scene_forge/.scratch/sceneforge-v9/issues/09-streaming-rendering-loading.md)
+- [x] [10-permission-configuration-actions.md](file:///Users/tangwujun/Documents/trae_projects/scene_forge/.scratch/sceneforge-v9/issues/10-permission-configuration-actions.md)

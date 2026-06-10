@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Home, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -6,9 +6,11 @@ import ChatHistory from './ChatHistory';
 
 interface ChatBubble {
   id: string;
-  type: 'thought' | 'tool_call' | 'text' | 'system';
+  type: 'thought' | 'tool_call' | 'text' | 'system' | 'prompt_ui';
   content: string;
   timestamp: string;
+  answered?: boolean;
+  selectedOptionLabel?: string;
 }
 
 interface StageState {
@@ -39,7 +41,7 @@ interface VariantProps {
   expandedThoughts: Record<string, boolean>;
   toggleThought: (id: string) => void;
   sendMacro: (action: 'start' | 'validate' | 'complete', stage: string) => void;
-  handleSend: () => void;
+  handleSend: (overrideText?: string) => void;
   handleCancel: () => void;
   handleNewSession: () => void;
   agentRunning: boolean;
@@ -47,9 +49,15 @@ interface VariantProps {
   sessionsLoading: boolean;
   showHistory: boolean;
   setShowHistory: (v: boolean) => void;
+  currentSessionId: string | null;
   onLoadSession: (id: string) => void;
   renderMarkdown: (text: string) => React.ReactNode;
   onReturnLobby?: () => void;
+  bypassPermissions: boolean;
+  setBypassPermissions: (v: boolean) => void;
+  chatEndRef: React.RefObject<HTMLDivElement>;
+  hasPendingPrompt: boolean;
+  onPromptSubmit: (bubbleId: string, optionId: string, optionLabel: string) => void;
 }
 
 const STAGES = [
@@ -93,10 +101,35 @@ export default function VariantB(props: VariantProps) {
     sessionsLoading,
     showHistory,
     setShowHistory,
+    currentSessionId,
     onLoadSession,
     renderMarkdown,
-    onReturnLobby
+    onReturnLobby,
+    bypassPermissions,
+    setBypassPermissions,
+    chatEndRef,
+    hasPendingPrompt,
+    onPromptSubmit
   } = props;
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [collapsedTools, setCollapsedTools] = React.useState<Record<string, boolean>>({});
+
+  const toggleToolCollapse = (id: string) => {
+    setCollapsedTools(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  // Auto-resize textarea as content grows
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (ta) {
+      ta.style.height = 'auto';
+      ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
+    }
+  }, [inputVal]);
 
   // Helper to check if a bubble is from user
   const isUserBubble = (content: string) => content.startsWith('>');
@@ -125,6 +158,15 @@ export default function VariantB(props: VariantProps) {
           <Button variant="ghost" size="sm" onClick={handleNewSession} title="开始新会话" className="text-xs text-muted-foreground hover:text-white">
             + 新会话
           </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setBypassPermissions(!bypassPermissions)} 
+            title={bypassPermissions ? "自动授权：子进程所有写入和执行操作自动跳过确认" : "安全授权模式：默认拦截写入/执行工具"} 
+            className={`text-xs flex items-center gap-1 ${bypassPermissions ? 'text-emerald-400 hover:text-emerald-300' : 'text-amber-400 hover:text-amber-300'}`}
+          >
+            🛡️ {bypassPermissions ? "自动授权 (Auto-Approve)" : "安全限制 (Protected)"}
+          </Button>
           <div className="logo-square">SF</div>
           <span className="brand-title">SceneForge</span>
           <span className="badge-v9">V9</span>
@@ -148,7 +190,7 @@ export default function VariantB(props: VariantProps) {
           <ChatHistory
             sessions={sessions}
             loading={sessionsLoading}
-            currentSessionId={null}
+            currentSessionId={currentSessionId}
             onSelect={onLoadSession}
             onClose={() => setShowHistory(false)}
           />
@@ -157,47 +199,44 @@ export default function VariantB(props: VariantProps) {
 
       {/* Grid Layout */}
       <div className="variant-b-grid">
-        {/* Panel 1: Vertical Stages Index */}
-        <aside className="variant-b-sidebar">
-          <div className="section-header">
-            <span>SOP PROCESS FLOW</span>
-            <span className="active-count">{STAGES.length} STAGES</span>
+        {/* Panel 1: Vertical Sidebar (Pipeline Flow Panel) */}
+        <aside className="variant-b-sidebar flex flex-col h-full border-r border-white/5 bg-[#08080c] w-[260px] flex-shrink-0 min-w-[260px]">
+          <div className="section-header px-4 py-3 text-[10px] tracking-wider text-muted-foreground uppercase font-mono border-b border-white/5">
+            <span>Pipeline Flow (SOP 管线)</span>
           </div>
-          <ScrollArea className="h-full flex-1">
-          <div className="stage-cards-container">
-            {STAGES.map((stg, index) => {
-              const state = projectState?.stages[stg];
-              const status = state?.status || 'ready';
-              const isActive = activeStage === stg;
-              const isCurrent = projectState?.current_stage === stg;
+          <ScrollArea className="flex-1">
+            <div className="p-3 flex flex-col gap-2">
+              {STAGES.map((stg, index) => {
+                const state = projectState?.stages[stg];
+                const status = state?.status || 'ready';
+                const isActive = activeStage === stg;
+                const isCurrent = projectState?.current_stage === stg;
 
-              return (
-                <div
-                  key={stg}
-                  className={`stage-card-b ${status} ${isActive ? 'active' : ''} ${isCurrent ? 'current' : ''}`}
-                >
-                  <div className="card-left-section">
-                    <span className="step-num">{String(index + 1).padStart(2, '0')}</span>
-                    <span className="status-bullet"></span>
-                  </div>
-                  
-                  <div className="card-mid-section">
-                    <span className="stage-title">{STAGE_NAMES[stg]}</span>
-                    {isCurrent && <span className="active-flow-tag">ACTIVE</span>}
-                  </div>
-
-                  <div className="card-right-section">
-                    <span className={`status-badge-b ${status}`}>
-                      {status === 'completed' && 'COMPLETE'}
-                      {status === 'in_progress' && 'RUNNING'}
-                      {status === 'review_failed' && 'FAILED'}
-                      {status === 'ready' && 'READY'}
+                return (
+                  <div
+                    key={stg}
+                    onClick={() => sendMacro && sendMacro('start', stg)}
+                    className={`flex items-center justify-between p-3 rounded cursor-pointer text-xs transition-all ${
+                      isActive 
+                        ? 'bg-white/5 text-white border border-white/10' 
+                        : 'text-muted-foreground hover:bg-white/[0.02]'
+                    } ${isCurrent ? 'border-l-2 border-l-[#00f0ff]' : ''}`}
+                  >
+                    <div className="flex items-center gap-2.5 truncate">
+                      <span className="font-mono text-[9px] opacity-40">{String(index + 1).padStart(2, '0')}</span>
+                      <span className="truncate text-[12px] font-medium">{STAGE_NAMES[stg]?.split(' ')[0] || stg}</span>
+                    </div>
+                    <span className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded ${
+                      status === 'completed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                      status === 'in_progress' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                      'bg-white/5 text-muted-foreground border border-white/5'
+                    }`}>
+                      {status === 'completed' ? 'Done' : status === 'in_progress' ? 'Run' : 'Idle'}
                     </span>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
           </ScrollArea>
         </aside>
 
@@ -206,35 +245,55 @@ export default function VariantB(props: VariantProps) {
           <div className="section-header">COLLABORATIVE FEED</div>
           
           {/* Chat Bubble Viewport */}
-          <ScrollArea className="flex-1">
           <div className="variant-b-feed-viewport">
             {bubbles.map((b) => {
               // 1. Thought Process Bubble
               if (b.type === 'thought') {
-                const expanded = expandedThoughts[b.id];
+                const expanded = expandedThoughts[b.id] !== false;
                 return (
-                  <div key={b.id} className={`chat-bubble-b thought ${expanded ? 'expanded' : ''}`}>
+                  <div key={b.id} className="chat-bubble-b thought">
                     <div className="bubble-thought-header" onClick={() => toggleThought(b.id)}>
-                      <span className="thought-icon">💡</span>
-                      <span className="thought-title">Agent Thought Process</span>
-                      <span className="expand-indicator">{expanded ? 'COLLAPSE ▲' : 'EXPAND ▼'}</span>
+                      <span>💡 Agent 思考中...</span>
+                      <span className="expand-indicator">{expanded ? '收起 ▲' : '展开 ▼'}</span>
                     </div>
                     {expanded && (
-                      <pre className="thought-pre-b">{b.content.trim()}</pre>
+                      <pre className="thought-pre-b">{b.content}</pre>
                     )}
                   </div>
                 );
               }
 
-              // 2. Tool System Call Bubble
+              // 2. Tool System Call Bubble (Claudian StatusPanel style: Collapsible & Copyable)
               if (b.type === 'tool_call') {
+                const isCollapsed = collapsedTools[b.id] !== false;
                 return (
-                  <div key={b.id} className="chat-bubble-b tool">
-                    <div className="bubble-tool-header">
-                      <span className="tool-icon">⚙️</span>
-                      <span className="tool-title">System Execution Log</span>
+                  <div key={b.id} className="chat-bubble-b tool border border-white/5 bg-[#050508] rounded my-1 overflow-hidden transition-all self-stretch">
+                    <div 
+                      className="bubble-tool-header px-3 py-1.5 bg-white/[0.02] border-b border-white/5 flex items-center justify-between cursor-pointer font-mono text-[9px]"
+                      onClick={() => toggleToolCollapse(b.id)}
+                    >
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <span>⚙️</span>
+                        <span className="font-semibold text-white/80">System Command Logs</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button 
+                          className="hover:text-[#00f0ff] transition-colors bg-transparent border-none p-0 cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(b.content);
+                          }}
+                        >
+                          Copy
+                        </button>
+                        <span className="opacity-40">{isCollapsed ? 'Expand ▼' : 'Collapse ▲'}</span>
+                      </div>
                     </div>
-                    <pre className="tool-pre-b">{b.content.trim()}</pre>
+                    {!isCollapsed && (
+                      <pre className="tool-pre-b p-3 m-0 font-mono text-[10px] leading-relaxed text-[#a3a3ac] overflow-x-auto bg-[#020204] border-none rounded-none text-left">
+                        {b.content.trim()}
+                      </pre>
+                    )}
                   </div>
                 );
               }
@@ -253,7 +312,63 @@ export default function VariantB(props: VariantProps) {
                 );
               }
 
-              // 4. AI / Assistant / System Response Bubble
+              // 3.5. Intercepted Prompt / Permission Card
+              if (b.type === 'prompt_ui') {
+                let payload: any;
+                try {
+                  payload = JSON.parse(b.content);
+                } catch (e) {
+                  payload = { title: '授权申请 (Permission Requested)', options: [] };
+                }
+
+                return (
+                  <div key={b.id} className="chat-bubble-b prompt-ui-wrapper">
+                    <div className={`prompt-ui-card ${b.answered ? 'answered' : 'pending'}`}>
+                      <div className="prompt-ui-header">
+                        <span className="prompt-ui-icon">{b.answered ? '✓' : '🛡️'}</span>
+                        <span className="prompt-ui-title">
+                          {b.answered ? '系统授权已确认 / SYSTEM PERMISSION RESOLVED' : '系统授权申请 / SYSTEM PERMISSION REQUEST'}
+                        </span>
+                      </div>
+                      
+                      <div className="prompt-ui-body">
+                        <p className="prompt-ui-question">{payload.title}</p>
+                        
+                        {b.answered ? (
+                          <div className="prompt-ui-status-resolved">
+                            <span className="resolved-check">✓</span>
+                            <span>已授权选项：<strong>{b.selectedOptionLabel}</strong></span>
+                          </div>
+                        ) : (
+                          <div className="prompt-ui-options-grid">
+                            {payload.options?.map((opt: any) => {
+                              const isAllow = opt.kind?.includes('allow') || opt.label?.toLowerCase().includes('yes') || opt.label?.toLowerCase().includes('allow') || opt.label?.includes('批准') || opt.label?.includes('允许');
+                              const isDeny = opt.kind?.includes('deny') || opt.label?.toLowerCase().includes('no') || opt.label?.toLowerCase().includes('deny') || opt.label?.includes('拒绝') || opt.label?.includes('取消');
+                              
+                              let btnClass = "prompt-ui-btn";
+                              if (isAllow) btnClass += " allow";
+                              else if (isDeny) btnClass += " deny";
+                              else btnClass += " neutral";
+
+                              return (
+                                <button
+                                  key={opt.value}
+                                  className={btnClass}
+                                  onClick={() => onPromptSubmit(b.id, opt.value, opt.label)}
+                                >
+                                  {opt.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              // 4. AI / Assistant / System Response Bubble (Without redundant approval buttons)
               return (
                 <div key={b.id} className="chat-bubble-b ai-wrapper">
                   <div className="ai-bubble">
@@ -266,8 +381,24 @@ export default function VariantB(props: VariantProps) {
                 </div>
               );
             })}
+
+            {agentRunning && (
+              <div className="chat-bubble-b ai-wrapper active-agent-loading">
+                <div className="ai-bubble loading-state" style={{ padding: '10px 14px', minWidth: '150px' }}>
+                  <div className="bubble-sender-title flex items-center gap-1.5" style={{ fontSize: '8px', marginBottom: '4px', display: 'flex', alignItems: 'center' }}>
+                    <span className="dot-blink-blue"></span>
+                    AI DIRECTOR IS WORKING
+                  </div>
+                  <div className="bubble-content flex items-center gap-1.5 py-0.5" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span className="typing-dot"></span>
+                    <span className="typing-dot"></span>
+                    <span className="typing-dot"></span>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
           </div>
-          </ScrollArea>
 
           {/* Current Stage Status Bar */}
           <div className="variant-b-action-dock">
@@ -292,25 +423,32 @@ export default function VariantB(props: VariantProps) {
 
           {/* TextInput Command Line Wrapper for Floating Card style */}
           <div className="variant-b-input-wrapper">
-            <div className="variant-b-input-container">
+            <div className={`variant-b-input-container ${hasPendingPrompt ? 'disabled' : ''}`}>
               <div className="input-prompt-symbol">&gt;</div>
-              <textarea
-                rows={4}
-                placeholder="Inject command or message to AI director... (Enter to send, Shift+Enter to wrap)"
-                value={inputVal}
-                onChange={(e) => setInputVal(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-              />
-              {agentRunning ? (
-                <button className="btn-b-send" onClick={handleCancel} style={{ background: '#FF453A' }}>⏹ STOP</button>
-              ) : (
-                <button className="btn-b-send" onClick={handleSend}>SEND PAYLOAD</button>
-              )}
+              <ScrollArea className="variant-b-input-scrollarea">
+                <textarea
+                  ref={textareaRef}
+                  rows={1}
+                  placeholder={hasPendingPrompt ? "等待授权决策以继续执行管线..." : "与 AI 导演对话... (Enter 发送，Shift+Enter 换行)"}
+                  value={hasPendingPrompt ? "" : inputVal}
+                  disabled={hasPendingPrompt}
+                  onChange={(e) => setInputVal(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  className="variant-b-textarea"
+                />
+              </ScrollArea>
+              <div className="variant-b-send-group">
+                {agentRunning ? (
+                  <button className="btn-b-send stop" onClick={handleCancel}>⏹ 停止</button>
+                ) : (
+                  <button className="btn-b-send" onClick={() => handleSend()} disabled={hasPendingPrompt}>发送</button>
+                )}
+              </div>
             </div>
           </div>
         </section>

@@ -5,18 +5,18 @@
   flex-direction: column;
   background-color: #050508;
   color: #d1d5db;
-  --accent-cyan: #0A84FF; /* Apple iOS Blue */
-  --accent-magenta: #FF375F; /* Apple Pink */
-  --accent-green: #30D158; /* Apple Green */
-  --accent-yellow: #FFD60A; /* Apple Yellow */
-  --accent-red: #FF453A; /* Apple Red */
-  --bg-dark-b: #000000;
-  --bg-panel-b: rgba(28, 28, 30, 0.45); /* Apple dark translucent */
-  --bg-card-b: rgba(44, 44, 46, 0.3);
+  --accent-cyan: #00f0ff; /* Cyber Cyan */
+  --accent-magenta: #d946ef; /* Cyber Magenta */
+  --accent-green: #10b981; /* Emeral Green */
+  --accent-yellow: #f59e0b; /* Amber Yellow */
+  --accent-red: #ef4444; /* Alert Red */
+  --bg-dark-b: #030305;
+  --bg-panel-b: rgba(10, 10, 15, 0.6); /* Translucent Space Dark */
+  --bg-card-b: rgba(255, 255, 255, 0.02);
   --border-b: rgba(255, 255, 255, 0.06);
-  --border-active-b: rgba(10, 132, 255, 0.4);
+  --border-active-b: rgba(0, 240, 255, 0.3);
   --text-main-b: #ffffff;
-  --text-muted-b: #8e8e93;
+  --text-muted-b: #71717a;
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Icons", "Helvetica Neue", sans-serif;

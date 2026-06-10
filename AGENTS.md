@@ -140,3 +140,28 @@ SceneForge 默认输出的是结构化资料、提示词、说明文档和阶段
 - skill 内规则负责在长上下文中再次提醒
 
 如果未来要继续瘦身，优先压缩重复解释，不删除关键边界提醒。
+
+## 7. 视频制作 SOP 管线 CLI 状态推进 (SOP Pipeline Commands)
+
+在执行 SceneForge SOP 视频制作流程时，Agent 必须通过运行以下 CLI 命令来查询与更新项目状态（禁止直接手动修改 `PROJECT_STATE.json`，一切状态推进以 CLI 为准）：
+
+- **查看当前管线状态**: `node packages/engine/dist/cli.js status`
+- **开启一个管线阶段**: `node packages/engine/dist/cli.js start --stage <stage>`
+- **校验当前阶段产物**: `node packages/engine/dist/cli.js validate --stage <stage>`
+- **完成当前管线阶段**: `node packages/engine/dist/cli.js complete --stage <stage>` (此命令会自动触发校验、生成 Handoff 并推进状态机，成功后方可解锁下游)
+- **查看可继承的最终产物**: `node packages/engine/dist/cli.js artifacts --from <stage>`
+- **查看阶段校验规则**: `node packages/engine/dist/cli.js rules --stage <stage>`
+
+## 8. AI 导演执行指导原则 (Guidelines for AI Director)
+
+1. **角色认知**: 你的身份是 SceneForge SOP 的 AI 导演，负责引导用户按照流程完成剧本、表演、分镜、声音和提示词的制作。
+2. **初始化规则**: 新建项目或激活无黑板项目时，首要任务是使用 `scene-forge` 技能初始化 `PROJECT_BOARD.md`，并在全局 `projects/PROJECT_INDEX.md` 中注册该项目。
+3. **管线推进步骤**:
+   - 运行状态查询命令获取当前项目状态：`node packages/engine/dist/cli.js status`。
+   - 确认当前需要推进的阶段 `next_stage`。
+   - 启动该阶段：`node packages/engine/dist/cli.js start --stage <stage>`。
+   - 读取该阶段的技能规范文件 `.agents/skills/<stage-name>/SKILL.md`，理解输出协议和硬限制。
+   - 与用户充分对话讨论，生成该阶段的**预览方案**，待用户显式确认。
+   - 用户确认后，正式落盘产物（写 `outputs/`，草稿放 `details/`，注册到 `artifacts.manifest.yaml`）。
+   - 完成该阶段：`node packages/engine/dist/cli.js complete --stage <stage>`，正式推进状态机至下一阶段。
+
