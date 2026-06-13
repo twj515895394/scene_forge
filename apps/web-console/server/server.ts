@@ -638,21 +638,23 @@ function buildProjectContext(projectPath: string): string {
   const slug = path.basename(projectPath);
   if (projectPath !== workspaceRoot) {
     return `【重要提示】当前正在操作的项目是：${slug}。
-1. 所有该项目的产物（无论是通过工具写入文件还是生成代码）必须读写在项目目录内：'projects/${slug}/'。
-   - 正式产物应写入：'projects/${slug}/outputs/' (例如：'projects/${slug}/outputs/video_prompts_pack_001.md')
-   - 过程草稿应写入：'projects/${slug}/details/'
-   - 输入资产应读写在：'projects/${slug}/inputs/'
-   - 阶段配置文件为：'projects/${slug}/PROJECT_STATE.json'
-   - 黑板文件为：'projects/${slug}/PROJECT_BOARD.md'
-   - 产物注册清单为：'projects/${slug}/artifacts.manifest.yaml'
-2. 所有执行 CLI 状态机命令时，必须先切换工作目录（cd）至 'projects/${slug}/' 后再执行。例如：
+1. 所有该项目的产物（无论是通过工具写入文件还是生成代码）在调用工具时，必须使用以项目文件夹为起点的完整相对路径（即以 'projects/${slug}/' 开头）：
+   - 正式产物写盘路径应为：'projects/${slug}/outputs/' (例如：'projects/${slug}/outputs/video_prompts_pack_001.md')
+   - 过程草稿写盘路径应为：'projects/${slug}/details/'
+   - 输入资产读写路径应为：'projects/${slug}/inputs/'
+   - 阶段配置文件路径为：'projects/${slug}/PROJECT_STATE.json'
+   - 黑板文件路径为：'projects/${slug}/PROJECT_BOARD.md'
+   - 产物注册清单路径为：'projects/${slug}/artifacts.manifest.yaml'
+   注意：在调用 IDE/AI 文件读写工具（如 write_to_file、replace_file_content 等）时，绝对不能省略 'projects/${slug}/' 前缀！
+2. 任何在终端执行 CLI 状态机命令的操作，必须先切换工作目录（cd）至 'projects/${slug}/' 后再执行。例如：
    - cd projects/${slug} && node ../../packages/engine/dist/cli.js status
    - cd projects/${slug} && node ../../packages/engine/dist/cli.js start --stage <stage>
    - cd projects/${slug} && node ../../packages/engine/dist/cli.js validate --stage <stage>
    - cd projects/${slug} && node ../../packages/engine/dist/cli.js complete --stage <stage>
 3. 随时阅读根目录下的 './AGENTS.md' 了解开发规范，而不是 './CLAUDE.md'。`;
   }
-  return `读取 ./AGENTS.md（不是根目录 the CLAUDE.md）。当前项目: ${slug}，目录 projects/${slug}/。`;
+  return `【当前状态】工作区处于根目录，暂无激活的具体创作项目。
+如需开始工作，请先在 Web Console 激活或创建一个具体项目。请阅读根目录下的 './AGENTS.md' 了解开发规范，而不是 './CLAUDE.md'。`;
 }
 
 // Helper to parse Claude's raw session JSONL log into ChatBubbles
