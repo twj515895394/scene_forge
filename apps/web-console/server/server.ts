@@ -636,6 +636,22 @@ app.get('/api/sessions/:id', (req, res) => {
 // Build minimal routing context for Claude's first message
 function buildProjectContext(projectPath: string): string {
   const slug = path.basename(projectPath);
+  if (projectPath !== workspaceRoot) {
+    return `【重要提示】当前正在操作的项目是：${slug}。
+1. 所有该项目的产物（无论是通过工具写入文件还是生成代码）必须读写在项目目录内：'projects/${slug}/'。
+   - 正式产物应写入：'projects/${slug}/outputs/' (例如：'projects/${slug}/outputs/video_prompts_pack_001.md')
+   - 过程草稿应写入：'projects/${slug}/details/'
+   - 输入资产应读写在：'projects/${slug}/inputs/'
+   - 阶段配置文件为：'projects/${slug}/PROJECT_STATE.json'
+   - 黑板文件为：'projects/${slug}/PROJECT_BOARD.md'
+   - 产物注册清单为：'projects/${slug}/artifacts.manifest.yaml'
+2. 所有执行 CLI 状态机命令时，必须先切换工作目录（cd）至 'projects/${slug}/' 后再执行。例如：
+   - cd projects/${slug} && node ../../packages/engine/dist/cli.js status
+   - cd projects/${slug} && node ../../packages/engine/dist/cli.js start --stage <stage>
+   - cd projects/${slug} && node ../../packages/engine/dist/cli.js validate --stage <stage>
+   - cd projects/${slug} && node ../../packages/engine/dist/cli.js complete --stage <stage>
+3. 随时阅读根目录下的 './AGENTS.md' 了解开发规范，而不是 './CLAUDE.md'。`;
+  }
   return `读取 ./AGENTS.md（不是根目录 the CLAUDE.md）。当前项目: ${slug}，目录 projects/${slug}/。`;
 }
 
@@ -766,12 +782,17 @@ wss.on('connection', (ws: WebSocket) => {
       }
     } catch (_) {}
 
+    const childEnv: Record<string, string> = {
+      ...process.env,
+      PATH: `/opt/homebrew/bin:/usr/local/bin:${process.env.PATH || ''}`
+    };
+    if (targetPath !== workspaceRoot) {
+      childEnv.SCENE_FORGE_PROJECT_PATH = targetPath;
+    }
+
     const proc = spawn(claudeBin, args, {
       cwd: workspaceRoot,
-      env: {
-        ...process.env,
-        PATH: `/opt/homebrew/bin:/usr/local/bin:${process.env.PATH || ''}`
-      }
+      env: childEnv
     });
     currentProcess = proc;
 

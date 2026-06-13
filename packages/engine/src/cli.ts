@@ -53,7 +53,7 @@ function handleError(err: any, options: { json?: boolean }) {
 }
 
 function getInstances() {
-  const projectPath = process.cwd();
+  const projectPath = process.env.SCENE_FORGE_PROJECT_PATH || process.cwd();
   const project = new Project(projectPath);
   const stateMachine = new StateMachine(project);
   const validator = new Validator(project);
