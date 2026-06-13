@@ -95,6 +95,16 @@
   gap: 4px;
 }
 
+/* Defensive: hide AI wrapper when bubble-content is empty (ghost bubble prevention) */
+.chat-bubble-b.ai-wrapper:has(.bubble-content:empty),
+.chat-bubble-b.ai-wrapper:has(.markdown-body-b:empty) {
+  display: none !important;
+}
+
+.markdown-rendered-container:empty {
+  display: none;
+}
+
 .bubble-sender-title {
   font-family: var(--sf-font-mono);
   font-size: var(--sf-text-micro);

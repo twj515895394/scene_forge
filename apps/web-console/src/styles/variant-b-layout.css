@@ -264,6 +264,12 @@
   border-color: rgba(255, 255, 255, 0.07);
 }
 
+.panel-toggle-chip.active {
+  border-color: var(--sf-border-strong);
+  background: rgba(117, 210, 255, 0.08);
+  color: var(--accent-cyan);
+}
+
 .active-count {
   color: var(--accent-cyan);
   font-weight: 600;

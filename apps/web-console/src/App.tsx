@@ -735,7 +735,7 @@ export default function App() {
 
   // Micro rendering helper for simple Markdown formatting
   const renderMarkdown = (text: string, mode: 'chat' | 'preview' = 'chat') => {
-    if (!text) return '';
+    if (!text) return null;
 
     // Strip and parse YAML frontmatter if it exists at the start of the markdown file
     let frontmatter: Record<string, string> = {};
@@ -762,7 +762,7 @@ export default function App() {
       markdownText = flattenMarkdownTablesForChat(markdownText);
       markdownText = stripChatNoiseLines(markdownText);
       if (!isChatContentRenderable(markdownText)) {
-        return '';
+        return null;
       }
     }
 

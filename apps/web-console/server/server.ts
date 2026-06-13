@@ -974,12 +974,14 @@ wss.on('connection', (ws: WebSocket) => {
             continue;
           }
 
-          generatedBubbles.push({
-            id: `run-${runId}-text-${idx}`,
-            type: 'text',
-            content: textsByIndex[idx],
-            timestamp: new Date().toISOString()
-          });
+          if (textsByIndex[idx] && textsByIndex[idx].trim()) {
+            generatedBubbles.push({
+              id: `run-${runId}-text-${idx}`,
+              type: 'text',
+              content: textsByIndex[idx],
+              timestamp: new Date().toISOString()
+            });
+          }
         } else if (chunk.type === 'tool_use') {
           type ToolInfo = { id: string; name: string; input: any; status: string; result?: string; isError?: boolean };
           const tool: ToolInfo = toolUses.get(chunk.id) || {

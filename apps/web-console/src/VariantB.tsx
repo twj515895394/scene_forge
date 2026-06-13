@@ -174,6 +174,9 @@ export default function VariantB(props: VariantProps) {
   const [expandedStages, setExpandedStages] = React.useState<Record<string, boolean>>({});
   const [stageArtifacts, setStageArtifacts] = React.useState<Record<string, any[]>>({});
 
+  // 4. Debug log visibility state
+  const [showSystemLogs, setShowSystemLogs] = React.useState(false);
+
   const toggleToolCollapse = (id: string) => {
     setCollapsedTools(prev => ({
       ...prev,
@@ -626,13 +629,22 @@ export default function VariantB(props: VariantProps) {
         <section className="variant-b-feed">
           <div className="section-header">
             <span>COLLABORATIVE FEED</span>
-            <button
-              className="panel-toggle-chip"
-              onClick={() => setPreviewCollapsed(!previewCollapsed)}
-              title={previewCollapsed ? '展开产物预览栏' : '折叠产物预览栏'}
-            >
-              {previewCollapsed ? '打开预览' : '收起预览'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                className={`panel-toggle-chip ${showSystemLogs ? 'active' : ''}`}
+                onClick={() => setShowSystemLogs(!showSystemLogs)}
+                title={showSystemLogs ? '隐藏系统调试日志（思考过程与工具调用）' : '显示系统调试日志（思考过程与工具调用）'}
+              >
+                {showSystemLogs ? '隐藏日志' : '显示日志'}
+              </button>
+              <button
+                className="panel-toggle-chip"
+                onClick={() => setPreviewCollapsed(!previewCollapsed)}
+                title={previewCollapsed ? '展开产物预览栏' : '折叠产物预览栏'}
+              >
+                {previewCollapsed ? '打开预览' : '收起预览'}
+              </button>
+            </div>
           </div>
 
           {/* Chat Bubble Viewport */}
@@ -642,6 +654,11 @@ export default function VariantB(props: VariantProps) {
                 // Skip empty or whitespace-only messages
                 if (!b.content || !b.content.trim()) {
                   return false;
+                }
+                // Hide thought and tool call bubbles if they are resolved/completed and system logs are disabled
+                if (!showSystemLogs) {
+                  if (b.type === 'tool_call') return false;
+                  if (b.type === 'thought' && b.thoughtStatus !== 'streaming') return false;
                 }
                 // Skip empty user messages
                 if (isUserBubble(b.content)) {
@@ -656,6 +673,10 @@ export default function VariantB(props: VariantProps) {
                     return false;
                   }
                 }
+                // Skip thought bubbles whose content normalizes to empty
+                if (b.type === 'thought' && !normalizeThoughtContent(b.content)) return false;
+                // Skip non-user text bubbles that aren't renderable after sanitization
+                if (b.type === 'text' && !isUserBubble(b.content) && !isChatContentRenderable(b.content)) return false;
                 return true;
               })
               .map((b) => {
@@ -664,7 +685,7 @@ export default function VariantB(props: VariantProps) {
                 const thoughtContent = normalizeThoughtContent(b.content);
                 if (!thoughtContent) return null;
                 const status = b.thoughtStatus ?? 'streaming';
-                const expanded = expandedThoughts[b.id] ?? status === 'streaming';
+                const expanded = showSystemLogs ? (expandedThoughts[b.id] !== false) : (expandedThoughts[b.id] ?? status === 'streaming');
                 const durationText = formatThoughtDuration(b.durationMs);
                 const title = status === 'resolved'
                   ? `已处理${durationText ? ` ${durationText}` : ''}`
@@ -695,7 +716,7 @@ export default function VariantB(props: VariantProps) {
                   return null;
                 }
 
-                const isCollapsed = collapsedTools[b.id] !== false;
+                const isCollapsed = showSystemLogs ? (collapsedTools[b.id] === true) : (collapsedTools[b.id] !== false);
 
                 // Extract a clean argument summary
                 let summaryText = '';
@@ -832,12 +853,14 @@ export default function VariantB(props: VariantProps) {
               // 4. AI / Assistant / System Response Bubble
               if (!b.content || !b.content.trim()) return null;
               if (!isChatContentRenderable(b.content)) return null;
+              const renderedMarkdown = renderMarkdown(b.content, 'chat');
+              if (!renderedMarkdown) return null;
               return (
                 <div key={b.id} className="chat-bubble-b ai-wrapper">
                   <div className="ai-bubble">
                     <div className="bubble-sender-title">AI DIRECTOR</div>
                     <div className="bubble-content markdown-body-b">
-                      {renderMarkdown(b.content, 'chat')}
+                      {renderedMarkdown}
                     </div>
                   </div>
                   <div className="bubble-meta-row ai-message-meta">
