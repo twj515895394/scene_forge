@@ -89,3 +89,27 @@ Status: deferred-optimization
 - **系统日志显示/隐藏切换开关**：在 COLLABORATIVE FEED 头部添加了“显示日志 / 隐藏日志”状态控制开关，支持局部高亮状态。
 - **自动展示/隐藏展开**：点击显示日志后，所有的历史工具调用和思考流程块不仅被拉回渲染树，还会自动呈现“展开（Expanded）”的可读日志状态，无需手动逐个点击。
 
+## 点击“显示日志”后依旧呈现空横线与无法显示日志的深度根因及修复（2026-06-13 第二次追加）
+
+### 1. 为什么显示日志后依旧看不到内容、只有大量横线？
+通过在 Chromium 中使用 Playwright 脚本评估页面的实时 DOM 和 computed style，发现当开启“显示日志”时，所有的 `.claudian-tool-call-container` 与 `.chat-bubble-b.thought.resolved.expanded` 元素的计算高度（computed height）居然都变成了 **`2px`**。
+进一步的 CSS 规则和布局分析定位到了以下两个关键设定：
+1. 这些容器元素都声明了 `overflow: hidden;`；
+2. 它们的直接父容器 `.variant-b-feed-viewport` 采用的是弹性伸缩布局 `display: flex; flex-direction: column;`。
+
+根据 CSS Flexbox 规范：
+- 弹性子元素的 `min-height` 默认值是 `auto`，通常它能保持内容尺寸以防止内容被裁切；
+- **但当弹性子元素设置了 `overflow` 为非 `visible` 的值（如 `hidden`、`scroll` 或 `auto`）时，其 `min-height` 的计算值会自动退化为 `0`**；
+- 此时，若 Flex 容器中的内容超出视口，且子元素没有声明 `flex-shrink: 0;`，浏览器就会将所有退化为 `min-height: 0` 的子项高度强制压缩到它们的极小极限——即 `2px`（刚好是 1px top border + 1px bottom border 的宽度），导致容器内所有本应正常渲染的文本和结构彻底被截断隐藏，只在页面上堆叠出大量平行的极细横线。
+
+### 2. 最终修复方案
+- 在 `variant-b-chat.css` 的 `.chat-bubble-b` 与 `.claudian-tool-call-container` 类中显式添加了 **`flex-shrink: 0;`**。
+- 这项修补彻底阻止了弹性布局对气泡与日志容器进行的高度挤压，强制它们在 DOM 渲染时采用其内部内容的真实天然高度。当内容总高度超出视口时，会自然触发父视口 `.variant-b-feed-viewport` 的原生滚动条。
+
+### 3. 验证结论
+- 重新使用 Playwright 脚本在浏览器中执行检测，确认当开启“显示日志”后：
+  - `.claudian-tool-call-container` 正常自适应渲染，展开出 `300.42px` 的实际日志内容高度；
+  - `.chat-bubble-b.thought.resolved.expanded` 正常渲染出 `80.76px` 的实际思考流程高度；
+  - 页面各日志条目的图标、Bash 命令、执行输出和文本完全可读，没有出现空横线残留，用户操作一键展开/折叠日志功能完美生效。
+
+

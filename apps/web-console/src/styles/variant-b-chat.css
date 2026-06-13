@@ -49,6 +49,7 @@
   flex-direction: column;
   gap: 3px;
   transition: all 0.2s;
+  flex-shrink: 0;
 }
 
 /* User Bubble on the Right */
@@ -1175,6 +1176,7 @@
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 0;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .claudian-tool-header {
