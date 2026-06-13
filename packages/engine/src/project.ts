@@ -36,17 +36,26 @@ export interface MarkdownWithFrontmatter {
 
 export function parseMarkdownFrontmatter(content: string): MarkdownWithFrontmatter {
   const match = content.match(/^---\r?\n([\s\S]+?)\r?\n---\r?\n([\s\S]*)$/);
-  if (!match) {
-    return { frontmatter: {}, body: content };
+  if (match) {
+    try {
+      const yamlContent = match[1];
+      const body = match[2];
+      const parsed = yaml.load(yamlContent) as Record<string, any>;
+      return { frontmatter: parsed || {}, body };
+    } catch (err) {
+      throw new Error(`Failed to parse frontmatter YAML: ${(err as Error).message}`);
+    }
   }
+  // Fallback: try parsing the entire content as YAML (e.g. PROJECT_BOARD.md without --- delimiters)
   try {
-    const yamlContent = match[1];
-    const body = match[2];
-    const parsed = yaml.load(yamlContent) as Record<string, any>;
-    return { frontmatter: parsed || {}, body };
-  } catch (err) {
-    throw new Error(`Failed to parse frontmatter YAML: ${(err as Error).message}`);
+    const parsed = yaml.load(content);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return { frontmatter: parsed as Record<string, any>, body: '' };
+    }
+  } catch {
+    // Not valid YAML, treat as plain markdown body
   }
+  return { frontmatter: {}, body: content };
 }
 
 export class Project {

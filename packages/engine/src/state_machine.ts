@@ -6,21 +6,31 @@ import { Project } from './project.js';
 // Stages definition
 export const DEFAULT_STAGES = [
   'topic_gate',
+  'reference',
+  'story',
+  'assets',
+  'design',
   'script',
   'performance',
-  'audio',
   'storyboard',
+  'audio',
   'video_prompts',
   'publish_review'
-];
+] as const;
+
+const DEFAULT_STAGE_SET = new Set<string>(DEFAULT_STAGES);
 
 export const STAGE_DEPENDENCIES: Record<string, string[]> = {
   topic_gate: [],
-  script: ['topic_gate'],
+  reference: ['topic_gate'],
+  story: ['reference'],
+  assets: ['story'],
+  design: ['assets'],
+  script: ['design'],
   performance: ['script'],
-  audio: ['performance'],
-  storyboard: ['performance', 'audio'],
-  video_prompts: ['storyboard'],
+  storyboard: ['performance'],
+  audio: ['storyboard'],
+  video_prompts: ['audio'],
   publish_review: ['video_prompts']
 };
 
@@ -79,7 +89,11 @@ export class StateMachine {
     try {
       const content = fs.readFileSync(this.stateFilePath, 'utf8');
       const parsed = JSON.parse(content);
-      return ProjectStateSchema.parse(parsed);
+      const { state, changed } = this.normalizeState(parsed);
+      if (changed) {
+        this.writeState(state);
+      }
+      return state;
     } catch (err) {
       throw new Error(`Failed to parse PROJECT_STATE.json: ${(err as Error).message}`);
     }
@@ -95,16 +109,7 @@ export class StateMachine {
   private initializeState(): ProjectState {
     const stages: Record<string, StageState> = {};
     for (const stage of DEFAULT_STAGES) {
-      stages[stage] = {
-        stage,
-        status: 'ready',
-        updated_at: new Date().toISOString(),
-        history: [{
-          status: 'ready',
-          timestamp: new Date().toISOString(),
-          message: 'Initialized stage status'
-        }]
-      };
+      stages[stage] = this.createInitialStageState(stage);
     }
     const state: ProjectState = {
       project: this.project.projectSlug,
@@ -112,6 +117,107 @@ export class StateMachine {
     };
     this.writeState(state);
     return state;
+  }
+
+  private createInitialStageState(stage: string): StageState {
+    const now = new Date().toISOString();
+    return {
+      stage,
+      status: 'ready',
+      updated_at: now,
+      history: [{
+        status: 'ready',
+        timestamp: now,
+        message: 'Initialized stage status'
+      }]
+    };
+  }
+
+  private normalizeState(raw: unknown): { state: ProjectState; changed: boolean } {
+    const rawState = (raw && typeof raw === 'object') ? raw as Record<string, any> : {};
+    const rawStages = (rawState.stages && typeof rawState.stages === 'object')
+      ? rawState.stages as Record<string, any>
+      : {};
+    const stages: Record<string, StageState> = {};
+    let changed = false;
+
+    for (const stage of DEFAULT_STAGES) {
+      const fallback = this.createInitialStageState(stage);
+      const candidate = rawStages[stage];
+
+      if (!candidate || typeof candidate !== 'object') {
+        stages[stage] = fallback;
+        changed = true;
+        continue;
+      }
+
+      const normalizedCandidate = {
+        stage,
+        status: candidate.status ?? fallback.status,
+        updated_at: candidate.updated_at ?? fallback.updated_at,
+        started_at: candidate.started_at,
+        completed_at: candidate.completed_at,
+        handoff_path: candidate.handoff_path,
+        validation_result_path: candidate.validation_result_path,
+        history: Array.isArray(candidate.history) && candidate.history.length > 0
+          ? candidate.history
+          : fallback.history
+      };
+
+      const parsed = StageStateSchema.safeParse(normalizedCandidate);
+      if (!parsed.success) {
+        stages[stage] = fallback;
+        changed = true;
+        continue;
+      }
+
+      stages[stage] = parsed.data;
+
+      if (
+        candidate.stage !== stage ||
+        candidate.status !== parsed.data.status ||
+        candidate.updated_at !== parsed.data.updated_at ||
+        !Array.isArray(candidate.history) ||
+        candidate.history.length === 0
+      ) {
+        changed = true;
+      }
+    }
+
+    for (const [stage, candidate] of Object.entries(rawStages)) {
+      if (DEFAULT_STAGE_SET.has(stage)) {
+        continue;
+      }
+      const parsed = StageStateSchema.safeParse(candidate);
+      if (parsed.success) {
+        stages[stage] = parsed.data;
+      } else {
+        changed = true;
+      }
+    }
+
+    const currentStage = typeof rawState.current_stage === 'string' && stages[rawState.current_stage]
+      ? rawState.current_stage
+      : undefined;
+    if (rawState.current_stage !== currentStage) {
+      changed = true;
+    }
+
+    const project = typeof rawState.project === 'string' && rawState.project
+      ? rawState.project
+      : this.project.projectSlug;
+    if (rawState.project !== project) {
+      changed = true;
+    }
+
+    return {
+      state: {
+        project,
+        current_stage: currentStage,
+        stages
+      },
+      changed
+    };
   }
 
   // Verify dependencies for starting a stage
@@ -137,7 +243,7 @@ export class StateMachine {
 
     // Check upstream dependencies
     if (!this.checkDependencies(stage)) {
-      const deps = STAGE_DEPENDENCIES[stage] || [];
+      const deps = (STAGE_DEPENDENCIES[stage] || []).filter((dep) => state.stages[dep]?.status !== 'completed');
       throw new Error(`Cannot start stage '${stage}': required upstream stages [${deps.join(', ')}] are not completed.`);
     }
 

@@ -1,5 +1,5 @@
 /* Google Fonts — moved from App.css */
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -7,36 +7,80 @@
 
 @layer base {
   :root {
-    /* shadcn/ui design tokens — dark cinema theme */
-    --background: 222.2 47% 11%;
-    --foreground: 210 40% 98%;
+    /* shadcn/ui design tokens */
+    --background: 225 20% 8%;
+    --foreground: 210 20% 96%;
 
-    --card: 217.2 33% 17%;
-    --card-foreground: 210 40% 98%;
+    --card: 222 18% 12%;
+    --card-foreground: 210 20% 96%;
 
-    --popover: 217.2 33% 17%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 222 18% 12%;
+    --popover-foreground: 210 20% 96%;
 
-    --primary: 217.2 91% 60%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 194 85% 65%;
+    --primary-foreground: 225 20% 8%;
 
-    --secondary: 217.2 20% 25%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 224 14% 18%;
+    --secondary-foreground: 210 20% 96%;
 
-    --muted: 217.2 20% 25%;
-    --muted-foreground: 215 16% 65%;
+    --muted: 224 14% 18%;
+    --muted-foreground: 216 12% 62%;
 
-    --accent: 43 74% 56%;
-    --accent-foreground: 222.2 47% 11%;
+    --accent: 194 60% 52%;
+    --accent-foreground: 225 20% 8%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 57%;
+    --destructive-foreground: 210 20% 96%;
 
-    --border: 214.3 5% 25%;
-    --input: 214.3 5% 25%;
-    --ring: 217.2 91% 60%;
+    --border: 222 12% 20%;
+    --input: 222 12% 20%;
+    --ring: 194 85% 65%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
+
+    /* SceneForge web console visual system */
+    --sf-font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC', sans-serif;
+    --sf-font-mono: 'JetBrains Mono', 'SFMono-Regular', ui-monospace, monospace;
+
+    --sf-bg-app: #1a1b1d;
+    --sf-bg-canvas: #202225;
+    --sf-bg-panel: rgba(38, 40, 45, 0.9);
+    --sf-bg-panel-strong: rgba(43, 46, 51, 0.94);
+    --sf-bg-card: rgba(255, 255, 255, 0.025);
+    --sf-bg-card-hover: rgba(255, 255, 255, 0.05);
+    --sf-bg-card-active: rgba(117, 210, 255, 0.08);
+    --sf-bg-user-bubble: linear-gradient(135deg, rgba(22, 93, 118, 0.72) 0%, rgba(14, 52, 68, 0.88) 100%);
+    --sf-bg-ai-bubble: rgba(18, 21, 28, 0.94);
+
+    --sf-border-subtle: rgba(255, 255, 255, 0.045);
+    --sf-border-default: rgba(255, 255, 255, 0.055);
+    --sf-border-strong: rgba(117, 210, 255, 0.18);
+    --sf-border-panel: rgba(255, 255, 255, 0.065);
+
+    --sf-text-primary: #eceff4;
+    --sf-text-secondary: #c4cad3;
+    --sf-text-muted: #9ca3af;
+    --sf-text-faint: #7b848f;
+
+    --sf-accent: #75d2ff;
+    --sf-accent-soft: rgba(117, 210, 255, 0.14);
+    --sf-accent-warm: #f3c97a;
+    --sf-accent-success: #54c58e;
+    --sf-accent-danger: #ef7070;
+
+    --sf-shadow-panel: 0 18px 40px rgba(0, 0, 0, 0.3);
+    --sf-shadow-card: 0 10px 24px rgba(0, 0, 0, 0.22);
+    --sf-shadow-focus: 0 0 0 1px rgba(117, 210, 255, 0.18), 0 0 0 6px rgba(117, 210, 255, 0.06);
+
+    --sf-text-title: 15px;
+    --sf-text-heading: 13px;
+    --sf-text-body: 13.5px;
+    --sf-text-body-sm: 12.5px;
+    --sf-text-meta: 11px;
+    --sf-text-micro: 10px;
+
+    --sf-tracking-tight: -0.02em;
+    --sf-tracking-wide: 0.08em;
 
     /* SceneForge legacy status colors — kept for variant compatibility */
     --color-ready: #3b82f6;
@@ -52,6 +96,8 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: var(--sf-font-sans);
+    background: var(--sf-bg-app);
+    color: var(--sf-text-primary);
   }
 }

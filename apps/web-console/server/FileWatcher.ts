@@ -1,6 +1,7 @@
 import chokidar from 'chokidar';
 import path from 'path';
 import fs from 'fs';
+import { parseMarkdownFrontmatter } from '@scene-forge/engine';
 
 export class FileWatcher {
   private watcher: chokidar.FSWatcher;
@@ -8,11 +9,12 @@ export class FileWatcher {
   constructor(projectPath: string, wsBroadcaster: (msg: any) => void) {
     const resolvedPath = path.resolve(projectPath);
 
-    // Watch outputs/, details/ and PROJECT_STATE.json
+    // Watch outputs/, details/, PROJECT_STATE.json and PROJECT_BOARD.md
     const pathsToWatch = [
       path.join(resolvedPath, 'outputs'),
       path.join(resolvedPath, 'details'),
-      path.join(resolvedPath, 'PROJECT_STATE.json')
+      path.join(resolvedPath, 'PROJECT_STATE.json'),
+      path.join(resolvedPath, 'PROJECT_BOARD.md')
     ];
 
     this.watcher = chokidar.watch(pathsToWatch, {
@@ -42,11 +44,25 @@ export class FileWatcher {
         }
       }
 
+      // Read latest PROJECT_BOARD.md content if it exists
+      let boardState = null;
+      const boardPath = path.join(resolvedPath, 'PROJECT_BOARD.md');
+      if (fs.existsSync(boardPath)) {
+        try {
+          const boardContent = fs.readFileSync(boardPath, 'utf8');
+          const parsed = parseMarkdownFrontmatter(boardContent);
+          boardState = parsed.frontmatter;
+        } catch (err) {
+          // Avoid crashing if partial write is ongoing
+        }
+      }
+
       wsBroadcaster({
         type: 'workspace_update',
         file: relativePath,
         event,
-        projectState
+        projectState,
+        boardState
       });
     };
 

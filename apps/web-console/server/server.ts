@@ -6,16 +6,80 @@ import fs from 'fs';
 import os from 'os';
 import { spawn, ChildProcess } from 'child_process';
 import { randomUUID } from 'crypto';
-import { OutputParser } from './OutputParser.js';
+import { createTransformStreamState, createTransformUsageState } from './transformClaudeMessage.js';
 import { FileWatcher } from './FileWatcher.js';
-import { engineVersion, Project, StateMachine } from '@scene-forge/engine';
+import { engineVersion, Project, StateMachine, parseMarkdownFrontmatter } from '@scene-forge/engine';
 import { AcpSubprocess, AcpJsonRpcTransport, AcpClientConnection } from './acp/index.js';
+import { buildSessionBubblesFromJsonl } from './chatHistory.js';
+import { extractClaudeChunks } from './claudeStream.js';
+import { mergeVisibleBubbleChunk } from './liveBubbleAccumulator.js';
+import {
+  buildIdeBlockedPromptPayload,
+  buildPermissionPromptPayload,
+} from './permissionPrompt.js';
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
 const PORT = process.env.PORT || 4399;
+
+function previewDebugContent(value: string, length = 80): string {
+  return value.replace(/\s+/g, ' ').trim().slice(0, length);
+}
+
+function debugChatEvent(label: string, payload: Record<string, unknown>) {
+  console.log(`[DEBUG-chatdiag] ${label}`, payload);
+}
+
+function normalizeComparableContent(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function collectSeparatorLines(value: string): string[] {
+  return value.match(/^\s*(?:-{3,}|\*{3,}|_{3,}|={3,})\s*$/gm) ?? [];
+}
+
+function collectTableDelimiterLines(value: string): string[] {
+  return value.match(/^\s*\|?(?:\s*:?-{3,}:?\s*\|){1,}\s*:?-{3,}:?\s*\|?\s*$/gm) ?? [];
+}
+
+function collectBlankRunLengths(value: string): number[] {
+  return (value.match(/\n{3,}/g) ?? []).map((segment) => segment.length);
+}
+
+function summarizeRenderableAnomalies(value: string) {
+  const separatorLines = collectSeparatorLines(value);
+  const tableDelimiterLines = collectTableDelimiterLines(value);
+  const blankRuns = collectBlankRunLengths(value);
+
+  return {
+    separatorLineCount: separatorLines.length,
+    tableDelimiterCount: tableDelimiterLines.length,
+    blankRunCount: blankRuns.length,
+    maxBlankRun: blankRuns.length > 0 ? Math.max(...blankRuns) : 0,
+  };
+}
+
+function collectSuspiciousTextBubbles(
+  bubbles: Array<{ id: string; type: string; content: string }>
+) {
+  return bubbles
+    .filter((bubble) => bubble.type === 'text' && typeof bubble.content === 'string')
+    .map((bubble) => {
+      const summary = summarizeRenderableAnomalies(bubble.content);
+      return {
+        id: bubble.id,
+        preview: previewDebugContent(bubble.content, 140),
+        ...summary,
+      };
+    })
+    .filter((bubble) =>
+      bubble.separatorLineCount > 0 ||
+      bubble.tableDelimiterCount > 0 ||
+      bubble.blankRunCount > 0
+    );
+}
 
 // Helper to locate the monorepo workspace root containing the 'projects' directory
 function findWorkspaceRoot(startDir: string): string {
@@ -135,7 +199,21 @@ app.post('/api/projects/active', (req, res) => {
   const project = new Project(activeProjectPath);
   const stateMachine = new StateMachine(project);
   const state = stateMachine.readState();
-  res.json({ success: true, projectSlug, state });
+
+  // Parse PROJECT_BOARD.md
+  let boardState = null;
+  const boardPath = path.join(activeProjectPath, 'PROJECT_BOARD.md');
+  if (fs.existsSync(boardPath)) {
+    try {
+      const boardContent = fs.readFileSync(boardPath, 'utf8');
+      const parsed = parseMarkdownFrontmatter(boardContent);
+      boardState = parsed.frontmatter;
+    } catch (err) {
+      console.error('Failed to parse PROJECT_BOARD.md:', err);
+    }
+  }
+
+  res.json({ success: true, projectSlug, state, boardState });
 });
 
 // 4. Retrieve current active project API
@@ -147,11 +225,26 @@ app.get('/api/projects/active', (req, res) => {
     const project = new Project(activeProjectPath);
     const stateMachine = new StateMachine(project);
     const state = stateMachine.readState();
+
+    // Parse PROJECT_BOARD.md
+    let boardState = null;
+    const boardPath = path.join(activeProjectPath, 'PROJECT_BOARD.md');
+    if (fs.existsSync(boardPath)) {
+      try {
+        const boardContent = fs.readFileSync(boardPath, 'utf8');
+        const parsed = parseMarkdownFrontmatter(boardContent);
+        boardState = parsed.frontmatter;
+      } catch (err) {
+        console.error('Failed to parse PROJECT_BOARD.md:', err);
+      }
+    }
+
     res.json({
       active: true,
       projectSlug: path.basename(activeProjectPath),
       path: activeProjectPath,
-      state
+      state,
+      boardState
     });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
@@ -293,16 +386,37 @@ app.post('/api/projects', (req, res) => {
     activeProjectPath = newProjectPath;
     console.log(`New project created, initialized with board & index, and activated: ${cleanSlug}`);
 
+    // Parse newly created PROJECT_BOARD.md
+    let boardState = null;
+    const boardPath = path.join(newProjectPath, 'PROJECT_BOARD.md');
+    if (fs.existsSync(boardPath)) {
+      try {
+        const boardContent = fs.readFileSync(boardPath, 'utf8');
+        const parsed = parseMarkdownFrontmatter(boardContent);
+        boardState = parsed.frontmatter;
+      } catch (err) {
+        console.error('Failed to parse PROJECT_BOARD.md:', err);
+      }
+    }
+
     res.status(201).json({
       success: true,
       projectSlug: cleanSlug,
       path: newProjectPath,
-      state
+      state,
+      boardState
     });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
 });
+
+// Helper to map 12-stage keys to 7-stage keys in the manifest
+function getManifestStagesFor12Stage(stage12: string): string[] {
+  if (stage12 === 'topic') return ['topic', 'topic_gate'];
+  if (stage12 === 'publish') return ['publish', 'publish_review'];
+  return [stage12];
+}
 
 // 6. Artifacts dynamic listing API
 app.get('/api/artifacts', (req, res) => {
@@ -315,8 +429,110 @@ app.get('/api/artifacts', (req, res) => {
   }
   try {
     const project = new Project(activeProjectPath);
-    const manifest = project.readManifest();
-    const list = manifest.artifacts.filter(a => a.stage === stage);
+    
+    // 1. Read from manifest
+    let list: any[] = [];
+    try {
+      const manifest = project.readManifest();
+      const manifestStages = getManifestStagesFor12Stage(stage);
+      list = manifest.artifacts.filter(a => manifestStages.includes(a.stage));
+      // Normalize stage names to the 12-stage name so the frontend aligns
+      list = list.map(a => ({
+        ...a,
+        stage: stage
+      }));
+    } catch (err) {
+      // Manifest might not exist yet
+    }
+
+    // 2. Read from PROJECT_BOARD.md's stage_index
+    const boardPath = path.join(activeProjectPath, 'PROJECT_BOARD.md');
+    if (fs.existsSync(boardPath)) {
+      try {
+        const boardContent = fs.readFileSync(boardPath, 'utf8');
+        const parsed = parseMarkdownFrontmatter(boardContent);
+        const boardState = parsed.frontmatter;
+        const stageIndex = boardState?.stage_index?.[stage];
+        if (stageIndex && stageIndex.files) {
+          const files = stageIndex.files;
+          const version = stageIndex.active_version || 'v1';
+          
+          if (files.primary && typeof files.primary === 'string') {
+            if (!list.some(a => a.path === files.primary)) {
+              list.push({
+                id: `${stage}_primary_${version}`,
+                stage,
+                kind: 'final',
+                role: 'primary_delivery',
+                path: files.primary
+              });
+            }
+          }
+          if (files.index && typeof files.index === 'string') {
+            if (!list.some(a => a.path === files.index)) {
+              list.push({
+                id: `${stage}_index_${version}`,
+                stage,
+                kind: 'final',
+                role: 'index',
+                path: files.index
+              });
+            }
+          }
+          if (Array.isArray(files.outputs)) {
+            files.outputs.forEach((file: string, idx: number) => {
+              if (file && typeof file === 'string' && !list.some(a => a.path === file)) {
+                list.push({
+                  id: `${stage}_output_${idx}_${version}`,
+                  stage,
+                  kind: 'final',
+                  role: 'output',
+                  path: file
+                });
+              }
+            });
+          }
+          if (Array.isArray(files.details)) {
+            files.details.forEach((file: string, idx: number) => {
+              if (file && typeof file === 'string' && !list.some(a => a.path === file)) {
+                list.push({
+                  id: `${stage}_detail_${idx}_${version}`,
+                  stage,
+                  kind: 'draft',
+                  role: 'detail',
+                  path: file
+                });
+              }
+            });
+          }
+          if (files.handoff && typeof files.handoff === 'string') {
+            if (!list.some(a => a.path === files.handoff)) {
+              list.push({
+                id: `${stage}_handoff_${version}`,
+                stage,
+                kind: 'review',
+                role: 'handoff',
+                path: files.handoff
+              });
+            }
+          }
+          if (files.quality_check && typeof files.quality_check === 'string') {
+            if (!list.some(a => a.path === files.quality_check)) {
+              list.push({
+                id: `${stage}_qc_${version}`,
+                stage,
+                kind: 'review',
+                role: 'quality_check',
+                path: files.quality_check
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to parse PROJECT_BOARD.md in /api/artifacts:', err);
+      }
+    }
+
     res.json(list);
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
@@ -341,11 +557,20 @@ function parseSessionPreview(jsonlPath: string): { id: string; preview: string; 
     for (const line of lines) {
       try {
         const entry = JSON.parse(line);
-        if (entry.type === 'user' && entry.message?.content) {
+        const val = entry.message?.content || entry.content;
+        if (entry.type === 'user' && val) {
           if (!firstUserMessage) {
-            let raw = typeof entry.message.content === 'string'
-              ? entry.message.content
-              : JSON.stringify(entry.message.content);
+            let raw = '';
+            if (typeof val === 'string') {
+              raw = val;
+            } else if (Array.isArray(val)) {
+              raw = val
+                .filter((b: any) => b.type === 'text')
+                .map((b: any) => b.text)
+                .join('\n');
+            } else {
+              raw = JSON.stringify(val);
+            }
             // 剥离注入上下文，只显示用户真正输入的内容
             const sep = '\n\n---\n用户: ';
             const idx = raw.indexOf(sep);
@@ -400,47 +625,8 @@ app.get('/api/sessions/:id', (req, res) => {
       return res.status(404).json({ error: 'Session not found' });
     }
 
-    const content = fs.readFileSync(jsonlPath, 'utf8');
-    const lines = content.trim().split('\n');
-    const messages: any[] = [];
-
-    for (const line of lines) {
-      try {
-        const entry = JSON.parse(line);
-        if (entry.type === 'user') {
-          let content = typeof entry.message?.content === 'string' ? entry.message.content : '';
-          // 剥离我们注入的上下文，只保留用户真正的输入
-          const sep = '\n\n---\n用户: ';
-          const idx = content.indexOf(sep);
-          if (idx !== -1) {
-            content = content.slice(idx + sep.length);
-          }
-          if (content.trim()) {
-            messages.push({ role: 'user', content, timestamp: entry.timestamp });
-          }
-        } else if (entry.type === 'assistant') {
-          const blocks = entry.message?.content;
-          const textParts: string[] = [];
-          if (Array.isArray(blocks)) {
-            for (const block of blocks) {
-              if (block.type === 'text' && block.text) {
-                textParts.push(block.text);
-              } else if (block.type === 'thinking' && block.thinking) {
-                textParts.push(`<thought>${block.thinking}</thought>`);
-              } else if (block.type === 'tool_use') {
-                textParts.push(`[tool_call: ${block.name || 'unknown'}]`);
-              }
-            }
-          }
-          const joined = textParts.join('\n');
-          if (joined.trim()) {
-            messages.push({ role: 'assistant', content: joined, timestamp: entry.timestamp });
-          }
-        }
-      } catch { /* skip */ }
-    }
-
-    res.json({ id: req.params.id, messages });
+    const bubbles = getSessionBubbles(req.params.id);
+    res.json({ id: req.params.id, bubbles });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
@@ -460,66 +646,7 @@ function getSessionBubbles(sessionId: string): any[] {
   if (!fs.existsSync(jsonlPath)) return [];
   try {
     const content = fs.readFileSync(jsonlPath, 'utf8');
-    const lines = content.trim().split('\n');
-    const bubbles: any[] = [];
-    for (const line of lines) {
-      try {
-        const entry = JSON.parse(line);
-        if (entry.type === 'user') {
-          let text = typeof entry.message?.content === 'string' ? entry.message.content : '';
-          const sep = '\n\n---\n用户: ';
-          const idx = text.indexOf(sep);
-          if (idx !== -1) {
-            text = text.slice(idx + sep.length);
-          }
-          if (text.trim()) {
-            bubbles.push({
-              id: `hist-u-${sessionId.slice(0, 4)}-${bubbles.length}`,
-              type: 'text',
-              content: `> ${text}`,
-              timestamp: entry.timestamp || new Date().toISOString()
-            });
-          }
-        } else if (entry.type === 'assistant') {
-          const blocks = entry.message?.content;
-          const textParts: string[] = [];
-          if (Array.isArray(blocks)) {
-            for (const block of blocks) {
-              if (block.type === 'text' && block.text) {
-                textParts.push(block.text);
-              } else if (block.type === 'thinking' && block.thinking) {
-                textParts.push(`<thought>${block.thinking}</thought>`);
-              } else if (block.type === 'tool_use') {
-                textParts.push(`[tool_call: ${block.name || 'unknown'}]`);
-              }
-            }
-          }
-          const joined = textParts.join('\n');
-          if (joined.trim()) {
-            const parts = joined.split(/(<thought>[\s\S]*?<\/thought>)/g);
-            for (const part of parts) {
-              if (part.startsWith('<thought>')) {
-                bubbles.push({
-                  id: `hist-t-${bubbles.length}`,
-                  type: 'thought',
-                  content: part.replace(/<\/?thought>/g, ''),
-                  timestamp: entry.timestamp || new Date().toISOString()
-                });
-              } else if (part.trim()) {
-                const isToolCall = part.trim().startsWith('[tool_call:');
-                bubbles.push({
-                  id: `hist-a-${bubbles.length}`,
-                  type: isToolCall ? 'tool_call' : 'text',
-                  content: part.trim(),
-                  timestamp: entry.timestamp || new Date().toISOString()
-                });
-              }
-            }
-          }
-        }
-      } catch { /* skip */ }
-    }
-    return bubbles;
+    return buildSessionBubblesFromJsonl(content, sessionId);
   } catch {
     return [];
   }
@@ -529,11 +656,27 @@ wss.on('connection', (ws: WebSocket) => {
   const targetPath = activeProjectPath || workspaceRoot;
   console.log(`Client connected to Web Console WebSocket. Target path: ${targetPath}`);
 
-  const parser = new OutputParser();
   let currentProcess: ChildProcess | null = null;
   let sessionId: string = randomUUID();
   let isFirstMessage = true;
   let bypassPermissions = false;
+  let activePromptSignature = '';
+  let activePromptId = '';
+  let activePromptMode: 'stdin' | 'ide_guidance' | '' = '';
+  let lastPromptText = '';
+
+  const dismissActivePrompt = () => {
+    if (!activePromptId) return;
+    if (activePromptMode === 'stdin' && ws.readyState === WebSocket.OPEN) {
+      debugChatEvent('ws.prompt_ui_dismissed', { id: activePromptId });
+      ws.send(JSON.stringify({ type: 'prompt_ui_dismissed', id: activePromptId }));
+    }
+    if (activePromptMode === 'stdin') {
+      activePromptSignature = '';
+      activePromptId = '';
+      activePromptMode = '';
+    }
+  };
 
   // Restore or persist session ID for the active target
   const activeSessionFile = path.join(targetPath, '.active_session_id');
@@ -564,7 +707,18 @@ wss.on('connection', (ws: WebSocket) => {
   if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ type: 'session_init', sessionId }));
     if (initialBubbles.length > 0) {
-      ws.send(JSON.stringify({ type: 'output', bubbles: initialBubbles }));
+      const suspiciousHistoryBubbles = collectSuspiciousTextBubbles(initialBubbles);
+      debugChatEvent('ws.history.initial', {
+        sessionId,
+        count: initialBubbles.length,
+        sample: initialBubbles.slice(0, 6).map((bubble) => ({
+          id: bubble.id,
+          type: bubble.type,
+          preview: previewDebugContent(bubble.content),
+        })),
+        suspiciousTextBubbles: suspiciousHistoryBubbles.slice(0, 12),
+      });
+      ws.send(JSON.stringify({ type: 'history', bubbles: initialBubbles }));
     }
   }
 
@@ -581,9 +735,14 @@ wss.on('connection', (ws: WebSocket) => {
       currentProcess = null;
     }
 
-    // 首次消息：注入项目上下文作为 system context
     let finalPrompt = prompt;
-    const args = ['--print'];
+    lastPromptText = prompt;
+    const args = [
+      '--print',
+      '--output-format', 'stream-json',
+      '--include-partial-messages',
+      '--verbose'
+    ];
     if (bypassPermissions) {
       args.push('--dangerously-skip-permissions');
     }
@@ -620,38 +779,349 @@ wss.on('connection', (ws: WebSocket) => {
       ws.send(JSON.stringify({ type: 'run_status', running: true }));
     }
 
-    proc.stdout.on('data', (data: Buffer) => {
-      const text = data.toString();
-      
-      // 检测是否有提权等待：包含 '[y/N]' 或者 '(y/n)'，以及以 'Allow ' 开头。
-      const cleanText = text.replace(/\u001b\[[0-9;]*[a-zA-Z]/g, '');
-      const isPermissionRequest = cleanText.includes('[y/N]') || cleanText.includes('(y/n)') || cleanText.includes('Allow ') || cleanText.includes('批准');
+    // Initialize transformer state for the current run
+    const streamState = createTransformStreamState();
+    const usageState = createTransformUsageState();
+    const transformOptions = {
+      streamState,
+      usageState,
+      intendedModel: 'sonnet'
+    };
 
-      if (isPermissionRequest && !bypassPermissions) {
-        console.log(`[Permission Intercepted] Captured question text: ${cleanText.trim()}`);
-        
-        const id = `prompt-${Date.now()}`;
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({
-            type: 'prompt_ui',
-            id,
-            title: cleanText.trim() || '系统检测到 Claude CLI 正在请求授权，是否批准？',
-            options: [
-              { label: '批准写入/执行 (Yes)', value: 'y', kind: 'allow' },
-              { label: '拒绝操作 (No)', value: 'n', kind: 'deny' }
-            ]
-          }));
+    // Keep track of thoughts and text per block index, and tools by ID
+    const thoughtsByIndex: Record<number, string> = {};
+    const textsByIndex: Record<number, string> = {};
+    const visibleThoughtStreamIndexes = new Set<number>();
+    const visibleTextStreamIndexes = new Set<number>();
+    const hiddenTextIndexes = new Set<number>();
+    const toolUses = new Map<string, { id: string; name: string; input: any; status: string; result?: string; isError?: boolean }>();
+    const lastToolBubbleContent = new Map<string, string>();
+    let pendingSensitiveTool: { id: string; name: string } | null = null;
+    let ideGuidancePromptShown = false;
+
+    const runId = Date.now().toString(36); // Generate unique ID for this turn to avoid collisions
+
+    const emitPromptUi = (
+      promptPayload: { title: string; options: Array<{ kind: 'allow' | 'deny'; label: string; value: string }> },
+      mode: 'stdin' | 'ide_guidance'
+    ) => {
+      if (promptPayload.title === activePromptSignature) {
+        debugChatEvent('prompt_ui.duplicate_ignored', {
+          title: previewDebugContent(promptPayload.title, 140),
+          mode,
+        });
+        return;
+      }
+      activePromptSignature = promptPayload.title;
+      activePromptId = `prompt-${Date.now()}`;
+      activePromptMode = mode;
+      if (ws.readyState === WebSocket.OPEN) {
+        debugChatEvent('ws.prompt_ui', {
+          id: activePromptId,
+          mode,
+          title: previewDebugContent(promptPayload.title, 140),
+          options: promptPayload.options.map((option) => option.value),
+        });
+        ws.send(JSON.stringify({
+          type: 'prompt_ui',
+          id: activePromptId,
+          title: promptPayload.title,
+          options: promptPayload.options,
+        }));
+      }
+    };
+
+    const handleClaudeJsonEvent = (msg: any) => {
+      let chunks: any[] = [];
+      try {
+        chunks = extractClaudeChunks(msg, transformOptions);
+      } catch (err) {
+        console.error(`[handleClaudeJsonEvent] transform error:`, err);
+        return;
+      }
+      if (chunks.length === 0) return;
+
+      const generatedBubbles: any[] = [];
+
+      for (const chunk of chunks) {
+        debugChatEvent('claude.chunk', {
+          sourceType: msg?.type ?? 'unknown',
+          chunkType: chunk.type,
+          index: chunk.index ?? null,
+          id: chunk.id ?? null,
+          preview: previewDebugContent(
+            typeof chunk.content === 'string'
+              ? chunk.content
+              : JSON.stringify(chunk.input ?? {})
+          ),
+        });
+        if (chunk.type === 'thinking') {
+          const idx = chunk.index ?? 0;
+          const comparableIncoming = normalizeComparableContent(chunk.content);
+          if (
+            msg?.type !== 'stream_event' &&
+            comparableIncoming &&
+            Object.values(thoughtsByIndex).some(
+              (existing) => normalizeComparableContent(existing) === comparableIncoming
+            )
+          ) {
+            debugChatEvent('thinking.semantic_duplicate_skipped', {
+              runId,
+              idx,
+              preview: previewDebugContent(chunk.content),
+            });
+            continue;
+          }
+          const mergeResult = mergeVisibleBubbleChunk({
+            previous: thoughtsByIndex[idx] || '',
+            incoming: chunk.content,
+            source: msg?.type === 'stream_event' ? 'stream' : 'assistant',
+            streamVisible: visibleThoughtStreamIndexes.has(idx),
+          });
+          if (mergeResult.skipped) {
+            continue;
+          }
+          thoughtsByIndex[idx] = mergeResult.next;
+          if (msg?.type === 'stream_event') {
+            visibleThoughtStreamIndexes.add(idx);
+          }
+          generatedBubbles.push({
+            id: `run-${runId}-thought-${idx}`,
+            type: 'thought',
+            content: thoughtsByIndex[idx],
+            timestamp: new Date().toISOString()
+          });
+        } else if (chunk.type === 'text') {
+          const idx = chunk.index ?? 0;
+          if (ideGuidancePromptShown && buildIdeBlockedPromptPayload(chunk.content)) {
+            debugChatEvent('text.ide_guidance_duplicate_skipped', {
+              runId,
+              idx,
+              preview: previewDebugContent(chunk.content, 140),
+            });
+            continue;
+          }
+          const comparableIncoming = normalizeComparableContent(chunk.content);
+          if (
+            msg?.type !== 'stream_event' &&
+            comparableIncoming &&
+            Object.values(textsByIndex).some(
+              (existing) => normalizeComparableContent(existing) === comparableIncoming
+            )
+          ) {
+            debugChatEvent('text.semantic_duplicate_skipped', {
+              runId,
+              idx,
+              preview: previewDebugContent(chunk.content, 140),
+            });
+            continue;
+          }
+          const mergeResult = mergeVisibleBubbleChunk({
+            previous: textsByIndex[idx] || '',
+            incoming: chunk.content,
+            source: msg?.type === 'stream_event' ? 'stream' : 'assistant',
+            streamVisible: visibleTextStreamIndexes.has(idx),
+          });
+          if (mergeResult.skipped) {
+            continue;
+          }
+          textsByIndex[idx] = mergeResult.next;
+          if (msg?.type === 'stream_event') {
+            visibleTextStreamIndexes.add(idx);
+          }
+
+          if (!ideGuidancePromptShown && pendingSensitiveTool) {
+            const fallbackPromptPayload = buildIdeBlockedPromptPayload(textsByIndex[idx]);
+            if (fallbackPromptPayload && !bypassPermissions) {
+              ideGuidancePromptShown = true;
+              hiddenTextIndexes.add(idx);
+              textsByIndex[idx] = '';
+              emitPromptUi(fallbackPromptPayload, 'ide_guidance');
+              generatedBubbles.push({
+                id: `run-${runId}-text-${idx}`,
+                type: 'text',
+                content: '',
+                timestamp: new Date().toISOString()
+              });
+              continue;
+            }
+          }
+
+          if (hiddenTextIndexes.has(idx)) {
+            continue;
+          }
+
+          generatedBubbles.push({
+            id: `run-${runId}-text-${idx}`,
+            type: 'text',
+            content: textsByIndex[idx],
+            timestamp: new Date().toISOString()
+          });
+        } else if (chunk.type === 'tool_use') {
+          type ToolInfo = { id: string; name: string; input: any; status: string; result?: string; isError?: boolean };
+          const tool: ToolInfo = toolUses.get(chunk.id) || {
+            id: chunk.id,
+            name: chunk.name,
+            input: chunk.input,
+            status: 'running'
+          };
+          // Update partial input
+          tool.input = { ...tool.input, ...chunk.input };
+          toolUses.set(chunk.id, tool);
+          if (['Write', 'Bash', 'Edit'].includes(tool.name)) {
+            pendingSensitiveTool = { id: tool.id, name: tool.name };
+          }
+
+          const serializedTool = JSON.stringify(tool);
+          if (lastToolBubbleContent.get(chunk.id) === serializedTool) {
+            debugChatEvent('tool_use.duplicate_skipped', {
+              runId,
+              toolId: chunk.id,
+              name: tool.name,
+            });
+            continue;
+          }
+          lastToolBubbleContent.set(chunk.id, serializedTool);
+
+          generatedBubbles.push({
+            id: `run-${runId}-tool-${chunk.id}`,
+            type: 'tool_call',
+            content: serializedTool,
+            timestamp: new Date().toISOString()
+          });
+        } else if (chunk.type === 'tool_result') {
+          type ToolInfo = { id: string; name: string; input: any; status: string; result?: string; isError?: boolean };
+          const tool: ToolInfo = toolUses.get(chunk.id) || {
+            id: chunk.id,
+            name: 'unknown',
+            input: {},
+            status: 'completed'
+          };
+          tool.status = chunk.isError ? 'error' : 'completed';
+          tool.result = chunk.content;
+          tool.isError = chunk.isError;
+          toolUses.set(chunk.id, tool);
+
+          const serializedTool = JSON.stringify(tool);
+          if (lastToolBubbleContent.get(chunk.id) === serializedTool) {
+            debugChatEvent('tool_result.duplicate_skipped', {
+              runId,
+              toolId: chunk.id,
+              name: tool.name,
+            });
+            continue;
+          }
+          lastToolBubbleContent.set(chunk.id, serializedTool);
+
+          generatedBubbles.push({
+            id: `run-${runId}-tool-${chunk.id}`,
+            type: 'tool_call',
+            content: serializedTool,
+            timestamp: new Date().toISOString()
+          });
+        } else if (chunk.type === 'error') {
+          generatedBubbles.push({
+            id: `run-${runId}-error-${Date.now()}`,
+            type: 'text',
+            content: `❌ **Error:** ${chunk.content}`,
+            timestamp: new Date().toISOString()
+          });
+        } else if (chunk.type === 'notice') {
+          generatedBubbles.push({
+            id: `run-${runId}-notice-${Date.now()}`,
+            type: 'text',
+            content: `⚠️ **Notice:** ${chunk.content}`,
+            timestamp: new Date().toISOString()
+          });
         }
       }
 
-      const bubbles = parser.feed(text);
-      if (ws.readyState === WebSocket.OPEN && bubbles.length > 0) {
-        ws.send(JSON.stringify({ type: 'output', bubbles }));
+      if (ws.readyState === WebSocket.OPEN && generatedBubbles.length > 0) {
+        const suspiciousOutputBubbles = collectSuspiciousTextBubbles(generatedBubbles);
+        debugChatEvent('ws.output', {
+          runId,
+          count: generatedBubbles.length,
+          sample: generatedBubbles.map((bubble) => ({
+            id: bubble.id,
+            type: bubble.type,
+            preview: previewDebugContent(
+              typeof bubble.content === 'string' ? bubble.content : JSON.stringify(bubble.content)
+            ),
+          })),
+          suspiciousTextBubbles: suspiciousOutputBubbles.slice(0, 12),
+        });
+        ws.send(JSON.stringify({ type: 'output', bubbles: generatedBubbles }));
+      }
+    };
+
+    const handleClaudeRawText = (text: string) => {
+      const promptPayload = buildPermissionPromptPayload(text);
+      debugChatEvent('claude.raw_text', {
+        matchedPrompt: Boolean(promptPayload),
+        bypassPermissions,
+        preview: previewDebugContent(text, 140),
+      });
+
+      if (promptPayload && !bypassPermissions) {
+        console.log(`[Permission Intercepted] Captured question text: ${promptPayload.title}`);
+        emitPromptUi(promptPayload, 'stdin');
+      }
+    };
+
+    let stdoutBuffer = '';
+    proc.stdout.on('data', (data: Buffer) => {
+      stdoutBuffer += data.toString();
+      let lineIndex = stdoutBuffer.indexOf('\n');
+      while (lineIndex !== -1) {
+        const line = stdoutBuffer.slice(0, lineIndex).trim();
+        stdoutBuffer = stdoutBuffer.slice(lineIndex + 1);
+        if (line) {
+          try {
+            const parsed = JSON.parse(line);
+            handleClaudeJsonEvent(parsed);
+          } catch (err) {
+            handleClaudeRawText(line);
+          }
+        }
+        lineIndex = stdoutBuffer.indexOf('\n');
+      }
+
+      // Check remaining buffer for prompts without newline
+      if (stdoutBuffer.trim()) {
+        const remaining = stdoutBuffer.trim();
+        if (buildPermissionPromptPayload(remaining) && !bypassPermissions) {
+          handleClaudeRawText(remaining);
+          stdoutBuffer = '';
+        }
+      }
+    });
+
+    let stderrBuffer = '';
+    proc.stderr?.on('data', (data: Buffer) => {
+      stderrBuffer += data.toString();
+      let lineIndex = stderrBuffer.indexOf('\n');
+      while (lineIndex !== -1) {
+        const line = stderrBuffer.slice(0, lineIndex).trim();
+        stderrBuffer = stderrBuffer.slice(lineIndex + 1);
+        if (line) {
+          handleClaudeRawText(line);
+          console.warn(`[Claude Stderr] ${line}`);
+        }
+        lineIndex = stderrBuffer.indexOf('\n');
+      }
+
+      if (stderrBuffer.trim() && !bypassPermissions) {
+        const remaining = stderrBuffer.trim();
+        if (buildPermissionPromptPayload(remaining)) {
+          handleClaudeRawText(remaining);
+          stderrBuffer = '';
+        }
       }
     });
 
     proc.on('close', () => {
       currentProcess = null;
+      dismissActivePrompt();
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'run_status', running: false }));
       }
@@ -661,6 +1131,10 @@ wss.on('connection', (ws: WebSocket) => {
   ws.on('message', async (message: string) => {
     try {
       const payload = JSON.parse(message);
+      if (payload.type === 'ping') {
+        ws.send(JSON.stringify({ type: 'pong' }));
+        return;
+      }
       if (payload.bypassPermissions !== undefined) {
         bypassPermissions = !!payload.bypassPermissions;
       }
@@ -686,9 +1160,46 @@ wss.on('connection', (ws: WebSocket) => {
           break;
 
         case 'prompt_response':
-          if (currentProcess && currentProcess.stdin) {
+          if (activePromptMode === 'stdin' && currentProcess && currentProcess.stdin) {
             console.log(`[Permission Response] Writing User response: ${payload.value} to stdin`);
             currentProcess.stdin.write(`${payload.value}\n`);
+            if (activePromptId && ws.readyState === WebSocket.OPEN) {
+              const selectedOptionLabel = payload.value === 'y'
+                ? '批准写入/执行 (Yes)'
+                : payload.value === 'n'
+                  ? '拒绝操作 (No)'
+                  : payload.value;
+              ws.send(JSON.stringify({
+                type: 'prompt_ui_resolved',
+                id: activePromptId,
+                selectedOptionLabel,
+              }));
+            }
+            activePromptSignature = '';
+            activePromptId = '';
+            activePromptMode = '';
+          } else if (activePromptMode === 'ide_guidance') {
+            const selectedOptionLabel = payload.value === 'retry_bypass'
+              ? '开启自动授权并重试'
+              : payload.value === 'ack_ide'
+                ? '已在 IDE 处理，关闭提示'
+                : payload.value === 'cancel'
+                  ? '取消本次操作'
+                  : payload.value;
+            if (activePromptId && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({
+                type: 'prompt_ui_resolved',
+                id: activePromptId,
+                selectedOptionLabel,
+              }));
+            }
+            activePromptSignature = '';
+            activePromptId = '';
+            activePromptMode = '';
+            if (payload.value === 'retry_bypass' && lastPromptText) {
+              bypassPermissions = true;
+              await runClaude(lastPromptText);
+            }
           }
           break;
 
@@ -696,6 +1207,7 @@ wss.on('connection', (ws: WebSocket) => {
           if (currentProcess) {
             try { currentProcess.kill('SIGINT'); } catch (_) {}
             currentProcess = null;
+            dismissActivePrompt();
             if (ws.readyState === WebSocket.OPEN) {
               ws.send(JSON.stringify({ type: 'run_status', running: false }));
               ws.send(JSON.stringify({
@@ -709,7 +1221,7 @@ wss.on('connection', (ws: WebSocket) => {
         case 'new_session':
           if (currentProcess) { try { currentProcess.kill(); } catch (_) {} }
           currentProcess = null;
-          parser.clear();
+          dismissActivePrompt();
           sessionId = randomUUID();
           isFirstMessage = true;
           try {
