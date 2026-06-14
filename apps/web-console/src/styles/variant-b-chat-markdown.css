@@ -58,8 +58,8 @@
 
 .preview-content-b p,
 .preview-content-b .md-p {
-  margin: 0 0 4px;
-  line-height: 1.4;
+  margin: 0 0 10px;
+  line-height: 1.5;
 }
 
 .preview-content-b .md-ul,
@@ -69,15 +69,15 @@
 }
 
 .preview-content-b .md-li {
-  margin: 2px 0;
-  line-height: 1.34;
+  margin: 3px 0;
+  line-height: 1.4;
 }
 
 .preview-content-b .md-hr {
   border: none;
   height: 1px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 50%, rgba(255, 255, 255, 0) 100%);
-  margin: 10px 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.12) 50%, transparent 100%);
+  margin: 14px 0;
 }
 
 .preview-content-b .md-table-wrapper {
