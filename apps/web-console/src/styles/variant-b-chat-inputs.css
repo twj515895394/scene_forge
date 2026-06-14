@@ -414,37 +414,6 @@
   scrollbar-color: rgba(255, 255, 255, 0.12) transparent !important;
 }
 
-/* YAML Frontmatter card styles */
-.md-frontmatter-card {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px dashed rgba(117, 210, 255, 0.15);
-  border-radius: 6px;
-  margin-bottom: 20px;
-  font-family: var(--sf-font-mono);
-  font-size: var(--sf-text-meta);
-}
-
-.md-frontmatter-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.md-frontmatter-key {
-  color: var(--text-muted-b);
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.md-frontmatter-value {
-  color: var(--accent-cyan);
-  font-weight: 600;
-}
-
 /* Radix ScrollArea styling overrides for visibility */
 [data-radix-scroll-area-viewport] {
   scrollbar-width: thin;

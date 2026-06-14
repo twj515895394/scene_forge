@@ -209,19 +209,6 @@
   font-size: var(--sf-text-meta);
 }
 
-.markdown-body-b .md-code-block {
-  background: rgba(0,0,0,0.4);
-  border: 1px solid var(--border-b);
-  border-radius: 12px;
-  padding: 10px 12px;
-  margin: 8px 0;
-  font-family: var(--sf-font-mono);
-  font-size: var(--sf-text-meta);
-  color: var(--sf-text-secondary);
-  overflow-x: auto;
-  white-space: pre-wrap;
-}
-
 .markdown-body-b strong { color: var(--sf-text-primary); font-weight: 700; }
 .markdown-body-b em { color: #d7deea; font-style: italic; }
 .markdown-body-b br + br { display: block; content: ''; margin-top: 6px; }

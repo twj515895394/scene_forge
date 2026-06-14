@@ -774,7 +774,21 @@ export default function App() {
       .replace(/((?:^(?:- |\* ).*$\n?)+)/gm, (listBlock: string) => {
         const items = listBlock.trim().split('\n');
         return '<ul class="md-ul">' + items.map(item => {
-          const content = item.replace(/^[-*]\s+/, '');
+          let content = item.replace(/^[-*]\s+/, '');
+          let isChecklist = false;
+          let isChecked = false;
+          if (content.startsWith('[ ] ')) {
+            isChecklist = true;
+            content = content.slice(4);
+          } else if (content.startsWith('[x] ')) {
+            isChecklist = true;
+            isChecked = true;
+            content = content.slice(4);
+          }
+
+          if (isChecklist) {
+            return `<li class="md-li md-task-item"><span class="md-task-checkbox${isChecked ? ' checked' : ''}"></span>${content}</li>`;
+          }
           return `<li class="md-li">${content}</li>`;
         }).join('') + '</ul>';
       })
