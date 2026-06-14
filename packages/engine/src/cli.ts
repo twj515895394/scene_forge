@@ -5,6 +5,7 @@ import { Project } from './project.js';
 import { StateMachine } from './state_machine.js';
 import { Validator } from './validators/validator.js';
 import { ArtifactRegistry } from './artifact_registry.js';
+import { syncStageArtifactIndex } from './artifact_sync.js';
 
 const program = new Command();
 
@@ -147,7 +148,7 @@ program
   .option('--json', 'Output result in JSON format')
   .action((options) => {
     try {
-      const { stateMachine, validator } = getInstances();
+      const { project, stateMachine, validator } = getInstances();
       
       // Perform validation
       const report = validator.validate(options.stage);
@@ -156,6 +157,7 @@ program
 
       // Trigger completeStage
       const stageState = stateMachine.completeStage(options.stage, isSuccess, errors);
+      const syncedArtifacts = syncStageArtifactIndex(project, options.stage);
       
       handleSuccess(
         {
@@ -163,7 +165,8 @@ program
           stage: stageState.stage,
           status: stageState.status,
           completed_at: stageState.completed_at,
-          handoff_path: stageState.handoff_path
+          handoff_path: stageState.handoff_path,
+          synced_artifacts: syncedArtifacts.length
         },
         options,
         () => `Successfully completed stage '${options.stage}'. Generated handoff at '${stageState.handoff_path}'.`

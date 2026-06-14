@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { mergeVisibleBubbleChunk } from '../liveBubbleAccumulator.js';
+import { dedupeConsecutiveTextBubbles, mergeVisibleBubbleChunk } from '../liveBubbleAccumulator.js';
 
 test('live bubble accumulator deduplicates final assistant content after stream output', async (t) => {
   await t.test('appends stream deltas into one visible string', () => {
@@ -49,5 +49,21 @@ test('live bubble accumulator deduplicates final assistant content after stream 
       streamVisible: false,
     });
     assert.deepStrictEqual(result, { next: 'Final answer', skipped: false });
+  });
+
+  await t.test('deduplicates adjacent text bubbles with identical or containing content', () => {
+    const result = dedupeConsecutiveTextBubbles([
+      { id: 'stream', type: 'text', content: 'Hello world' },
+      { id: 'final', type: 'text', content: 'Hello world\n\n' },
+      { id: 'partial', type: 'text', content: 'Next' },
+      { id: 'full', type: 'text', content: 'Next answer' },
+      { id: 'thought', type: 'thought', content: 'Next answer' },
+    ]);
+
+    assert.deepStrictEqual(result, [
+      { id: 'stream', type: 'text', content: 'Hello world' },
+      { id: 'full', type: 'text', content: 'Next answer' },
+      { id: 'thought', type: 'thought', content: 'Next answer' },
+    ]);
   });
 });

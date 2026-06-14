@@ -17,7 +17,7 @@ export const ArtifactSchema = z.object({
   schema: z.string().optional(),
   readable_by_downstream: z.boolean(),
   created_by_run: z.string().optional()
-});
+}).passthrough();
 
 export type Artifact = z.infer<typeof ArtifactSchema>;
 
@@ -25,7 +25,7 @@ export const ManifestSchema = z.object({
   version: z.number(),
   project: z.string(),
   artifacts: z.array(ArtifactSchema)
-});
+}).passthrough();
 
 export type Manifest = z.infer<typeof ManifestSchema>;
 

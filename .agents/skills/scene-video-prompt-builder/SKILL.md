@@ -5,194 +5,121 @@ description: 当用户要根据 SceneForge 分镜、表演表、声音导演结�
 
 # scene-video-prompt-builder
 
-负责把分镜、表演设计、声音方案和 source intake 继承约束转成最终可用于视频生成平台的提示词交付包，并保持与上游故事骨架一致。
+把分镜、表演设计、声音方案和 source intake 继承约束转成最终可用于外部视频生成平台的提示词交付包。SceneForge 只输出提示词和制作说明，不声称已经生成视频。
 
-执行期通用约束见仓库根 `AGENTS.md`；本文件只补当前阶段特有边界。
+执行期通用约束见仓库根 `AGENTS.md`。本技能只定义 video_prompts 阶段的路由、读取边界、执行顺序和强制交付。
 
-本阶段不再把声音要求作为附属说明，而是必须继承 `scene-audio-director` 的 audio plan，把台词气口、拟音、音乐、环境音和静默点整合进每个 Segment Prompt。
+## 必读参考
 
-本阶段只在当前 `style_family` 允许时继承 `expressive_animation` 扩展层中的风格化动作物理、轻中度卡通伤害尺度、反差喜剧、VFX 支撑、卡通声音和负向边界；非动画家族不得默认整套启用。
+执行本技能时按顺序读取：
 
-本阶段还必须继承 `scene-storyboard-director` 的 `beat_skeleton`、`storyboard_content_breakdown`、`cinematic_language_plan`、`video_generation_units`、`shot_continuity_plan`、开头/结尾锚帧和 `camera_language`，把专业镜头语言和镜头交接写入每段视频提示词。
+1. `references/workflow.md`
+2. `references/required-deliverables.md`
+3. `references/review-checklist.md`
+4. `references/video-prompt-template.md`
+5. `references/output-contract.md` 中与当前阶段相关的字段章节
 
-如果项目包含 `source_intake`，本阶段必须继承 source intake 的抽象结构与当前项目确认的保留 / 改写边界；是否保留经典台词、关键对白、具体镜头和高识别表达，由项目目标决定，本阶段只在需要时规避字幕版式、平台水印、品牌元素和强识别人物绑定。
-
-SceneForge 当前只输出视频生成提示词和制作说明，不生成视频。视频需要用户基于本阶段 prompt、角色说明书板、场景道具图和故事板图在外部平台手动生成。
-
-本阶段默认输出：
-
-- 按故事板 `pack` 对齐的中文导演长版提示词
-- 按故事板 `pack` 对齐的英文导演长版提示词
-- 每个 `pack` 内显式呈现的声音执行摘要与按 Segment 组织的声音执行块
-- 如用户明确需要，可额外提供整片中文 / 英文总控汇编版
-
-导演长版必须直接包含运行时所需的 `Segment + Shot + Timecode` 强结构，不再额外维护一套独立的“模型投喂版”弱压缩稿。
-
-并且必须先经历：
-
-```text
-Prompt Draft
--> Prompt Review
--> Auto Fix
--> Final Delivery
-```
-
-未经自动 review 通过，不得标记为最终交付。
+若上下文紧张，优先完整读取 `required-deliverables.md` 与 `review-checklist.md`，再按需读取 `output-contract.md` 目标章节。
 
 ## 何时使用
 
-在以下场景使用此技能：
+在以下场景使用：
 
-- 总控 Skill 发现项目 `state.next_stage` 为 `scene-video-prompt-builder`
-- 已完成分镜设计和声音导演，项目状态为 `audio_ready`
-- 需要生成可直接用于视频生成平台的分段提示词
-- 需要把 source intake 的核心动作链、亮点、可替换项和禁止照搬项落实到最终 Segment Prompt
-- 需要把角色一致性、场景一致性、镜头连续性、表演连续性和声音连续性一并整理为最终输出物
-- 需要把分镜、表演、声音阶段已确认且适配当前家族的表现力扩展规则整合进最终 Segment Prompt
-- 需要把分镜阶段的镜头语言方案、视觉动机和 selected shot pattern 整合进最终 Segment Prompt
-- 需要把双版故事板、连续性控制和模型适配策略转译成最终视频提示词
+- 总控发现当前项目 `state.next_stage` 为 `scene-video-prompt-builder`。
+- 已完成 storyboard 和 audio，项目可进入 video_prompts。
+- 需要按故事板 pack 生成中文 / 英文导演长版视频提示词。
+- 需要把 Beat、VGU、shot continuity、表演、声音、Blocking、道具状态和模型适配写进最终提示词。
 
-如果分镜或 audio plan 还没完成，或已经进入发布包装阶段，不要优先使用本技能。
+如果 storyboard、audio、时长、分段策略、风格包或视频提示词方案尚未确认，先阻塞并返回上游确认。
 
-## 执行步骤
+## 输入边界
 
-1. 读取项目 `PROJECT_BOARD.md`，确认 `state.project_status` 已到 `audio_ready`，且总控路由的 `state.next_stage` 为 `scene-video-prompt-builder`。
-2. 采用 `compact` 上下文预算：只读取 `PROJECT_BOARD.md`、本 Skill、`references/output-contract.md`、完整分镜、表演表、声音方案、设计摘要、参考边界、`creative_direction_context` 和必要的 Blocking/道具状态输入；若 `project_config.director_style_id` / `style_profile_path` 已存在，先读 `style_profiles/style_registry.md` 与当前 `style_profile_path`，再按需读取当前风格包；执行期读取边界同时遵循仓库根 `AGENTS.md`。
-3. 如果项目已经确认导演风格包，优先读取：
-   - `style_profiles/<director_style_id>/profile.md`
-   - `style_profiles/<director_style_id>/visual_language.md`
-   - `style_profiles/<director_style_id>/camera_language.md`
-   - `style_profiles/<director_style_id>/lighting_language.md`
-   - `style_profiles/<director_style_id>/negative_constraints.md`
-   只读取当前阶段必需文件，不得顺手读取整个风格包 7 个文件；若风格包字段缺失，或风格确认状态不满足正式确认/历史兼容条件，本阶段必须阻塞并返回风格确认，不得回退到 `style_profiles/pixar_like/` 继续生成提示词。
-4. 如果存在 `source_intake.status: analyzed`，读取黑板中的 `source_intake.topic_gate_handoff_summary`，并继承 `scene-storyboard-director` 产出的 `source_intake_storyboard_use`。
-5. 必要时读取：
-   - `inputs/source_intake/source_video_priority_map_v1.md`
-   - `inputs/source_intake/topic_gate_handoff_v1.md`
-6. 不默认读取 `source_video_analysis_v1.md` 或 `source_video_timeline_v1.md` 全文；只有最终提示词需要核对动作连续性时，才读取相关章节并说明原因。
-7. 如当前 `style_family` 属于 `3d_animation`、`2d_animation`，或当前风格包明确允许夸张风格化扩展的 `hybrid / motion_comic`，且最终提示词确实需要补充表现力扩展资产库中的正向或负向口径，可按需读取：
-   - `assets/animation-stylization/effect-library.md`
-   - `assets/animation-stylization/contrast-comedy-library.md`
-8. 如最终提示词需要补充镜头语言方案或分镜 pattern 的通用口径，可按需读取：
-   - `assets/cinematic-language/shot-language-library.md`
-   - `assets/cinematic-language/animation-film-shot-patterns.md`
-   - `assets/cinematic-language/animation-comedy-action-patterns.md`
-9. 如最终提示词需要显式对齐视频生成单元、双版故事板或模型适配规则，可按需读取：
-   - `assets/storyboard-methodology/index.md`
-   - `assets/storyboard-methodology/video-generation-unit-library.md`
-   - `assets/storyboard-methodology/continuity-control-library.md`
-   - `assets/storyboard-methodology/storyboard-dual-version-prompt-library.md`
-   - `assets/storyboard-methodology/video-prompt-translation-library.md`
-   - `assets/storyboard-methodology/model-adaptation-library.md`
-10. 读取 `references/output-contract.md`，确认输出物分类、`Segment + Shot + Timecode` 结构、Beat / VGU / shot continuity 继承字段、双版故事板继承字段、模型适配字段、自动 review 要求和目录落点。
-11. 开始本阶段前，先检查上游故事板确认状态。若 `storyboard_confirmation.confirmed_by_user != true`，或黑板中的故事板阶段确认仍是预览态，本阶段必须阻塞并返回故事板确认，不得直接生成视频提示词。
-12. 若上游 `storyboard_prompt_pack_mode = multi_pack_recommended`，说明故事板已超出单包安全承载量但用户尚未确认拆包方案；此时本阶段必须阻塞并返回故事板阶段，不得默认按单包故事板继续生成视频提示词。
-13. 继承分镜阶段已经确认的 `segment_duration_seconds`、`target_total_duration_seconds`、`beat_skeleton`、`segments`、`storyboard_content_breakdown`、`cinematic_language_plan`、`video_generation_units`、`shot_continuity_plan`、`shot_highlights`、`hero_moments`、`bridge_shots`、`blocking_map`、`faction_layout`、`prop_state_machines`、`storyboard_prompt_pack_mode`、`storyboard_prompt_files`、`control_storyboard_file`、`styled_storyboard_file`、`control_storyboard_prompt_file`、`styled_storyboard_prompt_file`、`opening_anchor_frame`、`closing_anchor_frame`、`space_continuity_map`、`action_continuity_chains`、`emotion_continuity_chains` 和 `continuity_control_system`；其中 `storyboard_prompt_files` 视为面向 `gpt-image2` 的中文整板故事板总板交付稿，可用于校对故事板画面和控制面是否一致，但不替代 `control_storyboard_file` 这类内部控制链主产物。
-14. 若当前 `style_family` 允许启用表现力扩展，则继承 `expressive_animation`、当前分镜阶段沉淀的镜头语言继承摘要、`expressive_storyboard_shots`、`stylized_action_shots`、`contrast_storyboard`、`expressive_audio_design` 和相关负向边界；若不允许，则显式保留关闭或局部启用说明，不得默认整套写入最终提示词。
-15. 在正式生成视频提示词文件前，先输出“视频提示词方案预览”，至少包含：`video_prompt_pack_plan`（主交付将拆成几个视频提示词包、每个包对应哪个故事板 `pack`、覆盖哪些 `segments / shots`、哪些只是可选整片汇编版）、每个 `pack` 的声音执行摘要（BGM 主情绪、关键拟音、环境音床、静默点 / 声音留白、转场声音钩子）、导演长版正文将采用的四层骨架（`global_execution_preamble -> project_level_global_rules -> segment_technical_control_block -> shot_by_shot_director_prompt`）、`global_execution_preamble` 的草案摘要、`project_level_global_rules` 的草案摘要、分段提示词结构、导演长版内的 `Segment + Shot + Timecode` 执行方式、每段的 `primary_vgu_ids`、`shot_continuity` 承接方式、每段参考图使用计划、控制版 / 风格版故事板使用声明、当前使用的 `director_style_id`（若发生回退则说明回退原因）、source intake 继承与规避计划、每段是否有对白与对白承载策略、当上游已有对白设计时的具体台词写法、continuity_in / continuity_out、blocking_continuity、prop_state_continuity、blocking_execution、逐镜头站位承接、prop_state_execution、声音连续性、按 Segment 呈现的声音执行块、表现力扩展写入方案、镜头语言继承方案、模型适配计划、双语交付计划和需要用户确认的问题。
-16. 等待用户明确确认视频提示词方案；用户纠错或补充偏好不等于授权落盘。故事板阶段的确认、音频阶段的确认或泛化的“继续”都不能替代本阶段确认。
-17. 用户确认后，先生成视频提示词草稿：为每个视频分段整合 Beat Skeleton 意图、`primary_vgu_ids`、镜头内容、动作、运镜、镜头语言、视觉动机、表演、按上游对白设计继承的具体台词、拟音、音乐、环境音、静默点、节奏、参考图使用方式、source intake 规避约束、表现力扩展要求、双版故事板转译规则和连续性钩子；若上游提供故事板总板或故事板包，必须把它们视为顺序视觉关键帧参考，而不是松散灵感图。
-18. 草稿直接维护完整导演长版主交付；最终正文必须按以下 4 层顺序组织，而不是把说明文、字段卡和投喂文本混写：
-    - `global_execution_preamble`：模型使用前导块。显式写出“把上游故事板总板 / 故事板包视为顺序视觉关键帧参考”、节拍推进、镜头节奏、构图逻辑、动作编排、空间关系、情绪递进、关键姿势、预备动作 / 发力 / 反应 / 收势逻辑、关键姿势之间的电影化动作扩展，以及不渲染故事板边框 / 箭头 / 面板编号 / UI / 字幕等版式痕迹。
-    - `project_level_global_rules`：项目级全局规则。显式写出主场景空间锁定、角色重现锁定、不重复角色、画面可读性、动作清晰度、角色轮廓识别、空间稳定性、表演时机准确性，以及风格包 / 灯光 / 负向约束等全局规则。
-    - `segment_technical_control_block`：当前 Segment 的结构化控制参数。显式写出 `primary_vgu_ids`、`shot_continuity_refs`、`continuity_in`、`continuity_out`、`blocking_continuity`、`prop_state_continuity`、`blocking_execution`、`prop_state_execution`、`next_handoff`、对白承载策略、音频连续性和锚帧承接。
-    - `shot_by_shot_director_prompt`：当前 Segment 的 `Segment + Shot + Timecode` 导演长版正文。逐镜头写清 `shot_continuity`、景别机位、空间承接、表演时机和动作扩展，而不是退化成 10 秒大段摘要。
-19. 每个故事板 `pack` 对齐的视频提示词文件默认都要先给一个包级声音执行摘要，清楚列出该包的 BGM 主情绪、关键拟音、环境音床、静默点 / 声音留白和转场声音钩子。每个 Segment 默认都要在所属故事板 `pack` 文件内带上一个“可直接复制使用块”，方便用户按故事板包逐批生成时直接复制使用，不需要手动从文件不同位置拼接。除非用户明确要求“按段单独落文件”，否则不要再为每个 Segment 额外生成独立文件。该块也必须沿用同一使用顺序：
-    1. `global_execution_preamble` 的精简可用版
-    2. `project_level_global_rules` 中与当前段直接相关的全局锁定规则
-    3. 当前 Segment 的 `segment_technical_control_block`
-    4. 当前 Segment 的中文导演长版提示词
-   其中第 3 部分至少显式写出 `primary_vgu_ids`、`continuity_in`、`continuity_out`、`shot_continuity_refs`、`blocking_continuity`、`prop_state_continuity`、`blocking_execution`、`prop_state_execution` 和 `next_handoff`，不能只剩 Duration / Camera / Dialogue 这类过轻摘要；版权/安全规避说明、review 日志、实现解释和确认提示不得进入该块。
-20. 若上游故事板为 `multi_pack_recommended` 或 `multi_pack_confirmed`，正式主交付应以按故事板 `pack` 对齐的视频提示词文件为主，方便用户按故事板包逐批生成和校对；整片总控文件只在用户明确需要时作为可选汇编版补充。若预览未先给出 `video_prompt_pack_plan`，不得直接进入正式落盘确认。默认不新增独立的 BGM / SFX / 环境音文件，而是在 pack 文件内完整呈现声音层。
-21. 对草稿执行自动 review：检查时长一致性、双语完整性、Beat / VGU / shot continuity 继承、Shot Timecode 完整性、仅当上游已有对白设计时是否写出具体台词、Blocking / Prop State 执行结构、逐镜头站位承接、Hero Candidate / Ending Payoff 继承、声音/表演/镜头语言继承、锚帧与连续性链继承、模型适配完整性和负向约束；同时逐包检查是否存在声音执行摘要，逐段检查是否存在独立的声音执行块，并确认其中显式覆盖 `BGM / Foley-SFX / Ambience / Silence`；此外还要检查每个 Segment 的可直接复制使用块是否包含完整四层且未混入版权/安全规避说明或 review/确认文案；review 必须基于最终正文逐项核对字面字段是否真实出现，不得只在结尾摘要里宣称“已包含”。
-22. 若发现结构性问题，先自动修复，再重新 review；不得悄悄改动用户已确认的创作方向、总时长和 Segment 策略。
-23. 通过 review 后，将最终提示词写入 `outputs/video_prompts/`；黑板里只保留摘要、版本信息、review 状态和路径。
-24. 输出单个 YAML 补丁块，说明生成了哪些视频提示词版本、是否已覆盖分段、是否按故事板 `pack` 拆分交付、source intake 继承边界、参考图使用条件、表演/声音/空间/道具/连续性/表现力扩展/镜头语言连续性、模型适配和自动修复情况。
-25. 将状态推进建议交回总控 Skill，进入 `scene-publish-review`。
+默认只读取：
 
-## source_intake 最终提示词规则
+- 当前项目 `PROJECT_BOARD.md`
+- 本技能和上述 references
+- `outputs/storyboard_pack_*.md`
+- `details/storyboard/*` 中与 Beat Skeleton、VGU、Shot Continuity、Quality Check 相关的文件
+- `outputs/storyboard_prompts/*`
+- `outputs/audio_pack_*.md`
+- `outputs/performance_pack_*.md`
+- `outputs/design.md`
+- 当前风格包中与视觉、镜头、光影和负向约束直接相关的文件
 
-如果项目来自视频源输入，本阶段必须显式输出：
+不要扫描其他项目、历史产物或整个 `docs/`。需要额外读取资产库时，先说明原因，并只读取当前提示词生成所需章节。
 
-```yaml
-source_intake_prompt_use:
-  source_intake_used: true
-  files_read:
-  inherited_structure:
-  inherited_action_chain:
-  adapted_highlights:
-  replaced_elements:
-  avoid_copying_enforced:
+## 执行链
+
+必须按以下顺序产出，不能跳步：
+
+```text
+storyboard / performance / audio / design inputs
+-> video_prompt_pack_plan
+-> pack_audio_execution_plan
+-> global_execution_preamble
+-> project_level_global_rules
+-> segment_technical_control_block
+-> shot_by_shot_director_prompt
+-> segment_sound_execution
+-> prompt_trace
+-> video_prompt_review
+-> zh/en pack-aligned final files
 ```
 
-规则：
+## 确认闸门
 
-- `core_must_keep` 只能转写为抽象动作、冲突结构、情绪转折、镜头功能或连续性目标。
-- `highlight_should_keep` 可以转写为新的动画电影化看点，但必须使用新的镜头表达、视觉语境和提示词措辞。
-- `safe_to_replace` 必须优先替换人物身份、场景表层、道具表层、构图、机位、转场和字幕画面；台词是否保留由项目创作目标和经典性决定，不默认强制替换。
-- `avoid_copying` 必须落实到每段 prompt 的负向边界或全局 negative / avoid section。
-- 最终 Segment Prompt 是否保留经典台词、关键对白、具体镜头组合、原始构图、原剪辑节奏或高识别视觉表达，由当前项目创作目标决定；本阶段不默认限制保留强度，只在需要时规避字幕版式、平台水印、品牌元素和具体人物身份绑定。
-- 允许继承的是“为什么有效”的结构，不是“它具体长什么样”。
-- 如果使用 source asset，只能引用用户确认后的具体 source asset 文件，不得默认读取整个 `assets/source-materials/`。
+正式落盘前先输出视频提示词方案预览，至少包含：
 
-## 关键规则
+- `video_prompt_pack_plan`
+- 每个 pack 覆盖的 segments / shots
+- 包级声音执行摘要
+- 四层强结构草案
+- 每段 `primary_vgu_ids`
+- continuity_in / continuity_out
+- blocking_execution / prop_state_execution
+- `segment_sound_execution` 如何覆盖 BGM / Foley-SFX / Ambience / Silence
+- 可直接复制使用块示例
+- 需要用户确认的问题
 
-- 输出内容至少包括：分段视频提示词、角色一致性约束、场景一致性约束、表演连续性约束、声音连续性说明、镜头连续性说明、镜头语言说明、source intake 继承与规避说明、参考图使用说明、Blocking 连续性、道具状态连续性和表现力扩展约束。
-- 默认正式交付中的每个视频提示词 `pack` 都必须包含包级声音执行摘要，便于用户快速确认该包的 BGM、拟音、环境音和静默策略，而不必从长版正文中逐段翻找。
-- 每段视频提示词必须显式给出“对白存在性判断”，而不是默认存在对白；仅当上游剧本或分镜已明确存在对白设计时，才写出具体台词正文，并写清角色、对白意图、语气、停顿和承载方式，无对白时写明由动作、表情、环境音或静默承载。
-- 默认交付必须优先包含与故事板 `pack` 对齐的中文 / 英文导演长版；导演长版内部直接承载运行时强结构，不再单独拆模型投喂版。
-- 导演长版正文必须先写 `global_execution_preamble`，再写 `project_level_global_rules`，再进入各 Segment 的 `segment_technical_control_block + shot_by_shot_director_prompt`；不得把这些层级打散成说明文、字段卡和自然语言段落的随意拼接。
-- 导演长版中的每个 Segment 默认都应在所属 `pack` 文件内附带“可直接复制使用块”，并沿用同一四层顺序：`global_execution_preamble` 精简可用版 -> `project_level_global_rules` 当前段锁定规则 -> `segment_technical_control_block` -> 当前 Segment 的中文导演长版提示词。用户在按故事板包逐批生成视频时，不应被要求手动拼接这些部分。
-- 正式 `video_prompt_files` 不能退化成“全局设定 + 每段参数表 + 编译 Prompt”的说明稿；这类文稿最多只能作为中间层导演稿、review 草稿或附录存在，不能替代导演长版正式主交付。
-- 若上游故事板为多包模式，正式视频提示词必须以按 `pack` 对齐的中英文件作为主交付；整片双语总控文件仅在用户明确需要时作为可选汇编版保留。只生成整片双语两份、不生成 pack 对齐文件，不得标记为最终交付完成。
-- `global_execution_preamble` 必须使用可直接投喂模型的语气，而不是解释性说明文；至少要显式写出顺序视觉关键帧参考、节拍推进、镜头节奏、构图逻辑、动作编排、空间关系、情绪递进、关键姿势、预备动作 / 发力 / 反应 / 收势逻辑、关键姿势之间的电影化动作扩展，以及不渲染故事板版式痕迹。
-- `project_level_global_rules` 必须显式写出主场景空间锁定、角色重现锁定、不重复角色，以及画面可读性、动作清晰度、角色轮廓识别、空间稳定性和表演时机准确性，不得只把这些内容留在 review 或说明区。
-- `可直接复制使用块` 不得混入版权与安全规避说明、review 日志、实现说明、确认事项或其他非投喂性元信息。
-- 最终投喂模型的提示词正文、`global_execution_preamble`、`project_level_global_rules`、`segment_technical_control_block` 和 `可直接复制使用块` 中，不得直接出现容易触发审核的显式安全词或版权词；内部可以保留安全/版权边界，但最终投喂正文必须改写成正向、抽象、非触发性的表达。
-- 显式安全词示例：`骨折`、`残忍`、`血腥`、`写实伤口`、`禁止暴力` 等；这些词可以存在于内部 review 或方法说明里，但不得直接写进最终投喂提示词。最终提示词应改写为“保持无害化卡通效果”“保持轻喜剧化非写实冲击”“保持夸张动画物理与安全化表现”等正向表达。
-- 显式版权词示例：具体版权角色名、明星名、演员名、影视 IP 名，以及“像某角色 / 某明星 / 某演员 / 某 IP 一样”的直接说法；这些词不得进入最终投喂提示词。最终提示词应改写为抽象风格描述、原创角色约束和非识别性视觉特征描述。
-- 若最终导出正文仍出现具体演员名、影视 IP 名、品牌/片场真实名称、或“面部参考/像谁一样”这类直指表达，则自动 review 必须失败，不得继续标记 `Final Delivery`。
-- 若上游故事板为 `multi_pack_recommended` 或 `multi_pack_confirmed`，本阶段必须显式消费全部相关故事板包，不得假设只有一个故事板 prompt 文件。
-- 若上游故事板为 `multi_pack_recommended` 或 `multi_pack_confirmed`，本阶段应按故事板 `pack` 对齐生成对应的视频提示词文件；只有用户明确要求“额外给整片汇编版”时，才再补整片总控文件。
-- 每段视频提示词必须整合该段的动作、运镜、镜头语言、表演、台词、拟音、音乐、环境音和节奏，而不是把声音或镜头语言要求单独悬空。
-- 每段视频提示词必须显式呈现独立的声音执行块，至少把 `BGM / Foley-SFX / Ambience / Silence` 分开写清，避免声音层被压缩进长版叙述后难以消费。
-- 若上游存在故事板总板或故事板包，最终视频提示词必须明确继承其节拍推进、镜头节奏、构图逻辑、动作编排、空间关系、情绪递进、关键姿势、预备动作、发力方向、反应动作和收势逻辑。
-- 最终视频提示词必须把故事板视为顺序视觉关键帧参考：保留相邻关键姿势之间的动作方向和表演时机，并扩展成流畅、连续、电影化的动画动作，而不是逐格摆拍或只做松散参考。
-- 最终视频提示词必须优先保证画面可读性、动作清晰度、角色轮廓识别、空间稳定性和表演时机准确性；这些要求是题材无关的，不得只在喜剧场景下才启用。
-- 双版故事板只能作为同源参考，不得把控制版和风格版翻译成两个不同叙事版本。
-- 必须优先消费 `control_storyboard_file` 和 `styled_storyboard_file` 这对同源双版故事板主产物；故事板 prompt 文件只是生成这对产物时的辅助输入，不是唯一依据。
-- 导演长版必须包含 `shot_plan`、时间码、`primary_vgu_ids`、`shot_continuity`、`blocking_execution`、逐镜头站位承接和 `prop_state_execution`，不能只保留段级概述。
-- 必须继承 `scene-performance-director` 的角色表演锚点和 `scene-audio-director` 的声音计划。
-- 必须继承分镜阶段的 `continuity_in`、`continuity_out`、Hero Shot、Bridge Shot、Segment Plan、`beat_skeleton`、`storyboard_content_breakdown` 和 `cinematic_language_plan`。
-- 必须继承 `video_generation_units`、`shot_continuity_plan`、`opening_anchor_frame`、`closing_anchor_frame`、`space_continuity_map`、`action_continuity_chains`、`emotion_continuity_chains` 和 `continuity_control_system`。
-- 必须继承 `scene-story-development` 的 `hero_moment_candidates` 与 `ending_payoff`，避免末端把前面确定的高潮与收束点压掉。
-- 必须继承 `scene-storyboard-director` 的 `source_intake_storyboard_use`，并继续执行 `avoid_copying_shots`。
-- 必须继承 `creative_direction_context`；`preserve_original` 模式下不得把原始剧情提示词重新写成新题材方向。
-- 若当前 `style_family` 允许启用 `expressive_animation`，必须把对应的风格化动作物理、轻中度卡通伤害尺度、反差喜剧和负向边界写入对应 Segment Prompt；若不允许，则不得默认写入这些动画扩展规则。
-- 必须继承分镜阶段的镜头语言继承摘要，把 `camera_language`、`visual_motivation`、`selected_shot_pattern` 转化为自然语言导演说明。
-- 若项目已确认 `director_style_id`，必须继承当前风格包中的 `visual_language`、`camera_language`、`lighting_language` 和 `negative_constraints`；若发生默认回退，必须显式说明，而不是把 Pixar-like 原则伪装成全局默认原则。
-- 必须以 `video_generation_units + shot_continuity_plan` 为主驱动组织最终提示词，`segments` 只负责交付切片，不得重新退化成旧的段级概述驱动。
-- 不得在最终 prompt 中写“模仿某部电影镜头”；只能写抽象镜头结构、景别、机位、构图、运动和视觉动机。
-- 不得把故事板边框、箭头、镜头号、草图质感或版式说明直接翻译进最终视频 prompt。
-- 同一连续场景段默认保持同一主场景空间锚点；同一角色重复出现时必须保持同一角色设计，不得无因重复、增殖、替换或空间漂移。
-- 是否保留原版镜头组合和高识别视觉表达由当前项目创作目标决定；本阶段只在需要时规避字幕画面、平台水印、品牌元素和具体人物身份绑定。
-- 动画物理提示词必须写清动作节奏和恢复，不只写“夸张特效”。
-- 轻中度卡通伤害提示词允许灰头土脸、头包、小擦伤等轻量卡通化后果，但最终投喂正文应改写为无害化、非写实、可继续表演的正向描述，不要把高刺激伤害词直接写进提示词。
-- 反差喜剧提示词必须保留 setup / reveal / hold，不能用过量 VFX 遮住反差本身。
-- 必须继承 `blocking_map`、`faction_layout` 和 `forbidden_zone`，在每段 prompt 中写清角色默认站位、允许移动区域和禁止区域。
-- 逐镜头必须写清左右站位、视线方向、景深前后关系和是否跨轴，避免同一角色在相邻镜头无因左右跳变。
-- 必须继承 `prop_state_machines`，在每段 prompt 中写清核心道具当前状态、可见证据、允许交互和安全边界。
-- `segment_duration_seconds` 表示单个视频生成片段时长，不表示整片时长。
-- 正式落盘前必须校验`project_config.target_total_duration_seconds` 是否与当前阶段和当前文件声明一致；不一致时先回写顶层黑板。
-- 视频提示词统一写入 `outputs/video_prompts/`，默认使用导演长版双语文件，并使用中文主导文件名。
-- 故事板方法论资产不得新增黑板顶层字段；方法论配置和启用记录只允许通过 `runtime_policy.context_policy.allowed_runtime_asset_paths`、`stage_index.storyboard.files.methodology_config` 和 `stage_index.storyboard.read_policy` 暴露。
-- 黑板只记录摘要和文件路径，不直接塞完整提示词正文。
-- 本阶段不得声称已经生成视频，只能说明“已生成用于外部平台制作视频的分段提示词”。
-- 必须诚实说明连续性、Blocking、镜头语言和参考图策略只能降低抽卡成本，不能保证视频模型一次生成完全稳定。
+快速执行模式下，必须等待用户确认当前 video prompt 方案。全自动模式只有在总控注入的 `execution_policy.mode = full_auto` 且前置解锁条件满足时，才可跳过确认。
 
-## 参考资料
+## 强制交付
 
-- `references/output-contract.md`：输出分类、目录规则、表现力扩展字段、镜头语言字段和黑板摘要边界
-- `.agents/skills/scene-performance-director/references/output-contract.md`：表演导演输出协议
-- `.agents/skills/scene-audio-director/references/output-contract.md`：声音导演输出协议
-- `.agents/skills/scene-storyboard-director/references/output-contract.md`：分镜导演输出协议
+正式完成前必须真实落盘并注册以下文件，不能只在主文件中声明路径：
+
+- `outputs/video_prompts/视频提示词_第01包_中文_v*.md`
+- `outputs/video_prompts/视频提示词_第01包_英文_v*.md`
+- `details/video_prompts/video_prompt_review_v*.md`
+
+如用户明确需要整片汇编版，才额外写入：
+
+- `outputs/video_prompts/视频提示词_导演长版_中文_v*.md`
+- `outputs/video_prompts/视频提示词_导演长版_英文_v*.md`
+
+如用户明确要求按段单独落文件，才额外写入 segment 文件。
+
+正式 pack 文件必须使用 `video-prompt-template.md` 定义的体裁。
+
+## 完成前 review
+
+写文件后、推进状态前，按 `references/review-checklist.md` 自检。若发现结构性缺失，只允许补结构、补缺失文件、补注册和索引；不得悄悄改动用户已确认的创作方向、总时长、分段策略、pack 规划、角色设定或剧情结果。
+
+若 auto-fix 后仍缺正式主交付必需元素，本阶段必须保持 failed 或 pending confirmation，不得推进。
+
+## 输出
+
+输出单个 YAML 补丁块：
+
+```yaml
+patch_type: scene-video-prompt-builder
+stage: scene-video-prompt-builder
+version:
+status: pending | in_progress | completed | blocked | failed
+summary:
+board_updates:
+files_created:
+files_updated:
+next_action:
+```
+
+黑板只记录状态、摘要、索引和路径；完整提示词正文必须落到实际文件。

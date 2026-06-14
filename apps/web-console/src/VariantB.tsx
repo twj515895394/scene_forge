@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { Home, History, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, ChevronRight } from 'lucide-react';
+import { Home, History, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, ChevronRight, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ChatHistory from './ChatHistory';
 import { isChatContentRenderable, stripChatNoiseLines } from './lib/chatSanitizer';
@@ -62,7 +62,10 @@ interface VariantProps {
   hasPendingPrompt: boolean;
   onPromptSubmit: (bubbleId: string, optionId: string, optionLabel: string) => void;
   onSelectArtifact?: (path: string) => void;
+  onExecutionModeChange: (mode: ExecutionPolicyMode) => void;
 }
+
+type ExecutionPolicyMode = 'fast_production' | 'full_auto';
 
 const STAGES = [
   'source_intake',
@@ -122,6 +125,28 @@ const SCENE_TO_UI_STAGE_MAP: Record<string, string> = {
 
 type UiStageStatus = 'ready' | 'in_progress' | 'review_failed' | 'validated' | 'completed' | 'skipped' | 'needs_sync';
 
+function getExecutionMode(boardState: any): ExecutionPolicyMode {
+  const mode = boardState?.execution_policy?.mode;
+  return mode === 'full_auto' ? 'full_auto' : 'fast_production';
+}
+
+function isConfirmed(value: any): boolean {
+  return value?.status === 'confirmed' || value?.status === 'legacy confirmed';
+}
+
+function isFullAutoUnlocked(boardState: any): boolean {
+  const confirmations = boardState?.confirmations ?? {};
+  const config = boardState?.project_config ?? {};
+  return (
+    isConfirmed(confirmations.topic_confirmed) &&
+    isConfirmed(confirmations.style_family_confirmed) &&
+    isConfirmed(confirmations.style_confirmed) &&
+    isConfirmed(confirmations.script_confirmed) &&
+    Boolean(config.target_total_duration_seconds) &&
+    Boolean(config.segment_duration_seconds)
+  );
+}
+
 export default function VariantB(props: VariantProps) {
   const {
     projectState,
@@ -153,7 +178,8 @@ export default function VariantB(props: VariantProps) {
     chatEndRef,
     hasPendingPrompt,
     onPromptSubmit,
-    onSelectArtifact
+    onSelectArtifact,
+    onExecutionModeChange
   } = props;
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -173,6 +199,9 @@ export default function VariantB(props: VariantProps) {
   // 3. Stage artifacts accordion states
   const [expandedStages, setExpandedStages] = React.useState<Record<string, boolean>>({});
   const [stageArtifacts, setStageArtifacts] = React.useState<Record<string, any[]>>({});
+  const [isRefreshingArtifacts, setIsRefreshingArtifacts] = React.useState(false);
+  const executionMode = getExecutionMode(boardState);
+  const fullAutoUnlocked = isFullAutoUnlocked(boardState);
 
   // 4. Debug log visibility state
   const [showSystemLogs, setShowSystemLogs] = React.useState(false);
@@ -185,6 +214,14 @@ export default function VariantB(props: VariantProps) {
   };
 
   // Toggle stage accordion and fetch artifacts on demand
+  const fetchStageArtifacts = async (stg: string) => {
+    const res = await fetch(`/api/artifacts?stage=${encodeURIComponent(stg)}`);
+    if (!res.ok) {
+      throw new Error(`Failed to load artifacts for ${stg}`);
+    }
+    return await res.json();
+  };
+
   const handleToggleStage = async (stg: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering stage activate Macro command
     const nextVal = !expandedStages[stg];
@@ -192,14 +229,28 @@ export default function VariantB(props: VariantProps) {
 
     if (nextVal && !stageArtifacts[stg]) {
       try {
-        const res = await fetch(`/api/artifacts?stage=${encodeURIComponent(stg)}`);
-        if (res.ok) {
-          const list = await res.json();
-          setStageArtifacts(prev => ({ ...prev, [stg]: list }));
-        }
+        const list = await fetchStageArtifacts(stg);
+        setStageArtifacts(prev => ({ ...prev, [stg]: list }));
       } catch (err) {
         console.error('Failed to load artifacts for', stg, err);
       }
+    }
+  };
+
+  const handleRefreshAllStageArtifacts = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isRefreshingArtifacts) return;
+
+    setIsRefreshingArtifacts(true);
+    try {
+      const entries = await Promise.all(
+        STAGES.map(async (stg) => [stg, await fetchStageArtifacts(stg)] as const)
+      );
+      setStageArtifacts(Object.fromEntries(entries));
+    } catch (err) {
+      console.error('Failed to refresh stage artifacts', err);
+    } finally {
+      setIsRefreshingArtifacts(false);
     }
   };
 
@@ -508,6 +559,32 @@ export default function VariantB(props: VariantProps) {
         <aside className={`variant-b-sidebar flex flex-col h-full ${sidebarCollapsed ? 'collapsed' : ''}`} style={sidebarCollapsed ? undefined : { width: `${sidebarWidth}px`, minWidth: `${sidebarWidth}px`, maxWidth: `${sidebarWidth}px` }}>
           <div className="section-header sidebar-section-header">
             <span>Pipeline Flow (SOP 管线)</span>
+            <div className="execution-policy-toggle" title={executionMode === 'full_auto' && !fullAutoUnlocked ? '全自动待解锁：请先确认题材、风格、剧本、总时长和分段策略' : '执行模式'}>
+              <button
+                type="button"
+                className={`execution-policy-option ${executionMode === 'fast_production' ? 'active' : ''}`}
+                onClick={() => onExecutionModeChange('fast_production')}
+              >
+                快速
+              </button>
+              <button
+                type="button"
+                className={`execution-policy-option ${executionMode === 'full_auto' ? 'active' : ''} ${executionMode === 'full_auto' && !fullAutoUnlocked ? 'pending' : ''}`}
+                onClick={() => onExecutionModeChange('full_auto')}
+              >
+                {executionMode === 'full_auto' && !fullAutoUnlocked ? '全自动·待解锁' : '全自动'}
+              </button>
+            </div>
+            <button
+              type="button"
+              className="stage-artifacts-refresh-btn"
+              onClick={handleRefreshAllStageArtifacts}
+              disabled={isRefreshingArtifacts}
+              title="刷新所有阶段产物"
+              aria-label="刷新所有阶段产物"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isRefreshingArtifacts ? 'spinning' : ''}`} />
+            </button>
           </div>
           <div className="sidebar-scroll-area flex-1 overflow-y-auto">
             <div className="p-2.5 flex flex-col gap-1.5">

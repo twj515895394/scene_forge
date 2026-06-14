@@ -1,20 +1,24 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
-import express from 'express';
-import { Project } from '@scene-forge/engine';
+import { getArtifactsForStage } from '../artifactDiscovery.js';
 
-test('Web Console Server - /api/artifacts API', async (t) => {
-  const manifestPath = path.resolve(process.cwd(), 'artifacts.manifest.yaml');
-  const backupExists = fs.existsSync(manifestPath);
-  let backupContent = '';
-  if (backupExists) {
-    backupContent = fs.readFileSync(manifestPath, 'utf8');
-  }
+function makeTempProject(): string {
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'sf-api-artifacts-'));
+}
 
-  // Create test manifest
-  const testManifest = `
+function writeFile(projectPath: string, relativePath: string, content = '') {
+  const fullPath = path.join(projectPath, relativePath);
+  fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+  fs.writeFileSync(fullPath, content, 'utf8');
+}
+
+test('Web Console Server - /api/artifacts backing discovery', () => {
+  const projectPath = makeTempProject();
+  try {
+    writeFile(projectPath, 'artifacts.manifest.yaml', `
 version: 1
 project: test_project
 artifacts:
@@ -24,56 +28,29 @@ artifacts:
     role: director
     path: outputs/storyboard_pack_001_cn.md
     readable_by_downstream: true
-  - id: art-2
-    stage: script
-    kind: draft
-    role: writer
-    path: outputs/script_draft.md
-    readable_by_downstream: true
-`;
+`);
+    writeFile(projectPath, 'PROJECT_BOARD.md', `
+stage_index:
+  storyboard:
+    status: pending
+    active_version:
+    files:
+      primary:
+      details: []
+      outputs: []
+      handoff:
+`);
+    writeFile(projectPath, 'outputs/storyboard_pack_001_cn.md', '# storyboard');
+    writeFile(projectPath, 'details/storyboard/shotlist_v1.md', '# shotlist');
 
-  fs.writeFileSync(manifestPath, testManifest, 'utf8');
-
-  try {
-    const app = express();
-    app.get('/api/artifacts', (req, res) => {
-      const stage = req.query.stage as string;
-      if (!stage) {
-        return res.status(400).json({ error: 'Missing stage parameter' });
-      }
-      try {
-        const project = new Project(process.cwd());
-        const manifest = project.readManifest();
-        const list = manifest.artifacts.filter(a => a.stage === stage);
-        res.json(list);
-      } catch (err) {
-        res.status(500).json({ error: (err as Error).message });
-      }
-    });
-
-    const server = app.listen(3999);
-
-    // Call API using fetch
-    const response = await fetch('http://localhost:3999/api/artifacts?stage=storyboard');
-    assert.strictEqual(response.status, 200);
-    const data = (await response.json()) as any[];
-    assert.strictEqual(data.length, 1);
-    assert.strictEqual(data[0].id, 'art-1');
-    assert.strictEqual(data[0].path, 'outputs/storyboard_pack_001_cn.md');
-
-    // Call API with missing param
-    const responseBad = await fetch('http://localhost:3999/api/artifacts');
-    assert.strictEqual(responseBad.status, 400);
-
-    server.close();
+    const data = getArtifactsForStage(projectPath, 'storyboard');
+    assert.strictEqual(data.some((artifact) => artifact.id === 'art-1'), true);
+    assert.strictEqual(data.some((artifact) => artifact.path === 'details/storyboard/shotlist_v1.md'), true);
+    assert.strictEqual(
+      data.filter((artifact) => artifact.path === 'outputs/storyboard_pack_001_cn.md').length,
+      1,
+    );
   } finally {
-    // Restore backup
-    if (backupExists) {
-      fs.writeFileSync(manifestPath, backupContent, 'utf8');
-    } else {
-      if (fs.existsSync(manifestPath)) {
-        fs.unlinkSync(manifestPath);
-      }
-    }
+    fs.rmSync(projectPath, { recursive: true, force: true });
   }
 });

@@ -445,6 +445,87 @@
 .sidebar-section-header {
   padding: 12px 16px;
   min-height: 50px;
+  gap: 8px;
+}
+
+.sidebar-section-header > span:first-child {
+  min-width: 0;
+  flex: 1;
+}
+
+.execution-policy-toggle {
+  height: 28px;
+  padding: 2px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  background: rgba(255, 255, 255, 0.025);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.execution-policy-option {
+  height: 22px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--sf-text-faint);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.execution-policy-option.active {
+  color: var(--sf-accent-cyan);
+  background: rgba(64, 220, 199, 0.1);
+}
+
+.execution-policy-option.pending {
+  color: var(--sf-accent-warm);
+  background: rgba(243, 201, 122, 0.1);
+}
+
+.stage-artifacts-refresh-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.026);
+  color: var(--sf-text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: color 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.stage-artifacts-refresh-btn:hover:not(:disabled) {
+  color: var(--sf-accent-cyan);
+  border-color: rgba(64, 220, 199, 0.22);
+  background: rgba(64, 220, 199, 0.08);
+}
+
+.stage-artifacts-refresh-btn:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.stage-artifacts-refresh-btn .spinning {
+  animation: stage-artifacts-refresh-spin 0.9s linear infinite;
+}
+
+@keyframes stage-artifacts-refresh-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .stage-row-b {

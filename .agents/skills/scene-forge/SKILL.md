@@ -180,16 +180,53 @@ projects/<project>/PROJECT_INDEX.md
 
 ## 确认闸门
 
-以下阶段默认先出预览，再等用户确认，确认后才允许写正式文件或推进状态：
+执行前必须先读取当前项目 `PROJECT_BOARD.md.execution_policy.mode`。若字段缺失，默认视为 `fast_production`。
 
-- `scene-story-development`
+支持两种执行模式：
+
+- `fast_production`：快速执行模式，默认模式。关键创作阶段保留确认，执行型阶段可以自动落盘并汇报产物。
+- `full_auto`：全自动模式。只有 `topic_gate + script/adaptation` 必须先确认题材、风格、改编方向或保留原剧情、目标总时长、分段策略和输出目标；这些前置确认未满足时显示为待解锁，不得跳过确认。前置确认完成后，后续阶段自动执行，只有硬错误才暂停。
+
+### fast_production 确认阶段
+
+以下关键阶段默认先出预览，再等用户确认，确认后才允许写正式文件或推进状态：
+
 - `scene-script-adapter`
 - `scene-design-builder`
-- `scene-performance-director`
 - `scene-storyboard-director`
-- `scene-audio-director`
 - `scene-video-prompt-builder`
+
+以下执行型阶段在 `fast_production` 下可以按上游已确认结果自动落盘、自动 review、自动汇报产物；不需要每次先询问“是否落盘”：
+
+- `scene-reference-decider`
+- `scene-story-development`
+- `scene-asset-checker`
+- `scene-performance-director`
+- `scene-audio-director`
 - `scene-publish-review`
+
+### full_auto 解锁与暂停规则
+
+`full_auto` 可以提前开启，但只有满足以下前置条件后才真正解锁：
+
+- `confirmations.topic_confirmed.status = confirmed`
+- 风格大类和导演风格包已确认
+- `scene-script-adapter` 已确认改编方向或保留原剧情
+- `project_config.target_total_duration_seconds` 已确认
+- `project_config.segment_duration_seconds` 或等价分段策略已确认
+- 输出目标已确认
+
+全自动解锁后，`scene-design-builder`、`scene-performance-director`、`scene-storyboard-director`、`scene-audio-director`、`scene-video-prompt-builder`、`scene-publish-review` 默认自动执行、自动落盘、自动 review 和自动汇报。
+
+全自动只在以下硬错误出现时暂停：
+
+- validator 或阶段 review 失败
+- 必填字段缺失
+- 总时长与分段策略冲突
+- 上游关键产物不存在
+- CLI 状态机无法推进
+
+创作质量一般、表达可优化或提示词可更精炼但结构可用时，不中断全自动流程；在最终汇报中标注风险。
 
 用户纠错、比较方案、补充偏好或指出问题，不等于授权落盘。只有明确表达“确认 / 采用 / 按这个生成 / 落盘 / 写入 / 继续执行该阶段”时，才可写正式产物。
 确认默认只绑定当前阶段预览，不得自动扩展为后续阶段授权。
@@ -198,7 +235,8 @@ projects/<project>/PROJECT_INDEX.md
 - 确认 `scene-storyboard-director` 预览，只允许正式落盘故事板相关产物，并把 `state.next_stage` 推进到 `scene-audio-director`
 - 不得把这次确认同时视为对 `scene-audio-director`、`scene-video-prompt-builder` 或 `scene-publish-review` 的授权
 - 用户只说“确认”而未点名阶段时，默认解释为确认当前 `state.next_stage` 对应阶段的预览，而不是整条后续流水线
-- 用户明确要求“继续下一阶段”时，也只允许执行一个下一阶段，不得一口气连续跑完多个确认型阶段
+- 用户明确要求“继续下一阶段”时，在 `fast_production` 下只允许执行一个下一阶段，不得一口气连续跑完多个确认型阶段
+- 在 `full_auto` 已解锁状态下，允许连续推进后续自动阶段；但遇到硬错误必须暂停并汇报
 
 ## 剧本模式与 source 改写方向
 

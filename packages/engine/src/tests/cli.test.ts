@@ -105,6 +105,7 @@ test('CLI System Tests', async (t) => {
     assert.strictEqual(resPass.stage, 'topic_gate');
     assert.strictEqual(resPass.status, 'completed');
     assert.ok(resPass.handoff_path);
+    assert.strictEqual(resPass.synced_artifacts, 2);
 
     const status2 = runCli('status --json');
     assert.strictEqual(status2.stages.topic_gate.status, 'completed');
@@ -112,8 +113,8 @@ test('CLI System Tests', async (t) => {
 
   await t.test('5. artifacts command --json', () => {
     const res = runCli('artifacts --from topic_gate --json');
-    assert.strictEqual(res.length, 1);
-    assert.strictEqual(res[0].id, 'topic_gate_final');
+    assert.strictEqual(res.some((artifact: any) => artifact.id === 'topic_gate_final'), true);
+    assert.strictEqual(res.filter((artifact: any) => artifact.path === 'outputs/topic.md').length, 1);
   });
 
   await t.test('6. rules command --json', () => {

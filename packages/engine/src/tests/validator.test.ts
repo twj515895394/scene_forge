@@ -14,6 +14,460 @@ test('Validator System Tests', async (t) => {
 
   const project = new Project(testDir);
   const validator = new Validator(project);
+  const validStoryboardBody = `## storyboard_prompt_pack
+### beat_skeleton
+### storyboard_content_breakdown
+### cinematic_language_plan
+### video_generation_units
+VGU001
+### shot_continuity_plan
+### continuity_control_system
+### storyboard_prompt_pack_plan
+### storyboard_quality_check
+control_storyboard_file
+styled_storyboard_file
+control_storyboard_prompt_file
+styled_storyboard_prompt_file`;
+  const validVideoPromptsBody = `## pack_audio_execution_plan
+### video_prompt_pack_plan
+### global_execution_preamble
+### project_level_global_rules
+## segment_sound_execution
+BGM
+Foley
+SFX
+Ambience
+Silence
+### segment_technical_control_block
+primary_vgu_ids
+continuity_in
+continuity_out
+blocking_execution
+prop_state_execution
+next_handoff
+### shot_by_shot_director_prompt
+shot_continuity
+screen_positioning
+### prompt_trace
+### video_prompt_review`;
+  const validVideoPromptPackBody = `---
+schema: video_prompts.v1
+stage: video_prompts
+pack_id: "001"
+---
+# 视频提示词 第01包
+
+## pack_audio_execution_plan
+
+## video_prompt_pack_plan
+
+## global_execution_preamble
+
+## project_level_global_rules
+
+## segment_sound_execution
+
+### BGM
+### Foley-SFX
+### Ambience
+### Silence
+
+## segment_technical_control_block
+
+primary_vgu_ids
+continuity_in
+continuity_out
+blocking_execution
+prop_state_execution
+next_handoff
+
+## shot_by_shot_director_prompt
+
+shot_continuity
+screen_positioning
+
+## prompt_trace
+
+## 可直接复制使用块
+
+global_execution_preamble
+project_level_global_rules
+segment_technical_control_block
+shot_by_shot_director_prompt
+
+## video_prompt_review`;
+  const validStoryboardPromptBody = `# 故事板整板 Prompt
+
+## 复制专用主 Prompt
+
+生成一张 12 格故事板总板。
+
+## Control-Oriented Storyboard Board
+
+### Beat Line
+### Camera Path
+### Action Path
+
+## Style & Rendering Storyboard Board
+
+### Visual Style
+### Character Rendering`;
+  const storyboardDetailArtifacts = [
+    {
+      id: 'storyboard-beat-skeleton-v1',
+      stage: 'storyboard',
+      kind: 'draft' as const,
+      role: 'detail',
+      path: 'details/storyboard/beat_skeleton_v1.md',
+      readable_by_downstream: false
+    },
+    {
+      id: 'storyboard-vgu-v1',
+      stage: 'storyboard',
+      kind: 'draft' as const,
+      role: 'detail',
+      path: 'details/storyboard/video_generation_units_v1.md',
+      readable_by_downstream: false
+    },
+    {
+      id: 'storyboard-shot-continuity-v1',
+      stage: 'storyboard',
+      kind: 'draft' as const,
+      role: 'detail',
+      path: 'details/storyboard/shot_continuity_plan_v1.md',
+      readable_by_downstream: false
+    },
+    {
+      id: 'storyboard-quality-check-v1',
+      stage: 'storyboard',
+      kind: 'draft' as const,
+      role: 'detail',
+      path: 'details/storyboard/storyboard_quality_check_v1.md',
+      readable_by_downstream: false
+    },
+    {
+      id: 'storyboard-design-reconciliation-v1',
+      stage: 'storyboard',
+      kind: 'draft' as const,
+      role: 'detail',
+      path: 'details/storyboard/design_reconciliation_review_v1.md',
+      readable_by_downstream: false
+    }
+  ];
+  const storyboardPromptArtifacts = [
+    {
+      id: 'storyboard-control-prompt-v1',
+      stage: 'storyboard',
+      kind: 'final' as const,
+      role: 'output',
+      path: 'outputs/storyboard_prompts/control_storyboard_prompt_v1.md',
+      readable_by_downstream: true
+    },
+    {
+      id: 'storyboard-styled-prompt-v1',
+      stage: 'storyboard',
+      kind: 'final' as const,
+      role: 'output',
+      path: 'outputs/storyboard_prompts/styled_storyboard_prompt_v1.md',
+      readable_by_downstream: true
+    }
+  ];
+  const videoPromptPackArtifacts = [
+    {
+      id: 'video-prompts-pack-001-zh',
+      stage: 'video_prompts',
+      kind: 'final' as const,
+      role: 'primary_delivery',
+      path: 'outputs/video_prompts/视频提示词_第01包_中文_v1.md',
+      readable_by_downstream: true,
+      pack_id: '001'
+    },
+    {
+      id: 'video-prompts-pack-001-en',
+      stage: 'video_prompts',
+      kind: 'final' as const,
+      role: 'primary_delivery',
+      path: 'outputs/video_prompts/视频提示词_第01包_英文_v1.md',
+      readable_by_downstream: true,
+      pack_id: '001'
+    }
+  ];
+  const videoPromptReviewArtifact = {
+    id: 'video-prompts-review-v1',
+    stage: 'video_prompts',
+    kind: 'draft' as const,
+    role: 'detail',
+    path: 'details/video_prompts/video_prompt_review_v1.md',
+    readable_by_downstream: false
+  };
+  const validDesignBody = `---
+schema: design.v1
+stage: design
+language: zh
+---
+## visual_language
+shape_language_core
+character_designs
+scene_designs
+prop_designs
+space_continuity_seed
+prop_state_machines
+blocking_map`;
+  const validDesignPromptBody = `# 角色说明书图片提示词
+
+## 复制专用主 Prompt
+
+生成一张中文主导的角色说明书板 / character bible sheet / character design board，用于后续多图参考和角色一致性校对。
+
+## 角色基础信息区
+角色名称、基础身份、故事功能、视觉锚点。
+
+## 多视角区
+正面、3/4、侧面、背面，保持同一脸型、发型、服装主色和剪影。
+
+## 轮廓剪影区
+展示清晰可识别的外轮廓和头身比。
+
+## 表情系统区
+包含 6 到 9 个剧情表情，覆盖惊讶、自信、紧张、喜悦、困惑、决心。
+
+## 微表情区
+包含 2 到 4 个微表情，展示眼神、眉毛和嘴角变化。
+
+## 动作姿态区
+包含 4 到 6 个剧情动作姿态，服务故事节拍。
+
+## 关键道具交互区
+展示角色与核心道具的握持、摆放、使用和状态变化。
+
+## 服装 / 配件 / 材质细节区
+展示服装、配件、手部、鞋子、材质和可复用识别点。
+
+## 比例对照区
+展示角色与关键道具、其他角色或场景元素的比例对照。
+
+## 物理与安全边界区
+说明边界约束、轻喜剧动作尺度和不可改变的角色锚点。`;
+  const designDetailArtifacts = [
+    {
+      id: 'design-character-v1',
+      stage: 'design',
+      kind: 'final' as const,
+      role: 'character_design',
+      path: 'details/design/character_design_主角_v1.md',
+      readable_by_downstream: true
+    },
+    {
+      id: 'design-scene-v1',
+      stage: 'design',
+      kind: 'final' as const,
+      role: 'scene_design',
+      path: 'details/design/scene_design_v1.md',
+      readable_by_downstream: true
+    },
+    {
+      id: 'design-prop-v1',
+      stage: 'design',
+      kind: 'final' as const,
+      role: 'prop_design',
+      path: 'details/design/prop_design_v1.md',
+      readable_by_downstream: true
+    },
+    {
+      id: 'design-space-v1',
+      stage: 'design',
+      kind: 'final' as const,
+      role: 'space_continuity_seed',
+      path: 'details/design/space_continuity_seed_v1.md',
+      readable_by_downstream: true
+    }
+  ];
+  const designPromptArtifacts = [
+    {
+      id: 'design-character-prompt-v1',
+      stage: 'design',
+      kind: 'final' as const,
+      role: 'design_prompt',
+      path: 'outputs/design_prompts/角色说明书图片提示词_v1.md',
+      readable_by_downstream: true
+    },
+    {
+      id: 'design-master-prompt-v1',
+      stage: 'design',
+      kind: 'final' as const,
+      role: 'design_prompt',
+      path: 'outputs/design_prompts/全场景资产总参考图提示词_v1.md',
+      readable_by_downstream: true
+    }
+  ];
+
+  function writeProjectFile(relativePath: string, content: string) {
+    const fullPath = path.resolve(testDir, relativePath);
+    fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+    fs.writeFileSync(fullPath, content, 'utf8');
+  }
+
+  function writeStoryboardDeliveryFiles(promptBody = validStoryboardPromptBody) {
+    for (const artifact of storyboardDetailArtifacts) {
+      const content = artifact.path.includes('design_reconciliation_review')
+        ? '# design_reconciliation_review\ndesign_revision_required: false\nchecked_storyboard_sources:\n  - outputs/storyboard_pack_001_cn.md\nchecked_design_sources:\n  - outputs/design.md\nnew_expression_or_pose_needs: none\nnew_prop_state_needs: none\nnew_space_or_blocking_needs: none\nnew_reference_board_needs: none\nno_design_change_reason: 当前最终分镜没有新增设计阶段未覆盖的表情、动作姿态、道具状态或空间站位。\n'
+        : `# ${artifact.id}\n`;
+      writeProjectFile(artifact.path, content);
+    }
+    for (const artifact of storyboardPromptArtifacts) {
+      writeProjectFile(artifact.path, promptBody);
+    }
+  }
+
+  function writeStoryboardBoard(
+    confirmationStatus: 'confirmed' | 'pending' = 'confirmed',
+    primaryPath = 'outputs/storyboard_pack_001_cn.md'
+  ) {
+    fs.writeFileSync(path.resolve(testDir, 'PROJECT_BOARD.md'), `
+confirmations:
+  storyboard_plan_confirmed:
+    status: ${confirmationStatus}
+execution_policy:
+  mode: fast_production
+stage_index:
+  storyboard:
+    status: completed
+    files:
+      primary: ${primaryPath}
+      outputs:
+        - ${primaryPath}
+        - outputs/storyboard_prompts/control_storyboard_prompt_v1.md
+        - outputs/storyboard_prompts/styled_storyboard_prompt_v1.md
+      details:
+        - details/storyboard/beat_skeleton_v1.md
+        - details/storyboard/video_generation_units_v1.md
+        - details/storyboard/shot_continuity_plan_v1.md
+        - details/storyboard/storyboard_quality_check_v1.md
+        - details/storyboard/design_reconciliation_review_v1.md
+      handoff: handoffs/storyboard.handoff.json
+      quality_check: details/storyboard/storyboard_quality_check_v1.md
+`, 'utf8');
+  }
+
+  function writeValidStoryboardManifest(primaryPath = 'outputs/storyboard_pack_001_cn.md') {
+    project.writeManifest({
+      version: 1,
+      project: 'temp_test_validator_project',
+      artifacts: [
+        {
+          id: 'storyboard_final_001',
+          stage: 'storyboard',
+          kind: 'final',
+          role: 'primary_delivery',
+          path: primaryPath,
+          readable_by_downstream: true,
+          pack_id: '001'
+        },
+        ...storyboardDetailArtifacts,
+        ...storyboardPromptArtifacts
+      ]
+    });
+  }
+
+  function writeVideoPromptDeliveryFiles(packBody = validVideoPromptPackBody) {
+    for (const artifact of videoPromptPackArtifacts) {
+      writeProjectFile(artifact.path, packBody);
+    }
+    writeProjectFile(videoPromptReviewArtifact.path, '# video_prompt_review\nfinal_delivery_ready: true\n');
+  }
+
+  function writeVideoPromptBoard(confirmationStatus: 'confirmed' | 'pending' = 'confirmed') {
+    fs.writeFileSync(path.resolve(testDir, 'PROJECT_BOARD.md'), `
+confirmations:
+  video_prompt_plan_confirmed:
+    status: ${confirmationStatus}
+execution_policy:
+  mode: fast_production
+stage_index:
+  video_prompts:
+    status: completed
+    files:
+      primary: outputs/video_prompts/视频提示词_第01包_中文_v1.md
+      outputs:
+        - outputs/video_prompts/视频提示词_第01包_中文_v1.md
+        - outputs/video_prompts/视频提示词_第01包_英文_v1.md
+      details:
+        - details/video_prompts/video_prompt_review_v1.md
+      quality_check: details/video_prompts/video_prompt_review_v1.md
+`, 'utf8');
+  }
+
+  function writeValidVideoPromptManifest() {
+    project.writeManifest({
+      version: 1,
+      project: 'temp_test_validator_project',
+      artifacts: [
+        {
+          id: 'storyboard_pack_001',
+          stage: 'storyboard',
+          kind: 'final',
+          role: 'primary_delivery',
+          path: 'outputs/storyboard_pack_001_cn.md',
+          readable_by_downstream: true,
+          pack_id: '001'
+        },
+        ...videoPromptPackArtifacts,
+        videoPromptReviewArtifact
+      ]
+    });
+  }
+
+  function writeDesignDeliveryFiles(characterPromptBody = validDesignPromptBody) {
+    writeProjectFile('outputs/design.md', validDesignBody);
+    for (const artifact of designDetailArtifacts) {
+      writeProjectFile(artifact.path, `# ${artifact.id}\nvisual_language\nprop_state_machines\nblocking_map\n`);
+    }
+    writeProjectFile('outputs/design_prompts/角色说明书图片提示词_v1.md', characterPromptBody);
+    writeProjectFile('outputs/design_prompts/全场景资产总参考图提示词_v1.md', '# 全场景资产总参考图提示词\n主场景空间布局\n角色默认站位\n核心道具位置\n道具状态矩阵\n');
+  }
+
+  function writeDesignBoard(confirmationStatus: 'confirmed' | 'pending' = 'confirmed') {
+    fs.writeFileSync(path.resolve(testDir, 'PROJECT_BOARD.md'), `
+confirmations:
+  design_confirmed:
+    status: ${confirmationStatus}
+execution_policy:
+  mode: fast_production
+stage_index:
+  design:
+    status: completed
+    files:
+      primary: outputs/design.md
+      outputs:
+        - outputs/design.md
+        - outputs/design_prompts/角色说明书图片提示词_v1.md
+        - outputs/design_prompts/全场景资产总参考图提示词_v1.md
+      details:
+        - details/design/character_design_主角_v1.md
+        - details/design/scene_design_v1.md
+        - details/design/prop_design_v1.md
+        - details/design/space_continuity_seed_v1.md
+`, 'utf8');
+  }
+
+  function writeValidDesignManifest() {
+    project.writeManifest({
+      version: 1,
+      project: 'temp_test_validator_project',
+      artifacts: [
+        {
+          id: 'design-final',
+          stage: 'design',
+          kind: 'final',
+          role: 'design_output',
+          path: 'outputs/design.md',
+          readable_by_downstream: true
+        },
+        ...designDetailArtifacts,
+        ...designPromptArtifacts
+      ]
+    });
+  }
 
   await t.test('1. L1 Lint - Missing final artifacts and file existence', () => {
     // 1. No artifacts at all
@@ -42,7 +496,7 @@ test('Validator System Tests', async (t) => {
     const invalidPath = 'outputs/invalid_name.md';
     const fullInvalidPath = path.resolve(testDir, invalidPath);
     fs.mkdirSync(path.dirname(fullInvalidPath), { recursive: true });
-    fs.writeFileSync(fullInvalidPath, '---\nschema: storyboard.v1\nstage: storyboard\npack_id: "001"\n---\n## storyboard_prompt_pack', 'utf8');
+    fs.writeFileSync(fullInvalidPath, `---\nschema: storyboard.v1\nstage: storyboard\npack_id: "001"\n---\n${validStoryboardBody}`, 'utf8');
 
     project.registerArtifact({
       id: 'storyboard_invalid_pattern',
@@ -128,11 +582,11 @@ test('Validator System Tests', async (t) => {
     fs.writeFileSync(forbiddenPath, 'terms:\n  - "Tom Cruise"\n  - "Coca-Cola"', 'utf8');
 
     // Content containing a forbidden term
-    fs.writeFileSync(fullValidPath, '---\nschema: storyboard.v1\nstage: storyboard\npack_id: "001"\n---\n## storyboard_prompt_pack\nWe will hire Tom Cruise for this scene.', 'utf8');
+    fs.writeFileSync(fullValidPath, `---\nschema: storyboard.v1\nstage: storyboard\npack_id: "001"\n---\n${validStoryboardBody}\nWe will hire Tom Cruise for this scene.`, 'utf8');
     
     const report = validator.validate('storyboard');
     assert.strictEqual(report.status, 'failed');
-    assert.ok(report.errors.some(e => e.rule_id === 'SF-L3-001' && e.line === 7));
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-L3-001' && e.artifact === validPath));
 
     // Clean up forbidden_terms file
     fs.unlinkSync(forbiddenPath);
@@ -150,7 +604,7 @@ test('Validator System Tests', async (t) => {
     const fullP1Path = path.resolve(testDir, p1Path);
     
     // 1. Pack ID discontinuity (starts at 002, missing 001)
-    fs.writeFileSync(fullP1Path, '---\nschema: storyboard.v1\nstage: storyboard\npack_id: "002"\n---\n## storyboard_prompt_pack\n### segment-01', 'utf8');
+    fs.writeFileSync(fullP1Path, `---\nschema: storyboard.v1\nstage: storyboard\npack_id: "002"\n---\n${validStoryboardBody}\n### segment-01`, 'utf8');
     project.registerArtifact({
       id: 'storyboard_final_002',
       stage: 'storyboard',
@@ -180,7 +634,7 @@ test('Validator System Tests', async (t) => {
 
     const p0Path = 'outputs/storyboard_pack_001_cn.md';
     const fullP0Path = path.resolve(testDir, p0Path);
-    fs.writeFileSync(fullP0Path, '---\nschema: storyboard.v1\nstage: storyboard\npack_id: "001"\n---\n## storyboard_prompt_pack\n### segment-01\n### segment-03', 'utf8');
+    fs.writeFileSync(fullP0Path, `---\nschema: storyboard.v1\nstage: storyboard\npack_id: "001"\n---\n${validStoryboardBody}\n### segment-01\n### segment-03`, 'utf8');
     
     project.registerArtifact({
       id: 'storyboard_final_001',
@@ -207,7 +661,9 @@ test('Validator System Tests', async (t) => {
 
     const customPath = 'outputs/custom_storyboard_1.md';
     const fullCustomPath = path.resolve(testDir, customPath);
-    fs.writeFileSync(fullCustomPath, '---\nschema: storyboard.v1\nstage: storyboard\npack_id: "001"\n---\n## custom_header', 'utf8');
+    fs.writeFileSync(fullCustomPath, `---\nschema: storyboard.v1\nstage: storyboard\npack_id: "001"\n---\n## custom_header\n${validStoryboardBody}`, 'utf8');
+    writeStoryboardDeliveryFiles();
+    writeStoryboardBoard('confirmed', customPath);
 
     // Register custom artifact
     project.registerArtifact({
@@ -221,13 +677,29 @@ test('Validator System Tests', async (t) => {
     });
 
     // We need to clear previous final artifacts in manifest to avoid their path mismatches
-    const manifest = project.readManifest();
-    manifest.artifacts = manifest.artifacts.filter(art => art.id === 'custom_storyboard');
-    project.writeManifest(manifest);
+    project.writeManifest({
+      version: 1,
+      project: 'temp_test_validator_project',
+      artifacts: [
+        {
+          id: 'custom_storyboard',
+          stage: 'storyboard',
+          kind: 'final',
+          role: 'primary_delivery',
+          path: customPath,
+          readable_by_downstream: true,
+          pack_id: '001'
+        },
+        ...storyboardDetailArtifacts,
+        ...storyboardPromptArtifacts
+      ]
+    });
 
     const report = validator.validate('storyboard');
     assert.strictEqual(report.status, 'passed');
     assert.strictEqual(report.errors.length, 0);
+
+    fs.rmSync(path.resolve(testDir, '.rules'), { recursive: true, force: true });
   });
 
   await t.test('7. SF-VP-001 Video Prompt storyboard pack alignment', () => {
@@ -251,7 +723,7 @@ test('Validator System Tests', async (t) => {
     const fullVpPath = path.resolve(testDir, vpPath);
     fs.mkdirSync(path.dirname(fullVpPath), { recursive: true });
     // Write a valid body with headers to avoid other errors
-    fs.writeFileSync(fullVpPath, '---\nschema: video_prompts.v1\nstage: video_prompts\npack_id: "002"\n---\n## pack_audio_execution_plan\n## segment_sound_execution', 'utf8');
+    fs.writeFileSync(fullVpPath, `---\nschema: video_prompts.v1\nstage: video_prompts\npack_id: "002"\n---\n${validVideoPromptsBody}`, 'utf8');
 
     project.registerArtifact({
       id: 'vp_pack_002',
@@ -272,6 +744,374 @@ test('Validator System Tests', async (t) => {
     if (fs.existsSync(fullVpPath)) {
       fs.unlinkSync(fullVpPath);
     }
+  });
+
+  await t.test('8. L4 index consistency warns when state, board, and manifest drift apart', () => {
+    const topicPath = 'outputs/topic.md';
+    const topicFullPath = path.resolve(testDir, topicPath);
+    fs.mkdirSync(path.dirname(topicFullPath), { recursive: true });
+    fs.writeFileSync(topicFullPath, '---\nschema: topic_gate.v1\nstage: topic_gate\n---\n## topic_ideas\n- idea', 'utf8');
+    fs.mkdirSync(path.resolve(testDir, 'details/topic_gate'), { recursive: true });
+    fs.writeFileSync(path.resolve(testDir, 'details/topic_gate/notes_v1.md'), '# notes', 'utf8');
+
+    project.writeManifest({
+      version: 1,
+      project: 'temp_test_validator_project',
+      artifacts: [{
+        id: 'topic_gate_final',
+        stage: 'topic_gate',
+        kind: 'final',
+        role: 'primary_delivery',
+        path: topicPath,
+        readable_by_downstream: true
+      }]
+    });
+    fs.writeFileSync(path.resolve(testDir, 'PROJECT_STATE.json'), JSON.stringify({
+      project: 'temp_test_validator_project',
+      stages: {
+        topic_gate: {
+          stage: 'topic_gate',
+          status: 'completed',
+          updated_at: '2026-06-14T00:00:00.000Z',
+          history: []
+        }
+      }
+    }, null, 2), 'utf8');
+    fs.writeFileSync(path.resolve(testDir, 'PROJECT_BOARD.md'), `
+stage_index:
+  topic_gate:
+    status: pending
+    files:
+      primary:
+      outputs: []
+      details: []
+`, 'utf8');
+
+    const report = validator.validate('topic_gate');
+    assert.strictEqual(report.status, 'passed');
+    assert.ok(report.warnings.some(e => e.rule_id === 'SF-L4-001'));
+    assert.ok(report.warnings.some(e => e.rule_id === 'SF-L4-002'));
+  });
+
+  await t.test('9. Storyboard deep contract rejects shallow prompt packs', () => {
+    const shallowPath = 'outputs/storyboard_pack_001_cn.md';
+    const fullShallowPath = path.resolve(testDir, shallowPath);
+    fs.writeFileSync(fullShallowPath, '---\nschema: storyboard.v1\nstage: storyboard\npack_id: "001"\n---\n## storyboard_prompt_pack\n### shot list\n- C01: wide shot', 'utf8');
+
+    project.writeManifest({
+      version: 1,
+      project: 'temp_test_validator_project',
+      artifacts: [{
+        id: 'storyboard_shallow_001',
+        stage: 'storyboard',
+        kind: 'final',
+        role: 'primary_delivery',
+        path: shallowPath,
+        readable_by_downstream: true,
+        pack_id: '001'
+      }]
+    });
+
+    const report = validator.validate('storyboard');
+    assert.strictEqual(report.status, 'failed');
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-SB-101'));
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-SB-108'));
+  });
+
+  await t.test('10. Video prompts deep contract rejects missing technical control fields', () => {
+    const shallowPath = 'outputs/video_prompts_pack_001_cn.md';
+    const fullShallowPath = path.resolve(testDir, shallowPath);
+    fs.writeFileSync(fullShallowPath, '---\nschema: video_prompts.v1\nstage: video_prompts\npack_id: "001"\n---\n## pack_audio_execution_plan\n## segment_sound_execution\n- music rises', 'utf8');
+
+    project.writeManifest({
+      version: 1,
+      project: 'temp_test_validator_project',
+      artifacts: [
+        {
+          id: 'storyboard_pack_001',
+          stage: 'storyboard',
+          kind: 'final',
+          role: 'primary_delivery',
+          path: 'outputs/storyboard_pack_001_cn.md',
+          readable_by_downstream: true,
+          pack_id: '001'
+        },
+        {
+          id: 'vp_shallow_001',
+          stage: 'video_prompts',
+          kind: 'final',
+          role: 'primary_delivery',
+          path: shallowPath,
+          readable_by_downstream: true,
+          pack_id: '001'
+        }
+      ]
+    });
+
+    const report = validator.validate('video_prompts');
+    assert.strictEqual(report.status, 'failed');
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-VP-102'));
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-VP-103'));
+  });
+
+  await t.test('11. Storyboard delivery contract rejects declared but missing prompt files', () => {
+    const validPath = 'outputs/storyboard_pack_001_cn.md';
+    writeProjectFile(validPath, `---\nschema: storyboard.v1\nstage: storyboard\npack_id: "001"\n---\n${validStoryboardBody}`);
+    project.writeManifest({
+      version: 1,
+      project: 'temp_test_validator_project',
+      artifacts: [{
+        id: 'storyboard_final_001',
+        stage: 'storyboard',
+        kind: 'final',
+        role: 'primary_delivery',
+        path: validPath,
+        readable_by_downstream: true,
+        pack_id: '001'
+      }]
+    });
+    fs.rmSync(path.resolve(testDir, 'PROJECT_BOARD.md'), { force: true });
+
+    const report = validator.validate('storyboard');
+    assert.strictEqual(report.status, 'failed');
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-SB-201'));
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-SB-205'));
+  });
+
+  await t.test('12. Storyboard delivery contract rejects prompt files without whole-board sections', () => {
+    const validPath = 'outputs/storyboard_pack_001_cn.md';
+    writeProjectFile(validPath, `---\nschema: storyboard.v1\nstage: storyboard\npack_id: "001"\n---\n${validStoryboardBody}`);
+    writeStoryboardDeliveryFiles('# Prompt\n## Shot List\nSeg | Shot | Prompt CN');
+    writeStoryboardBoard('confirmed');
+    writeValidStoryboardManifest(validPath);
+
+    const report = validator.validate('storyboard');
+    assert.strictEqual(report.status, 'failed');
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-SB-207'));
+  });
+
+  await t.test('13. Storyboard delivery contract rejects pending confirmation in fast mode', () => {
+    const validPath = 'outputs/storyboard_pack_001_cn.md';
+    writeProjectFile(validPath, `---\nschema: storyboard.v1\nstage: storyboard\npack_id: "001"\n---\n${validStoryboardBody}`);
+    writeStoryboardDeliveryFiles();
+    writeStoryboardBoard('pending');
+    writeValidStoryboardManifest(validPath);
+
+    const report = validator.validate('storyboard');
+    assert.strictEqual(report.status, 'failed');
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-SB-208'));
+  });
+
+  await t.test('13b. Storyboard delivery contract rejects missing confirmation in fast mode', () => {
+    const validPath = 'outputs/storyboard_pack_001_cn.md';
+    writeProjectFile(validPath, `---\nschema: storyboard.v1\nstage: storyboard\npack_id: "001"\n---\n${validStoryboardBody}`);
+    writeStoryboardDeliveryFiles();
+    writeStoryboardBoard('confirmed');
+    writeValidStoryboardManifest(validPath);
+    fs.writeFileSync(path.resolve(testDir, 'PROJECT_BOARD.md'), fs.readFileSync(path.resolve(testDir, 'PROJECT_BOARD.md'), 'utf8').replace(/confirmations:[\s\S]*?execution_policy:/, 'execution_policy:'), 'utf8');
+
+    const report = validator.validate('storyboard');
+    assert.strictEqual(report.status, 'failed');
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-SB-208'));
+  });
+
+  await t.test('13c. Storyboard design reconciliation requires conditional fields and review dimensions', () => {
+    const validPath = 'outputs/storyboard_pack_001_cn.md';
+    writeProjectFile(validPath, `---\nschema: storyboard.v1\nstage: storyboard\npack_id: "001"\n---\n${validStoryboardBody}`);
+    writeStoryboardDeliveryFiles();
+    writeProjectFile('details/storyboard/design_reconciliation_review_v1.md', '# design_reconciliation_review\ndesign_revision_required: true\nchecked_storyboard_sources:\n  - outputs/storyboard_pack_001_cn.md\nchecked_design_sources:\n  - outputs/design.md\nno_design_change_reason: 不需要\n');
+    writeStoryboardBoard('confirmed');
+    writeValidStoryboardManifest(validPath);
+
+    const report = validator.validate('storyboard');
+    assert.strictEqual(report.status, 'failed');
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-SB-214'));
+  });
+
+  await t.test('14. Storyboard delivery contract passes with registered files, board index, and prompt sections', () => {
+    const validPath = 'outputs/storyboard_pack_001_cn.md';
+    writeProjectFile(validPath, `---\nschema: storyboard.v1\nstage: storyboard\npack_id: "001"\n---\n${validStoryboardBody}`);
+    writeStoryboardDeliveryFiles();
+    writeStoryboardBoard('confirmed');
+    writeValidStoryboardManifest(validPath);
+
+    const report = validator.validate('storyboard');
+    assert.strictEqual(report.status, 'passed');
+    assert.strictEqual(report.errors.length, 0);
+  });
+
+  await t.test('15. Video prompts delivery contract rejects missing pack and review files', () => {
+    const vpPath = 'outputs/video_prompts_pack_001_cn.md';
+    writeProjectFile(vpPath, validVideoPromptPackBody);
+    project.writeManifest({
+      version: 1,
+      project: 'temp_test_validator_project',
+      artifacts: [
+        {
+          id: 'storyboard_pack_001',
+          stage: 'storyboard',
+          kind: 'final',
+          role: 'primary_delivery',
+          path: 'outputs/storyboard_pack_001_cn.md',
+          readable_by_downstream: true,
+          pack_id: '001'
+        },
+        {
+          id: 'vp_legacy_001',
+          stage: 'video_prompts',
+          kind: 'final',
+          role: 'primary_delivery',
+          path: vpPath,
+          readable_by_downstream: true,
+          pack_id: '001'
+        }
+      ]
+    });
+    fs.rmSync(path.resolve(testDir, 'PROJECT_BOARD.md'), { force: true });
+
+    const report = validator.validate('video_prompts');
+    assert.strictEqual(report.status, 'failed');
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-VP-201'));
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-VP-202'));
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-VP-203'));
+  });
+
+  await t.test('16. Video prompts delivery contract rejects pack files without required runtime sections', () => {
+    writeVideoPromptDeliveryFiles(`---
+schema: video_prompts.v1
+stage: video_prompts
+pack_id: "001"
+---
+## pack_audio_execution_plan
+## video_prompt_pack_plan
+## global_execution_preamble
+## project_level_global_rules
+## segment_sound_execution
+BGM
+foley
+sfx
+Ambience
+Silence
+## segment_technical_control_block
+primary_vgu_ids
+continuity_in
+continuity_out
+blocking_execution
+prop_state_execution
+next_handoff
+## shot_by_shot_director_prompt
+shot_continuity
+screen_positioning
+## prompt_trace
+## video_prompt_review`);
+    writeVideoPromptBoard('confirmed');
+    writeValidVideoPromptManifest();
+
+    const report = validator.validate('video_prompts');
+    assert.strictEqual(report.status, 'failed');
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-VP-204'));
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-VP-205'));
+  });
+
+  await t.test('17. Video prompts delivery contract rejects pending confirmation in fast mode', () => {
+    writeVideoPromptDeliveryFiles();
+    writeVideoPromptBoard('pending');
+    writeValidVideoPromptManifest();
+
+    const report = validator.validate('video_prompts');
+    assert.strictEqual(report.status, 'failed');
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-VP-206'));
+  });
+
+  await t.test('17b. Video prompts delivery contract rejects locked full_auto mode', () => {
+    writeVideoPromptDeliveryFiles();
+    writeVideoPromptBoard('confirmed');
+    writeValidVideoPromptManifest();
+    fs.writeFileSync(path.resolve(testDir, 'PROJECT_BOARD.md'), fs.readFileSync(path.resolve(testDir, 'PROJECT_BOARD.md'), 'utf8').replace('mode: fast_production', 'mode: full_auto'), 'utf8');
+
+    const report = validator.validate('video_prompts');
+    assert.strictEqual(report.status, 'failed');
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-VP-206'));
+  });
+
+  await t.test('18. Video prompts delivery contract passes with registered pack files, review, and board index', () => {
+    writeVideoPromptDeliveryFiles();
+    writeVideoPromptBoard('confirmed');
+    writeValidVideoPromptManifest();
+
+    const report = validator.validate('video_prompts');
+    assert.strictEqual(report.status, 'passed');
+    assert.strictEqual(report.errors.length, 0);
+  });
+
+  await t.test('19. Design delivery contract rejects missing required design artifacts', () => {
+    writeProjectFile('outputs/design.md', validDesignBody);
+    project.writeManifest({
+      version: 1,
+      project: 'temp_test_validator_project',
+      artifacts: [{
+        id: 'design-final',
+        stage: 'design',
+        kind: 'final',
+        role: 'design_output',
+        path: 'outputs/design.md',
+        readable_by_downstream: true
+      }]
+    });
+    fs.rmSync(path.resolve(testDir, 'PROJECT_BOARD.md'), { force: true });
+
+    const report = validator.validate('design');
+    assert.strictEqual(report.status, 'failed');
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-DG-201'));
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-DG-205'));
+  });
+
+  await t.test('20. Design delivery contract rejects English-dominant poster-style character prompt', () => {
+    writeDesignDeliveryFiles(`# Character Poster
+
+single portrait, cinematic portrait, hero poster, highly detailed character poster, dramatic lighting, full body, cool pose
+
+## character design board
+front view, side view`);
+    writeDesignBoard('confirmed');
+    writeValidDesignManifest();
+
+    const report = validator.validate('design');
+    assert.strictEqual(report.status, 'failed');
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-DG-207'));
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-DG-208'));
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-DG-209'));
+  });
+
+  await t.test('21. Design delivery contract rejects pending confirmation in fast mode', () => {
+    writeDesignDeliveryFiles();
+    writeDesignBoard('pending');
+    writeValidDesignManifest();
+
+    const report = validator.validate('design');
+    assert.strictEqual(report.status, 'failed');
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-DG-210'));
+  });
+
+  await t.test('21b. Design delivery contract rejects missing confirmation in fast mode', () => {
+    writeDesignDeliveryFiles();
+    writeDesignBoard('confirmed');
+    writeValidDesignManifest();
+    fs.writeFileSync(path.resolve(testDir, 'PROJECT_BOARD.md'), fs.readFileSync(path.resolve(testDir, 'PROJECT_BOARD.md'), 'utf8').replace(/confirmations:[\s\S]*?execution_policy:/, 'execution_policy:'), 'utf8');
+
+    const report = validator.validate('design');
+    assert.strictEqual(report.status, 'failed');
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-DG-210'));
+  });
+
+  await t.test('22. Design delivery contract passes with registered files, Chinese prompt, and board index', () => {
+    writeDesignDeliveryFiles();
+    writeDesignBoard('confirmed');
+    writeValidDesignManifest();
+
+    const report = validator.validate('design');
+    assert.strictEqual(report.status, 'passed');
+    assert.strictEqual(report.errors.length, 0);
   });
 
   // Cleanup

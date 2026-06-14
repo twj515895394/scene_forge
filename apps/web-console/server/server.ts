@@ -12,6 +12,7 @@ import { engineVersion, Project, StateMachine, parseMarkdownFrontmatter } from '
 import { AcpSubprocess, AcpJsonRpcTransport, AcpClientConnection } from './acp/index.js';
 import { buildSessionBubblesFromJsonl } from './chatHistory.js';
 import { extractClaudeChunks } from './claudeStream.js';
+import { getArtifactsForStage } from './artifactDiscovery.js';
 import { mergeVisibleBubbleChunk } from './liveBubbleAccumulator.js';
 import {
   buildIdeBlockedPromptPayload,
@@ -143,6 +144,78 @@ app.get('/api/file', (req, res) => {
 // Global tracker for currently active workspace project path
 let activeProjectPath: string | null = null;
 
+type ExecutionPolicyMode = 'fast_production' | 'full_auto';
+
+function isExecutionPolicyMode(value: unknown): value is ExecutionPolicyMode {
+  return value === 'fast_production' || value === 'full_auto';
+}
+
+function buildExecutionPolicyYaml(mode: ExecutionPolicyMode): string {
+  return [
+    'execution_policy:',
+    `  mode: ${mode}`,
+    `  updated_at: '${new Date().toISOString()}'`,
+    '  full_auto_requires:',
+    '    topic_gate_confirmed: true',
+    '    adaptation_confirmed: true',
+    '    duration_confirmed: true',
+    '    segment_strategy_confirmed: true',
+  ].join('\n');
+}
+
+function upsertExecutionPolicyBlock(boardContent: string, mode: ExecutionPolicyMode): string {
+  const block = buildExecutionPolicyYaml(mode);
+  const existingBlockPattern = /^execution_policy:\n(?:^[ \t]+.*\n?)*/m;
+  if (existingBlockPattern.test(boardContent)) {
+    return boardContent.replace(existingBlockPattern, `${block}\n`);
+  }
+
+  const insertBeforeRuntime = /^runtime_policy:/m;
+  if (insertBeforeRuntime.test(boardContent)) {
+    return boardContent.replace(insertBeforeRuntime, `${block}\n$&`);
+  }
+
+  return `${block}\n${boardContent}`;
+}
+
+function readProjectBoardState(projectPath: string): any | null {
+  const boardPath = path.join(projectPath, 'PROJECT_BOARD.md');
+  if (!fs.existsSync(boardPath)) {
+    return null;
+  }
+  try {
+    const boardContent = fs.readFileSync(boardPath, 'utf8');
+    const parsed = parseMarkdownFrontmatter(boardContent);
+    return parsed.frontmatter;
+  } catch (err) {
+    console.error('Failed to parse PROJECT_BOARD.md:', err);
+    return null;
+  }
+}
+
+function getExecutionPolicyContext(projectPath: string): string {
+  const boardState = readProjectBoardState(projectPath);
+  const mode = boardState?.execution_policy?.mode === 'full_auto' ? 'full_auto' : 'fast_production';
+  const confirmations = boardState?.confirmations ?? {};
+  const config = boardState?.project_config ?? {};
+  const confirmed = (value: any) => value?.status === 'confirmed' || value?.status === 'legacy confirmed';
+  const fullAutoUnlocked = (
+    confirmed(confirmations.topic_confirmed) &&
+    confirmed(confirmations.style_family_confirmed) &&
+    confirmed(confirmations.style_confirmed) &&
+    confirmed(confirmations.script_confirmed) &&
+    Boolean(config.target_total_duration_seconds) &&
+    Boolean(config.segment_duration_seconds)
+  );
+
+  return `当前执行策略 execution_policy.mode = ${mode}。
+- fast_production：默认快速执行模式。topic_gate、script/adaptation、design、storyboard、video_prompts 等关键创作阶段保留确认；reference、story、assets、performance、audio、publish_review 等执行型阶段可自动落盘并汇报产物。
+- full_auto：全自动模式。只有 topic_gate + script/adaptation 必须先确认题材、风格、改编方向、目标总时长、分段策略和输出目标；之后 design/performance/storyboard/audio/video_prompts/publish_review 自动执行。
+- full_auto 当前状态：${fullAutoUnlocked ? '已解锁，可在硬错误前自动推进后续阶段' : '待解锁，前置确认未完全满足，不得跳过 topic_gate 或 script/adaptation 的确认'}。
+- 全自动硬停机条件：validator/review 失败、必填字段缺失、时长/分段策略冲突、上游关键产物不存在、CLI 状态机无法推进。
+- 创作质量一般但结构可用时，不中断流程；在最终汇报中标注风险。`;
+}
+
 // 2. Projects Discovery API
 app.get('/api/projects', (req, res) => {
   try {
@@ -200,18 +273,7 @@ app.post('/api/projects/active', (req, res) => {
   const stateMachine = new StateMachine(project);
   const state = stateMachine.readState();
 
-  // Parse PROJECT_BOARD.md
-  let boardState = null;
-  const boardPath = path.join(activeProjectPath, 'PROJECT_BOARD.md');
-  if (fs.existsSync(boardPath)) {
-    try {
-      const boardContent = fs.readFileSync(boardPath, 'utf8');
-      const parsed = parseMarkdownFrontmatter(boardContent);
-      boardState = parsed.frontmatter;
-    } catch (err) {
-      console.error('Failed to parse PROJECT_BOARD.md:', err);
-    }
-  }
+  const boardState = readProjectBoardState(activeProjectPath);
 
   res.json({ success: true, projectSlug, state, boardState });
 });
@@ -226,18 +288,7 @@ app.get('/api/projects/active', (req, res) => {
     const stateMachine = new StateMachine(project);
     const state = stateMachine.readState();
 
-    // Parse PROJECT_BOARD.md
-    let boardState = null;
-    const boardPath = path.join(activeProjectPath, 'PROJECT_BOARD.md');
-    if (fs.existsSync(boardPath)) {
-      try {
-        const boardContent = fs.readFileSync(boardPath, 'utf8');
-        const parsed = parseMarkdownFrontmatter(boardContent);
-        boardState = parsed.frontmatter;
-      } catch (err) {
-        console.error('Failed to parse PROJECT_BOARD.md:', err);
-      }
-    }
+    const boardState = readProjectBoardState(activeProjectPath);
 
     res.json({
       active: true,
@@ -245,6 +296,34 @@ app.get('/api/projects/active', (req, res) => {
       path: activeProjectPath,
       state,
       boardState
+    });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.post('/api/projects/active/execution-policy', (req, res) => {
+  if (!activeProjectPath) {
+    return res.status(400).json({ error: 'No active project selected' });
+  }
+
+  const { mode } = req.body;
+  if (!isExecutionPolicyMode(mode)) {
+    return res.status(400).json({ error: 'Invalid execution policy mode' });
+  }
+
+  const boardPath = path.join(activeProjectPath, 'PROJECT_BOARD.md');
+  if (!fs.existsSync(boardPath)) {
+    return res.status(404).json({ error: 'PROJECT_BOARD.md not found' });
+  }
+
+  try {
+    const boardContent = fs.readFileSync(boardPath, 'utf8');
+    fs.writeFileSync(boardPath, upsertExecutionPolicyBlock(boardContent, mode), 'utf8');
+    res.json({
+      success: true,
+      mode,
+      boardState: readProjectBoardState(activeProjectPath),
     });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
@@ -411,13 +490,6 @@ app.post('/api/projects', (req, res) => {
   }
 });
 
-// Helper to map 12-stage keys to 7-stage keys in the manifest
-function getManifestStagesFor12Stage(stage12: string): string[] {
-  if (stage12 === 'topic') return ['topic', 'topic_gate'];
-  if (stage12 === 'publish') return ['publish', 'publish_review'];
-  return [stage12];
-}
-
 // 6. Artifacts dynamic listing API
 app.get('/api/artifacts', (req, res) => {
   const stage = req.query.stage as string;
@@ -428,112 +500,7 @@ app.get('/api/artifacts', (req, res) => {
     return res.status(400).json({ error: 'No active project selected' });
   }
   try {
-    const project = new Project(activeProjectPath);
-    
-    // 1. Read from manifest
-    let list: any[] = [];
-    try {
-      const manifest = project.readManifest();
-      const manifestStages = getManifestStagesFor12Stage(stage);
-      list = manifest.artifacts.filter(a => manifestStages.includes(a.stage));
-      // Normalize stage names to the 12-stage name so the frontend aligns
-      list = list.map(a => ({
-        ...a,
-        stage: stage
-      }));
-    } catch (err) {
-      // Manifest might not exist yet
-    }
-
-    // 2. Read from PROJECT_BOARD.md's stage_index
-    const boardPath = path.join(activeProjectPath, 'PROJECT_BOARD.md');
-    if (fs.existsSync(boardPath)) {
-      try {
-        const boardContent = fs.readFileSync(boardPath, 'utf8');
-        const parsed = parseMarkdownFrontmatter(boardContent);
-        const boardState = parsed.frontmatter;
-        const stageIndex = boardState?.stage_index?.[stage];
-        if (stageIndex && stageIndex.files) {
-          const files = stageIndex.files;
-          const version = stageIndex.active_version || 'v1';
-          
-          if (files.primary && typeof files.primary === 'string') {
-            if (!list.some(a => a.path === files.primary)) {
-              list.push({
-                id: `${stage}_primary_${version}`,
-                stage,
-                kind: 'final',
-                role: 'primary_delivery',
-                path: files.primary
-              });
-            }
-          }
-          if (files.index && typeof files.index === 'string') {
-            if (!list.some(a => a.path === files.index)) {
-              list.push({
-                id: `${stage}_index_${version}`,
-                stage,
-                kind: 'final',
-                role: 'index',
-                path: files.index
-              });
-            }
-          }
-          if (Array.isArray(files.outputs)) {
-            files.outputs.forEach((file: string, idx: number) => {
-              if (file && typeof file === 'string' && !list.some(a => a.path === file)) {
-                list.push({
-                  id: `${stage}_output_${idx}_${version}`,
-                  stage,
-                  kind: 'final',
-                  role: 'output',
-                  path: file
-                });
-              }
-            });
-          }
-          if (Array.isArray(files.details)) {
-            files.details.forEach((file: string, idx: number) => {
-              if (file && typeof file === 'string' && !list.some(a => a.path === file)) {
-                list.push({
-                  id: `${stage}_detail_${idx}_${version}`,
-                  stage,
-                  kind: 'draft',
-                  role: 'detail',
-                  path: file
-                });
-              }
-            });
-          }
-          if (files.handoff && typeof files.handoff === 'string') {
-            if (!list.some(a => a.path === files.handoff)) {
-              list.push({
-                id: `${stage}_handoff_${version}`,
-                stage,
-                kind: 'review',
-                role: 'handoff',
-                path: files.handoff
-              });
-            }
-          }
-          if (files.quality_check && typeof files.quality_check === 'string') {
-            if (!list.some(a => a.path === files.quality_check)) {
-              list.push({
-                id: `${stage}_qc_${version}`,
-                stage,
-                kind: 'review',
-                role: 'quality_check',
-                path: files.quality_check
-              });
-            }
-          }
-        }
-      } catch (err) {
-        console.error('Failed to parse PROJECT_BOARD.md in /api/artifacts:', err);
-      }
-    }
-
-    res.json(list);
+    res.json(getArtifactsForStage(activeProjectPath, stage));
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
@@ -638,6 +605,7 @@ function buildProjectContext(projectPath: string): string {
   const slug = path.basename(projectPath);
   if (projectPath !== workspaceRoot) {
     return `【重要提示】当前正在操作的项目是：${slug}。
+${getExecutionPolicyContext(projectPath)}
 1. 所有该项目的产物（无论是通过工具写入文件还是生成代码）在调用工具时，必须使用以项目文件夹为起点的完整相对路径（即以 'projects/${slug}/' 开头）：
    - 正式产物写盘路径应为：'projects/${slug}/outputs/' (例如：'projects/${slug}/outputs/video_prompts_pack_001.md')
    - 过程草稿写盘路径应为：'projects/${slug}/details/'
@@ -651,6 +619,8 @@ function buildProjectContext(projectPath: string): string {
    - cd projects/${slug} && node ../../packages/engine/dist/cli.js start --stage <stage>
    - cd projects/${slug} && node ../../packages/engine/dist/cli.js validate --stage <stage>
    - cd projects/${slug} && node ../../packages/engine/dist/cli.js complete --stage <stage>
+   - cd projects/${slug} && node ../../packages/engine/dist/cli.js rules --stage <stage>
+   严禁在工作区根目录、/Users/tangwujun/Documents 或其他目录直接执行 'node ../../packages/engine/dist/cli.js ...'，否则相对路径会解析到错误位置。
 3. 随时阅读根目录下的 './AGENTS.md' 了解开发规范，而不是 './CLAUDE.md'。`;
   }
   return `【当前状态】工作区处于根目录，暂无激活的具体创作项目。
@@ -1264,10 +1234,12 @@ wss.on('connection', (ws: WebSocket) => {
         case 'macro': {
           const { action, stage } = payload;
           if (action && stage) {
+            const slug = activeProjectPath ? path.basename(activeProjectPath) : '<project-slug>';
+            const cliPrefix = `cd projects/${slug} && node ../../packages/engine/dist/cli.js`;
             const prompts: Record<string, string> = {
-              start: `请开始执行 ${stage} 阶段 learnings 对应的管线制作工作。先检查上游依赖是否完成，然后按照 Project Board 中的规范生成产物。`,
-              validate: `请对 ${stage} 阶段的产物执行格式校验（Lint/Validator），并输出校验结果。`,
-              complete: `请确认 ${stage} 阶段的工作已完成，执行 Complete 流程：生成 Handoff 文件，更新 PROJECT_STATE.json 状态。`
+              start: `请开始执行 ${stage} 阶段 learnings 对应的管线制作工作。先检查上游依赖是否完成。所有 CLI 命令必须使用当前项目目录执行，例如：\`${cliPrefix} start --stage ${stage}\`。`,
+              validate: `请对 ${stage} 阶段的产物执行格式校验（Lint/Validator），并输出校验结果。必须使用当前项目目录执行：\`${cliPrefix} validate --stage ${stage}\`；查看规则使用：\`${cliPrefix} rules --stage ${stage}\`。`,
+              complete: `请确认 ${stage} 阶段的工作已完成，执行 Complete 流程：生成 Handoff 文件，更新 PROJECT_STATE.json 状态。必须使用当前项目目录执行：\`${cliPrefix} complete --stage ${stage}\`。`
             };
             if (prompts[action]) await runClaude(prompts[action]);
           }

@@ -77,6 +77,16 @@ function dedupeConsecutiveTextBubbles<T extends ChatBubble>(items: T[]): T[] {
     ) {
       continue;
     }
+    if (normalized && previous?.type === 'text') {
+      const previousNormalized = normalizeBubbleTextForMerge(previous.content);
+      if (normalized.length > previousNormalized.length && normalized.startsWith(previousNormalized)) {
+        next[next.length - 1] = bubble;
+        continue;
+      }
+      if (previousNormalized.startsWith(normalized)) {
+        continue;
+      }
+    }
 
     next.push(bubble);
   }
@@ -346,6 +356,36 @@ export default function App() {
       setBubbles([]);
     } catch (err) {
       console.error('Failed to return to lobby:', err);
+    }
+  };
+
+  const handleExecutionModeChange = async (mode: 'fast_production' | 'full_auto') => {
+    try {
+      const res = await fetch('/api/projects/active/execution-policy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode }),
+      });
+      if (!res.ok) {
+        throw new Error('Failed to update execution policy');
+      }
+      const data = await res.json();
+      if (data.boardState) {
+        setBoardState(data.boardState);
+      }
+      setBubbles((prev) => [
+        ...prev,
+        {
+          id: `system-execution-policy-${Date.now()}`,
+          type: 'system',
+          content: mode === 'full_auto'
+            ? '已切换为全自动模式：topic_gate + script/adaptation 确认后，后续阶段将自动执行，硬错误才暂停。'
+            : '已切换为快速执行模式：关键创作阶段保留确认，执行型阶段自动落盘汇报。',
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+    } catch (err) {
+      console.error('Failed to update execution policy:', err);
     }
   };
 
@@ -730,9 +770,9 @@ export default function App() {
       // Code blocks first (before other transformations)
       .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre class="md-code-block"><code>$2</code></pre>')
       // Headings
-      .replace(/^### (.*$)/gim, '<h3 class="md-h3">$1</h3>')
-      .replace(/^## (.*$)/gim, '<h2 class="md-h2">$1</h2>')
-      .replace(/^# (.*$)/gim, '<h1 class="md-h1">$1</h1>')
+      .replace(/^###\s*(.*$)/gim, '<h3 class="md-h3">$1</h3>')
+      .replace(/^##\s*(.*$)/gim, '<h2 class="md-h2">$1</h2>')
+      .replace(/^#\s*(.*$)/gim, '<h1 class="md-h1">$1</h1>')
       // Bold and italic
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.+?)\*/g, '<em>$1</em>')
@@ -857,7 +897,8 @@ export default function App() {
     chatEndRef,
     hasPendingPrompt,
     onPromptSubmit: handlePromptSubmit,
-    onSelectArtifact: fetchPreviewFile
+    onSelectArtifact: fetchPreviewFile,
+    onExecutionModeChange: handleExecutionModeChange
   };
 
   if (activeProject === null) {

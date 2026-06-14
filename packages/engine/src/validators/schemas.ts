@@ -33,6 +33,11 @@ export const PerformanceFrontmatterSchema = CommonFrontmatterSchema.extend({
   language: z.string().optional()
 });
 
+export const DesignFrontmatterSchema = CommonFrontmatterSchema.extend({
+  version: z.string().optional(),
+  language: z.string().optional()
+});
+
 export const TopicGateFrontmatterSchema = CommonFrontmatterSchema.extend({
   version: z.string().optional()
 });
@@ -44,6 +49,7 @@ export const PublishReviewFrontmatterSchema = CommonFrontmatterSchema.extend({
 export const FrontmatterSchemas: Record<string, z.ZodObject<any>> = {
   topic_gate: TopicGateFrontmatterSchema,
   script: ScriptFrontmatterSchema,
+  design: DesignFrontmatterSchema,
   performance: PerformanceFrontmatterSchema,
   audio: AudioFrontmatterSchema,
   storyboard: StoryboardFrontmatterSchema,
