@@ -1,4 +1,4 @@
-Status: deferred-optimization
+Status: completed
 
 # Issue 17: 实时聊天流与确认卡片稳定性收口
 

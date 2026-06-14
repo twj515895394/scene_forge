@@ -1,4 +1,4 @@
-Status: deferred-optimization
+Status: completed
 
 # Issue 16: 历史聊天去重与 Markdown 渲染净化收口
 

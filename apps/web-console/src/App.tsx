@@ -125,48 +125,6 @@ function resolveThoughtBubbles(items: ChatBubble[], resolvedAt = Date.now()): Ch
   });
 }
 
-function flattenMarkdownTablesForChat(value: string): string {
-  return value.replace(/((?:^\|.*\|$\n?)+)/gm, (tableBlock: string) => {
-    const rows = tableBlock
-      .trim()
-      .split('\n')
-      .map((row) => row.trim())
-      .filter(Boolean);
-
-    if (rows.length < 2) {
-      return tableBlock;
-    }
-
-    const parsedRows = rows
-      .filter((row, index) => {
-        if (index === 0) return true;
-        return !/^\|?(?:\s*:?-{3,}:?\s*\|){1,}\s*:?-{3,}:?\s*\|?\s*$/.test(row);
-      })
-      .map((row) => row.split('|').map((cell) => cell.trim()).filter((cell, index, arr) => index > 0 && index < arr.length - 1));
-
-    if (parsedRows.length === 0) {
-      return '';
-    }
-
-    const headers = parsedRows[0] ?? [];
-    const bodyRows = parsedRows.slice(1);
-
-    if (bodyRows.length === 0) {
-      return headers.join(' | ');
-    }
-
-    return bodyRows
-      .map((cells) =>
-        cells
-          .map((cell, index) => {
-            const header = headers[index];
-            return header ? `${header}：${cell}` : cell;
-          })
-          .join(' | ')
-      )
-      .join('\n');
-  });
-}
 
 function summarizeChatRenderableArtifacts(value: string) {
   return summarizeChatNoise(value);
@@ -758,8 +716,6 @@ export default function App() {
     }
 
     if (mode === 'chat') {
-      markdownText = stripChatNoiseLines(markdownText);
-      markdownText = flattenMarkdownTablesForChat(markdownText);
       markdownText = stripChatNoiseLines(markdownText);
       if (!isChatContentRenderable(markdownText)) {
         return null;

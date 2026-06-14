@@ -1,0 +1,369 @@
+/* ==========================================
+   Output Artifact Visualizer (B)
+   ========================================== */
+.preview-header-b {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-b);
+  background: var(--bg-dark-b);
+}
+
+.file-icon-b {
+  font-size: 14px;
+}
+
+.file-name-b {
+  font-family: var(--sf-font-mono);
+  font-size: var(--sf-text-meta);
+  color: var(--text-muted-b);
+  font-weight: 600;
+}
+
+.preview-content-b {
+  flex: 1;
+  padding: 10px 13px 12px;
+  font-family: var(--sf-font-sans);
+  font-size: var(--sf-text-body);
+  line-height: 1.28;
+  color: var(--sf-text-secondary);
+  background: #090c11;
+}
+
+.preview-content-b .md-h1 {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--sf-text-primary);
+  border-bottom: 1px solid var(--border-b);
+  padding-bottom: 4px;
+  margin: 0 0 7px;
+}
+
+.preview-content-b .md-h2 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  margin-top: 7px;
+  margin-bottom: 1px;
+}
+
+.preview-content-b .md-h3 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sf-text-primary);
+  margin-top: 4px;
+  margin-bottom: 1px;
+}
+
+.preview-content-b p,
+.preview-content-b .md-p {
+  margin: 0 0 2px;
+}
+
+.preview-content-b .md-ul,
+.preview-content-b .md-ol {
+  margin: 4px 0;
+  padding-left: 18px;
+}
+
+.preview-content-b .md-li {
+  margin: 1px 0;
+  line-height: 1.2;
+}
+
+.preview-content-b .md-hr {
+  margin: 6px 0;
+}
+
+.preview-content-b .md-table-wrapper {
+  margin: 6px 0;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(13, 17, 23, 0.25);
+}
+
+.preview-content-b .md-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 0;
+  font-size: var(--sf-text-body-sm);
+  background: rgba(13, 17, 23, 0.35);
+}
+
+.preview-content-b .md-table th {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 2px solid rgba(0, 240, 255, 0.28);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--accent-cyan, #00f0ff);
+  font-weight: 600;
+  font-size: var(--sf-text-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: rgba(0, 240, 255, 0.045);
+}
+
+.preview-content-b .md-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--sf-text-secondary);
+  vertical-align: top;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.preview-content-b .md-table th:last-child,
+.preview-content-b .md-table td:last-child {
+  border-right: none;
+}
+
+.preview-content-b .md-table tr:last-child td {
+  border-bottom: none;
+}
+
+.preview-content-b .md-table tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.preview-content-b .md-table tr:hover td {
+  background: rgba(0, 240, 255, 0.06) !important;
+  color: var(--sf-text-primary);
+}
+
+.preview-content-b .md-p:empty {
+  display: none;
+}
+
+.preview-content-b .md-h2 + .md-table-wrapper,
+.preview-content-b .md-h2 + .md-table,
+.preview-content-b .md-h2 + .md-p,
+.preview-content-b .md-h2 + .md-h3,
+.preview-content-b .md-h3 + .md-p,
+.preview-content-b .md-h3 + .md-table-wrapper,
+.preview-content-b .md-h3 + .md-table {
+  margin-top: 1px;
+}
+
+.preview-content-b .md-code {
+  background: #11161d;
+  color: #f0b5ff;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: var(--sf-text-meta);
+  font-family: var(--sf-font-mono);
+}
+
+
+/* ==========================================
+   Claudian-aligned Markdown & Tool UI Styles
+   ========================================== */
+
+/* Custom Unordered List styling */
+.markdown-body-b .md-ul {
+  padding-left: 20px;
+  margin: 8px 0;
+  list-style-type: square;
+}
+.markdown-body-b .md-li {
+  margin-bottom: 4px;
+  color: #cbd5e1;
+}
+.markdown-body-b .md-li::marker {
+  color: var(--accent-cyan);
+}
+
+/* Custom Ordered List styling */
+.markdown-body-b .md-ol {
+  padding-left: 20px;
+  margin: 8px 0;
+  list-style-type: decimal;
+}
+
+/* Custom Blockquote styling */
+.markdown-body-b .md-blockquote {
+  border-left: 2px solid rgba(141, 176, 204, 0.28);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 9px 14px;
+  margin: 10px 0;
+  border-radius: 0;
+  color: var(--sf-text-secondary);
+  font-style: italic;
+}
+
+/* Custom Hyperlink styling */
+.markdown-body-b .md-link {
+  color: var(--accent-cyan);
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(117, 210, 255, 0.35);
+  transition: all 0.2s ease;
+}
+.markdown-body-b .md-link:hover {
+  color: var(--sf-text-primary);
+  border-bottom-color: var(--sf-text-primary);
+  text-shadow: none;
+}
+
+/* Custom Image styling */
+.markdown-body-b .md-img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  border: 1px solid var(--border-b);
+  margin: 12px 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Custom Horizontal Line styling */
+.md-hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 12px 0;
+  box-shadow: none;
+}
+
+/* Premium Dark Tables with scroll wrapper */
+.md-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 14px 0;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(13, 17, 23, 0.2);
+}
+
+/* Premium scrollbar for table wrapper */
+.md-table-wrapper::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.md-table-wrapper::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+.md-table-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+}
+.md-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 240, 255, 0.35);
+}
+
+.markdown-body-b .md-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 0;
+  font-size: var(--sf-text-body-sm);
+  background: rgba(13, 17, 23, 0.35);
+  overflow: hidden;
+  border: none;
+}
+.markdown-body-b .md-table th {
+  text-align: left;
+  padding: 11px 14px;
+  border-bottom: 2px solid rgba(0, 240, 255, 0.28);
+  color: var(--accent-cyan, #00f0ff);
+  font-weight: 600;
+  font-size: var(--sf-text-meta);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: rgba(0, 240, 255, 0.045);
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.12);
+}
+.markdown-body-b .md-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: var(--sf-text-secondary);
+  vertical-align: top;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.markdown-body-b .md-table tr:last-child td {
+  border-bottom: none;
+}
+.markdown-body-b .md-table tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.012);
+}
+.markdown-body-b .md-table tr:hover td {
+  background: rgba(0, 240, 255, 0.06) !important;
+  color: var(--sf-text-primary);
+}
+
+/* Claudian-aligned Tool Call Cards */
+.claudian-tool-call-container {
+  margin: 6px 0;
+  width: 100%;
+  align-self: stretch;
+  background: rgba(255, 255, 255, 0.018);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.claudian-tool-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 13px;
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  user-select: none;
+  font-family: var(--sf-font-mono);
+  font-size: var(--sf-text-meta);
+}
+
+.claudian-tool-header:not(.collapsed) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.claudian-tool-header:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.claudian-tool-icon {
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.claudian-tool-icon.status-running {
+  animation: pulse-blue 1.5s infinite ease-in-out;
+}
+
+.claudian-tool-name {
+  color: var(--sf-text-primary);
+  font-weight: 600;
+}
+
+.claudian-tool-summary {
+  color: var(--sf-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--sf-text-micro);
+  opacity: 0.85;
+  margin-left: 8px;
+}
+
+.claudian-tool-content {
+  padding: 11px 13px 12px;
+  background: rgba(0, 0, 0, 0.14);
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.claudian-tool-result-pre {
+  margin: 0;
+  font-family: var(--sf-font-mono);
+  font-size: var(--sf-text-meta);
+  line-height: 1.44;
+  color: #cbd5e1;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 300px;
+  overflow-y: auto;
+  text-align: left;
+}
