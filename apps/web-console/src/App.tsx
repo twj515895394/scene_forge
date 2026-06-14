@@ -804,6 +804,12 @@ export default function App() {
       .replace(/\n\n/g, '<br/><br/>')
       .replace(/\n/g, '<br/>');
 
+    // Clean up extra <br/> tags that are adjacent to block tags
+    html = html
+      .replace(/(<\/(?:h1|h2|h3|div|ul|ol|li|table|thead|tbody|tr|th|td|blockquote|pre|hr)>)\s*(?:<br\s*\/?>)+/gi, '$1')
+      .replace(/(?:<br\s*\/?>)+\s*(<(?:h1|h2|h3|div|ul|ol|li|table|thead|tbody|tr|th|td|blockquote|pre|hr)[^>]*>)/gi, '$1');
+
+
     return (
       <div className="markdown-rendered-container">
         {Object.keys(frontmatter).length > 0 && (
