@@ -699,6 +699,14 @@ export default function App() {
     fetchSessions(); // Refresh history list
   };
 
+  const handleReloadClaudeConfig = () => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'reload_claude_config' }));
+    }
+    setBubbles([]);
+    fetchSessions();
+  };
+
   // Keystroke stdin
   const handleSend = (overrideText?: string | React.MouseEvent) => {
     const text = typeof overrideText === 'string' ? overrideText : inputVal;
@@ -883,6 +891,7 @@ export default function App() {
     handleSend,
     handleCancel,
     handleNewSession,
+    handleReloadClaudeConfig,
     agentRunning,
     sessions,
     sessionsLoading,

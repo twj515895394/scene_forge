@@ -47,6 +47,7 @@ interface VariantProps {
   handleSend: (overrideText?: string) => void;
   handleCancel: () => void;
   handleNewSession: () => void;
+  handleReloadClaudeConfig: () => void;
   agentRunning: boolean;
   sessions: any[];
   sessionsLoading: boolean;
@@ -164,6 +165,7 @@ export default function VariantB(props: VariantProps) {
     handleSend,
     handleCancel,
     handleNewSession,
+    handleReloadClaudeConfig,
     agentRunning,
     sessions,
     sessionsLoading,
@@ -988,6 +990,15 @@ export default function VariantB(props: VariantProps) {
                   className="h-7 px-2.5 text-[11px] text-muted-foreground hover:text-white hover:bg-white/5 border border-white/5"
                 >
                   + 新会话
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleReloadClaudeConfig}
+                  title="停止当前 Claude 进程并创建新会话。适用于 cc switch 修改 Claude CLI 配置；如果切换依赖环境变量，请重启 Web Console。"
+                  className="h-7 px-2.5 text-[11px] text-muted-foreground hover:text-white hover:bg-white/5 border border-white/5"
+                >
+                  重载 Claude
                 </Button>
               </div>
               <span className="label-done">通过对话驱动 Claude 推进管线</span>

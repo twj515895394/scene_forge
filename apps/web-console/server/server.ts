@@ -1231,6 +1231,33 @@ wss.on('connection', (ws: WebSocket) => {
           }
           break;
 
+        case 'reload_claude_config':
+          if (currentProcess) { try { currentProcess.kill('SIGINT'); } catch (_) {} }
+          currentProcess = null;
+          dismissActivePrompt();
+          sessionId = randomUUID();
+          isFirstMessage = true;
+          try {
+            fs.writeFileSync(activeSessionFile, sessionId, 'utf8');
+            console.log(`[Session] Reloaded Claude config with new session ID: ${sessionId}`);
+          } catch (err) {
+            console.warn(`Failed to write reloaded .active_session_id: ${(err as Error).message}`);
+          }
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'run_status', running: false }));
+            ws.send(JSON.stringify({ type: 'session_init', sessionId }));
+            ws.send(JSON.stringify({
+              type: 'output',
+              bubbles: [{
+                id: `reload-${Date.now()}`,
+                type: 'system',
+                content: 'Claude 配置已重载：已停止当前进程并创建新会话。下一次发送消息会重新启动 Claude CLI 并读取 cc switch 写入的配置；如果切换依赖环境变量，请重启 Web Console 服务。',
+                timestamp: new Date().toISOString()
+              }]
+            }));
+          }
+          break;
+
         case 'macro': {
           const { action, stage } = payload;
           if (action && stage) {
