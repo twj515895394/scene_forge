@@ -7,19 +7,18 @@ description: 当用户要为 SceneForge 项目生成角色与场景的风格化�
 
 为 SceneForge 项目生成角色、场景、关键道具和空间连续性的视觉设定，并产出可直接用于外部图像平台的设计 prompt。SceneForge 只输出提示词和制作说明，不声称已经生成图片。
 
-执行期通用约束见仓库根 `AGENTS.md`。本技能只定义 design 阶段的路由、读取边界、执行顺序和强制交付。
+执行期通用约束见仓库根 `AGENTS.md`。本技能只定义 design 阶段的路由、读取边界、执行顺序和强制交付。用户可读说明与正式产物默认中文主导。
 
 ## 必读参考
 
-执行本技能时按顺序读取：
+执行本技能时默认按顺序读取：
 
 1. `references/workflow.md`
 2. `references/required-deliverables.md`
 3. `references/review-checklist.md`
 4. `references/design-prompt-template.md`
-5. `references/output-contract.md` 中与当前阶段相关的字段章节
 
-若上下文紧张，优先完整读取 `required-deliverables.md` 与 `review-checklist.md`，再按需读取 `output-contract.md` 目标章节。
+`references/output-contract.md` 已降级为短机器契约，只在修复字段、实现 validator、排查 board/manifest 漂移时按需读取。
 
 ## 何时使用
 

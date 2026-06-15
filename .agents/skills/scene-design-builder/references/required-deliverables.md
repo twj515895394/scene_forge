@@ -1,10 +1,10 @@
-# Design Required Deliverables
+# Design 阶段强制交付清单
 
 本文件是从 `scene-design-builder` 既有阶段规则和 `references/output-contract.md` 抽出的交付清单，不以任何单个项目产物作为模板来源。
 
 Design 阶段完成时，以下文件必须真实存在、写入 manifest，并进入 `PROJECT_BOARD.md stage_index.design.files`。
 
-## Primary
+## 主交付
 
 ```text
 outputs/design.md
@@ -20,7 +20,7 @@ outputs/design.md
 - `prop_state_machines`
 - `blocking_map`
 
-## Details
+## 细节文件
 
 ```text
 details/design/character_design_*_v*.md
@@ -35,7 +35,7 @@ details/design/space_continuity_seed_v*.md
 details/角色说明书_*_v*.md
 ```
 
-## Design Prompt Outputs
+## 设计 Prompt 输出
 
 ```text
 outputs/design_prompts/角色说明书图片提示词_v*.md
@@ -56,7 +56,7 @@ outputs/design_prompts/空间站位图提示词_v*.md
 
 不得退化为单张海报式图。
 
-## Board Index
+## 黑板索引
 
 `PROJECT_BOARD.md` 必须同步：
 
@@ -76,7 +76,7 @@ stage_index:
         - outputs/design_prompts/全场景资产总参考图提示词_v*.md
 ```
 
-## Forbidden Completion
+## 禁止完成的情况
 
 不得把以下情况标记为 completed：
 

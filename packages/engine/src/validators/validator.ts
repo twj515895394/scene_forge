@@ -321,6 +321,43 @@ const VIDEO_PROMPTS_SOUND_REQUIRED_SECTIONS = [
   'Silence',
 ];
 
+const VIDEO_PROMPTS_COPY_BLOCK_REQUIRED_MARKERS = [
+  '【故事板关键帧参考规则】',
+  '将"控制故事板 Pack',
+  '顺序动作、镜头调度、空间关系和连续性主参考',
+  '将"风格故事板 Pack',
+  '角色渲染、场景质感、灯光影调、情绪氛围和最终画面质量辅助参考',
+  '严格依据控制故事板中的节拍推进、镜头节奏、构图逻辑、动作编排、空间关系和情绪递进',
+  '不渲染故事板中的边框、箭头、镜头编号、面板分隔线、UI标注或字幕',
+  '【项目级全局锁定规则】',
+  '主场景',
+  '角色锁定',
+  '不重复角色',
+  '画面可读性',
+  '风格锁定',
+  '灯光锁定',
+  '负向边界',
+  '技术控制说明',
+  '导演长版提示词',
+];
+
+const VIDEO_PROMPTS_DIRECTOR_PROMPT_REQUIRED_MARKERS = [
+  'Segment 总时间轴',
+  '镜头语言',
+  '画面构图',
+  '角色表演',
+  '情绪递进',
+  '动作弧线',
+  '空间',
+  '道具',
+  '情绪氛围',
+  '美术',
+  '灯光',
+  '声音',
+  'Foley-SFX',
+  '负向边界',
+];
+
 export const DEFAULT_STAGE_RULES: Record<string, StageRule> = {
   topic_gate: {
     expected_file_pattern: '^outputs/topic\\.md$',
@@ -673,6 +710,15 @@ export class Validator {
             suggestion: 'Add a design reconciliation review that explains whether final storyboard requires design revisions.'
           });
         }
+        if (revisionRequired === 'true' && missingConditionalMarkers.length === 0) {
+          errors.push({
+            rule_id: 'SF-SB-215',
+            severity: 'error',
+            artifact: reconciliationArtifact.path,
+            message: 'Storyboard design reconciliation requires design revisions before this stage can complete.',
+            suggestion: 'Return to the design stage, apply the recommended_design_updates, then rerun storyboard validation.'
+          });
+        }
       }
     }
 
@@ -936,6 +982,9 @@ export class Validator {
       const content = fs.readFileSync(fullPath, 'utf8');
       const missingSections = VIDEO_PROMPTS_PACK_REQUIRED_SECTIONS.filter((section) => !content.includes(section));
       const missingSoundSections = VIDEO_PROMPTS_SOUND_REQUIRED_SECTIONS.filter((section) => !content.includes(section));
+      const missingCopyBlockMarkers = VIDEO_PROMPTS_COPY_BLOCK_REQUIRED_MARKERS.filter((marker) => !content.includes(marker));
+      const missingDirectorPromptMarkers = VIDEO_PROMPTS_DIRECTOR_PROMPT_REQUIRED_MARKERS.filter((marker) => !content.includes(marker));
+      const hasShotTimecode = /[A-Z]\d{2}\s*\[\d{2}:\d{2}-\d{2}:\d{2}\]/.test(content);
 
       if (missingSections.length > 0) {
         errors.push({
@@ -954,6 +1003,46 @@ export class Validator {
           artifact: artifact.path,
           message: `Video prompt pack segment_sound_execution is missing sound layer(s): ${missingSoundSections.join(', ')}.`,
           suggestion: 'Expand segment_sound_execution into BGM, Foley-SFX, Ambience, and Silence layers.'
+        });
+      }
+
+      if (missingCopyBlockMarkers.length > 0) {
+        errors.push({
+          rule_id: 'SF-VP-211',
+          severity: 'error',
+          artifact: artifact.path,
+          message: `Video prompt copy-ready block is missing required marker(s): ${missingCopyBlockMarkers.join(', ')}.`,
+          suggestion: 'Rewrite each 可直接复制使用块 with the required storyboard keyframe preamble, project-level global lock rules, natural-language technical control, and director prompt sections.'
+        });
+      }
+
+      if (missingDirectorPromptMarkers.length > 0) {
+        errors.push({
+          rule_id: 'SF-VP-212',
+          severity: 'error',
+          artifact: artifact.path,
+          message: `Video prompt director prompt is missing required dimension(s): ${missingDirectorPromptMarkers.join(', ')}.`,
+          suggestion: 'Expand Segment X 导演长版提示词 to cover camera language, composition, performance, emotion, action arc, space/prop continuity, sound handoff, and negative boundaries.'
+        });
+      }
+
+      if (!hasShotTimecode) {
+        errors.push({
+          rule_id: 'SF-VP-214',
+          severity: 'error',
+          artifact: artifact.path,
+          message: 'Video prompt director prompt is missing shot-level timecodes.',
+          suggestion: 'Add Segment 总时间轴 and per-shot timecodes such as C01 [00:00-00:02] in Segment X 导演长版提示词.'
+        });
+      }
+
+      if (/可直接复制使用块[\s\S]*```(?:yaml|yml)/i.test(content)) {
+        errors.push({
+          rule_id: 'SF-VP-213',
+          severity: 'error',
+          artifact: artifact.path,
+          message: 'Video prompt copy-ready block must not contain a YAML technical control block.',
+          suggestion: 'Convert Segment X 技术控制说明 into natural-language prose before final delivery.'
         });
       }
     }

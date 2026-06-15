@@ -1,4 +1,4 @@
-# scene-video-prompt-builder Workflow
+# scene-video-prompt-builder 工作流
 
 ## 1. 入口检查
 
@@ -15,7 +15,7 @@
 - storyboard 主 pack。
 - storyboard details 中的 Beat Skeleton、VGU、Shot Continuity、Quality Check。
 - storyboard prompt outputs，用于校对视觉关键帧和控制轨道。
-- audio pack。
+- audio pack；必须继承其中的 BGM、Foley-SFX、Ambience、Silence 与跨段声音钩子。
 - performance pack。
 - design summary。
 - 当前风格包的 visual / camera / lighting / negative constraints。
@@ -29,6 +29,7 @@
 - 四层强结构草案
 - 每段 technical control block 样例
 - 每段 sound execution 样例
+- 每段如何继承 audio 阶段声音设计
 - 每段可直接复制使用块样例
 - 中英交付范围
 
@@ -42,7 +43,7 @@
 4. `project_level_global_rules`
 5. `segment_technical_control_block`
 6. `shot_by_shot_director_prompt`
-7. `segment_sound_execution`
+7. `segment_sound_execution`：继承 audio 阶段的 BGM、Foley-SFX、Ambience、Silence 和跨段声音钩子
 8. `prompt_trace`
 9. 中文 pack 文件
 10. 英文 pack 文件

@@ -1,8 +1,8 @@
-# Design Prompt Template
+# 设计 Prompt 模板
 
 `outputs/design_prompts/角色说明书图片提示词_v*.md` 必须是中文主导的角色说明书板 prompt。
 
-## Required Shape
+## 必须使用的体裁
 
 ```markdown
 # 角色说明书图片提示词
@@ -40,12 +40,12 @@
 ## 物理与安全边界区
 ```
 
-## Language
+## 语言要求
 
 - 默认中文主导。
 - 英文只作为锚词、风格词和板式名词辅助。
 
-## Forbidden Shape
+## 禁止形态
 
 不要把角色说明书图片 prompt 写成：
 

@@ -1,10 +1,10 @@
-# Storyboard Required Deliverables
+# Storyboard 阶段强制交付清单
 
 本文件是从 `scene-storyboard-director` 既有阶段规则和 `references/output-contract.md` 抽出的交付清单，不以任何单个项目产物作为模板来源。
 
 Storyboard 阶段完成时，以下文件必须真实存在、写入 manifest，并进入 `PROJECT_BOARD.md stage_index.storyboard.files`。
 
-## Primary
+## 主交付
 
 ```text
 outputs/storyboard_pack_*.md
@@ -26,7 +26,7 @@ outputs/storyboard_pack_*.md
 - `control_storyboard_prompt_file`
 - `styled_storyboard_prompt_file`
 
-## Details
+## 细节文件
 
 ```text
 details/storyboard/beat_skeleton_v*.md
@@ -44,7 +44,7 @@ details/storyboard/cinematic_language_plan_v*.md
 details/storyboard/space_continuity_map_v*.md
 ```
 
-## Storyboard Prompt Outputs
+## 故事板 Prompt 输出
 
 ```text
 outputs/storyboard_prompts/control_storyboard_prompt_v*.md
@@ -59,7 +59,7 @@ outputs/storyboard_prompts/styled_storyboard_prompt_v*.md
 - `Control-Oriented Storyboard Board`
 - `Style & Rendering Storyboard Board`
 
-## Board Index
+## 黑板索引
 
 `PROJECT_BOARD.md` 必须同步：
 
@@ -80,7 +80,7 @@ stage_index:
       quality_check: details/storyboard/storyboard_quality_check_v*.md
 ```
 
-## Forbidden Completion
+## 禁止完成的情况
 
 不得把以下情况标记为 completed：
 

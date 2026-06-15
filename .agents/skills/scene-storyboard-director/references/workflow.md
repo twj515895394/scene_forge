@@ -1,4 +1,4 @@
-# scene-storyboard-director Workflow
+# scene-storyboard-director 工作流
 
 ## 1. 入口检查
 
@@ -48,6 +48,7 @@
 10. control storyboard prompt
 11. styled storyboard prompt
 12. storyboard quality check
+13. design reconciliation review：根据最终分镜回看 design 阶段产物是否需要补充或修订
 
 ## 5. 落盘与注册
 
@@ -56,6 +57,7 @@
 - 写入 `outputs/storyboard_pack_*.md`。
 - 写入 `details/storyboard/*` 分层文件。
 - 写入 `outputs/storyboard_prompts/*` prompt 文件。
+- 写入 `details/storyboard/design_reconciliation_review_v*.md`；若 `design_revision_required: true`，不得完成 storyboard，应先回到 design 做修订。
 - 在 `artifacts.manifest.yaml` 注册上述文件。
 - 在 `PROJECT_BOARD.md stage_index.storyboard.files` 注册 primary、details、outputs、quality_check。
 

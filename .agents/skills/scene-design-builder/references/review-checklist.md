@@ -1,13 +1,13 @@
-# Design Review Checklist
+# Design 阶段 Review 清单
 
 正式推进 design 阶段前逐项检查。
 
-## Confirmation
+## 确认闸门
 
 - 快速执行模式：`confirmations.design_confirmed.status = confirmed`。
 - 全自动模式：必须确认总控已注入 `execution_policy.mode = full_auto` 且 unlock 条件满足。
 
-## Files
+## 文件检查
 
 - `outputs/design.md` 存在。
 - 至少一个角色设计 / 角色说明书文件存在。
@@ -19,7 +19,7 @@
 - 所有文件已进入 manifest。
 - `PROJECT_BOARD.md stage_index.design.files.details / outputs` 已同步。
 
-## Character Bible Sheet Prompt
+## 角色说明书板 Prompt
 
 角色说明书图片 prompt 必须包含：
 
@@ -43,12 +43,12 @@
 - hero poster
 - character poster
 
-## Space And Prop Continuity
+## 空间与道具连续性
 
 - `space_continuity_seed` 必须覆盖空间锚点、重复地标、出入口逻辑和轴线说明。
 - 核心道具必须有状态机或状态变化说明。
 - 多角色项目必须有 blocking / faction 设计摘要。
 
-## Auto-fix Rule
+## 自动修复规则
 
 若缺结构或缺文件，只补缺失结构与注册信息；不得改变已确认的创作方向、风格包、角色身份、故事功能或参考边界。

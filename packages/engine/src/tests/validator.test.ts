@@ -90,10 +90,23 @@ screen_positioning
 
 ## 可直接复制使用块
 
-global_execution_preamble
-project_level_global_rules
-segment_technical_control_block
-shot_by_shot_director_prompt
+【故事板关键帧参考规则】
+将"控制故事板 Pack 01"作为本段视频生成的顺序动作、镜头调度、空间关系和连续性主参考；将"风格故事板 Pack 01"作为角色渲染、场景质感、灯光影调、情绪氛围和最终画面质量辅助参考。严格依据控制故事板中的节拍推进、镜头节奏、构图逻辑、动作编排、空间关系和情绪递进来驱动画面生成。在相邻故事板关键姿势之间，扩展出流畅、连续、电影化的动画动作，遵循预备动作→发力→反应→收势的完整弧线。不渲染故事板中的边框、箭头、镜头编号、面板分隔线、UI标注或字幕等版式痕迹。
+
+【项目级全局锁定规则】
+- 主场景：测试主场景保持固定空间锚点。
+- 角色锁定：主角每次出现保持同一角色设计。
+- 不重复角色：同一镜头内不出现两个主角。
+- 画面可读性：动作清晰、角色轮廓可辨、空间锚点稳定、表演时机准确。
+- 风格锁定：保持已确认风格包的镜头节奏和表演尺度。
+- 灯光锁定：保持已确认灯光方向和光比。
+- 负向边界：不现代化表演，不出现角色重复、空间漂移或故事板版式痕迹。
+
+【Segment 1 技术控制说明】
+本段承接 VGU-01，continuity_in 从上一段动作动势进入，continuity_out 将角色视线和道具状态交给下一段。角色始终保持画面右侧到中景的移动路径，空间轴线不反转，blocking_execution 与 prop_state_execution 都以可读动作为先，next_handoff 保留动作、视线和声音钩子。
+
+【Segment 1 导演长版提示词】
+Segment 总时间轴：00:00-00:10。C01 [00:00-00:02] 镜头语言：使用中景固定到缓慢推镜，镜头运动服务动作可读性和情绪递进。画面构图：角色位于画面中央偏右，前景保留空间锚点，中景展示动作路径，后景保持场景轮廓。角色表演：先出现预备动作，再发力推进，随后完成反应和收势，微表情从紧张过渡到释然。情绪递进：进入时压抑，动作爆发时升高，结尾回落并交给下一段。动作弧线：预备动作→发力→反应→收势必须完整。空间与道具连续性：角色不跨轴，道具开头、段内变化和结尾状态都清晰可见。情绪氛围：保持压抑到释放的渐进氛围。美术质感：沿用风格故事板中的场景材质、角色渲染和最终画面质量。灯光影调：保持已确认灯光方向、色温和光比。声音承接：BGM 承接上一段，Foley-SFX 强化动作点，Ambience 保持场景底噪，Silence 留给情绪停顿。负向边界：避免现代快剪、现代化表演、角色重复、空间漂移、写实伤害和故事板版式痕迹。
 
 ## video_prompt_review`;
   const validStoryboardPromptBody = `# 故事板整板 Prompt
@@ -928,6 +941,19 @@ stage_index:
     assert.ok(report.errors.some(e => e.rule_id === 'SF-SB-214'));
   });
 
+  await t.test('13d. Storyboard blocks completion when design reconciliation requires revision', () => {
+    const validPath = 'outputs/storyboard_pack_001_cn.md';
+    writeProjectFile(validPath, `---\nschema: storyboard.v1\nstage: storyboard\npack_id: "001"\n---\n${validStoryboardBody}`);
+    writeStoryboardDeliveryFiles();
+    writeProjectFile('details/storyboard/design_reconciliation_review_v1.md', '# design_reconciliation_review\ndesign_revision_required: true\nchecked_storyboard_sources:\n  - outputs/storyboard_pack_001_cn.md\nchecked_design_sources:\n  - outputs/design.md\nnew_expression_or_pose_needs: 需要新增冲刺后喘息和回头确认的微表情。\nnew_prop_state_needs: none\nnew_space_or_blocking_needs: none\nnew_reference_board_needs: 需要补一张角色动作姿态参考。\nrecommended_design_updates:\n  - 更新角色说明书动作姿态区。\n');
+    writeStoryboardBoard('confirmed');
+    writeValidStoryboardManifest(validPath);
+
+    const report = validator.validate('storyboard');
+    assert.strictEqual(report.status, 'failed');
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-SB-215'));
+  });
+
   await t.test('14. Storyboard delivery contract passes with registered files, board index, and prompt sections', () => {
     const validPath = 'outputs/storyboard_pack_001_cn.md';
     writeProjectFile(validPath, `---\nschema: storyboard.v1\nstage: storyboard\npack_id: "001"\n---\n${validStoryboardBody}`);
@@ -1011,6 +1037,64 @@ screen_positioning
     assert.strictEqual(report.status, 'failed');
     assert.ok(report.errors.some(e => e.rule_id === 'SF-VP-204'));
     assert.ok(report.errors.some(e => e.rule_id === 'SF-VP-205'));
+  });
+
+  await t.test('16b. Video prompts delivery contract rejects shallow copy-ready blocks', () => {
+    writeVideoPromptDeliveryFiles(`---
+schema: video_prompts.v1
+stage: video_prompts
+pack_id: "001"
+---
+# 视频提示词 第01包
+
+## pack_audio_execution_plan
+## video_prompt_pack_plan
+## global_execution_preamble
+## project_level_global_rules
+## segment_sound_execution
+### BGM
+### Foley-SFX
+### Ambience
+### Silence
+## segment_technical_control_block
+primary_vgu_ids
+continuity_in
+continuity_out
+blocking_execution
+prop_state_execution
+next_handoff
+## shot_by_shot_director_prompt
+shot_continuity
+screen_positioning
+## prompt_trace
+## 可直接复制使用块
+【故事板关键帧参考规则】
+global_execution_preamble
+【项目级全局锁定规则】
+主场景
+角色锁定
+不重复角色
+画面可读性
+风格锁定
+灯光锁定
+负向边界
+【Segment 1 技术控制说明】
+\`\`\`yaml
+primary_vgu_ids: [VGU-01]
+continuity_in: 上一段
+continuity_out: 下一段
+\`\`\`
+【Segment 1 导演长版提示词】
+镜头标题和短句。
+## video_prompt_review`);
+    writeVideoPromptBoard('confirmed');
+    writeValidVideoPromptManifest();
+
+    const report = validator.validate('video_prompts');
+    assert.strictEqual(report.status, 'failed');
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-VP-211'));
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-VP-212'));
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-VP-213'));
   });
 
   await t.test('17. Video prompts delivery contract rejects pending confirmation in fast mode', () => {
