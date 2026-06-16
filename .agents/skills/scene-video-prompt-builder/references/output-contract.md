@@ -6,21 +6,20 @@
 
 完整规则迁移位置见 `../../scene-design-builder/references/output-contract-migration-map.md`。
 
-## 读取规则
-
 - 默认执行阶段不需要全文读取本文件。
 - 只有在修复字段、实现 validator、排查 board/manifest 漂移或核对 pack 正式体裁时读取。
-- 中文 pack 是主交付；英文 pack 是基于中文正式稿的翻译/模型适配版。
+- 中文 pack 是默认主交付；英文 pack 是按需生成的翻译/模型适配版。
 - 正文说明必须中文主导；英文只保留为技术 key、镜头参数、模型提示词必要表达。
 
 ## 主交付
 
-必须按故事板 pack 对齐输出：
+默认必须按故事板 pack 对齐输出，多包按 `第02包`、`第03包` 递增：
 
 - `outputs/video_prompts/视频提示词_第01包_中文_v*.md`
-- `outputs/video_prompts/视频提示词_第01包_英文_v*.md`
 
-多包时按 `第02包`、`第03包` 递增。
+英文 pack 仅在用户明确要求、目标平台需要英文或发布策略要求海外投放时生成：
+
+- `outputs/video_prompts/视频提示词_第01包_英文_v*.md`
 
 只有用户明确要求整片汇编版时，才额外写：
 
@@ -29,21 +28,13 @@
 
 ## Review 文件
 
-必须真实落盘并注册：
+必须真实落盘并注册，且包含 `review_status`、`review_round`、`issues_found`、`auto_fixes_applied`、`final_delivery_ready`：
 
 - `details/video_prompts/video_prompt_review_v*.md`
 
-必须包含：
-
-- `review_status`
-- `review_round`
-- `issues_found`
-- `auto_fixes_applied`
-- `final_delivery_ready`
-
 ## 每个 Pack 必备结构
 
-每个中文/英文 pack 文件必须包含：
+每个已生成的中文/英文 pack 文件必须包含：
 
 - `video_prompt_pack_plan`
 - `pack_audio_execution_plan`
@@ -85,7 +76,9 @@
 
 不得把以下内容当成正式 video_prompts 完成：
 
-- 只有中文或只有英文 pack。
+- 缺少中文 pack。
+- 用户未要求英文时默认生成英文 pack。
+- 用户要求英文但缺少英文 pack。
 - 说明性表格、逐段参数表、逐镜参数表。
 - “全局设定 + 参数表 + 编译 Prompt”。
 - 缺少 `segment_technical_control_block` 或 `shot_by_shot_director_prompt` 的大段 prompt。
@@ -101,7 +94,6 @@
 primary: outputs/video_prompts/视频提示词_第01包_中文_v*.md
 outputs:
   - outputs/video_prompts/视频提示词_第01包_中文_v*.md
-  - outputs/video_prompts/视频提示词_第01包_英文_v*.md
 details:
   - details/video_prompts/video_prompt_review_v*.md
 quality_check: details/video_prompts/video_prompt_review_v*.md

@@ -60,47 +60,28 @@ test('CLI System Tests', async (t) => {
     // 1. Validation fails because no artifacts exist
     const resFail = runCli('validate --stage topic_gate --json', { expectError: true });
     assert.strictEqual(resFail.error_code, 'SF-ERR-VALIDATION-FAILED');
+    let status = runCli('status --json');
+    assert.strictEqual(status.stages.topic_gate.status, 'review_failed');
 
     // 2. Setup correct artifact
     const validPath = 'outputs/topic.md';
     const fullValidPath = path.resolve(testDir, validPath);
     fs.mkdirSync(path.dirname(fullValidPath), { recursive: true });
-    fs.writeFileSync(fullValidPath, '---\nschema: topic_gate.v1\nstage: topic_gate\n---\n## topic_ideas\n- idea 1', 'utf8');
+    fs.writeFileSync(fullValidPath, '---\nschema: topic_gate.v1\nstage: topic_gate\n---\npatch_type: scene-topic-gate\nstage: topic_gate\n', 'utf8');
 
-    project.registerArtifact({
-      id: 'topic_gate_final',
-      stage: 'topic_gate',
-      kind: 'final',
-      role: 'primary_delivery',
-      path: validPath,
-      readable_by_downstream: true
-    });
-
-    // 3. Validate again, should pass
+    // 3. Validate again, should auto-sync the disk artifact and pass
     const resPass = runCli('validate --stage topic_gate --json');
     assert.strictEqual(resPass.status, 'passed');
     assert.strictEqual(resPass.errors.length, 0);
+    status = runCli('status --json');
+    assert.strictEqual(status.stages.topic_gate.status, 'validated');
   });
 
-  await t.test('4. complete command validation fail and success', () => {
-    // 1. Intentionally break the file to cause complete to fail validation
+  await t.test('4. complete command auto-syncs and succeeds for YAML topic_gate artifact', () => {
     const validPath = 'outputs/topic.md';
     const fullValidPath = path.resolve(testDir, validPath);
-    fs.writeFileSync(fullValidPath, '---\nschema: topic_gate.v1\nstage: topic_gate\n---\nBody missing required headers', 'utf8');
+    fs.writeFileSync(fullValidPath, '---\nschema: topic_gate.v1\nstage: topic_gate\n---\npatch_type: scene-topic-gate\nstage: topic_gate\n', 'utf8');
 
-    const resFail = runCli('complete --stage topic_gate --json', { expectError: true });
-    assert.strictEqual(resFail.error_code, 'SF-ERR-VALIDATION-FAILED');
-    
-    // Verify stage status goes to review_failed
-    const status1 = runCli('status --json');
-    assert.strictEqual(status1.stages.topic_gate.status, 'review_failed');
-
-    // 2. Fix the file
-    fs.writeFileSync(fullValidPath, '---\nschema: topic_gate.v1\nstage: topic_gate\n---\n## topic_ideas\n- idea 1', 'utf8');
-    // Restart stage
-    runCli('start --stage topic_gate --json');
-
-    // 3. Complete stage successfully
     const resPass = runCli('complete --stage topic_gate --json');
     assert.strictEqual(resPass.stage, 'topic_gate');
     assert.strictEqual(resPass.status, 'completed');
@@ -113,7 +94,6 @@ test('CLI System Tests', async (t) => {
 
   await t.test('5. artifacts command --json', () => {
     const res = runCli('artifacts --from topic_gate --json');
-    assert.strictEqual(res.some((artifact: any) => artifact.id === 'topic_gate_final'), true);
     assert.strictEqual(res.filter((artifact: any) => artifact.path === 'outputs/topic.md').length, 1);
   });
 
@@ -122,6 +102,27 @@ test('CLI System Tests', async (t) => {
     assert.strictEqual(res.stage, 'storyboard');
     assert.strictEqual(res.expected_file_pattern, '^outputs/storyboard_pack_\\d+(_\\w+)?\\.md$');
     assert.deepStrictEqual(res.required_headers, ['storyboard_prompt_pack']);
+  });
+
+  await t.test('7. complete auto-syncs protocol detail primary files before validation', () => {
+    const referencePath = 'details/reference/reference_boundary_v1.md';
+    const fullReferencePath = path.resolve(testDir, referencePath);
+    fs.mkdirSync(path.dirname(fullReferencePath), { recursive: true });
+    fs.writeFileSync(
+      fullReferencePath,
+      '# reference_boundary\nallowed_inheritance\nforbidden_inheritance\ncreative_direction_context\n',
+      'utf8',
+    );
+
+    runCli('start --stage reference --json');
+    const resPass = runCli('complete --stage reference --json');
+    assert.strictEqual(resPass.stage, 'reference');
+    assert.strictEqual(resPass.status, 'completed');
+
+    const manifest = project.readManifest();
+    const registered = manifest.artifacts.find((artifact) => artifact.path === referencePath);
+    assert.strictEqual(registered?.kind, 'final');
+    assert.strictEqual(registered?.readable_by_downstream, true);
   });
 
   // Cleanup

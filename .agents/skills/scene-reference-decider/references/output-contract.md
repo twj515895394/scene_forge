@@ -84,6 +84,7 @@ data:
 - `source_material.source_type` 是输入来源描述
 - `reference_type` 是本阶段最终裁定结果
 - “未定”不进入该枚举，用补丁 `status` 表达
+- 若项目明确做动画化、风格化 3D、漫画化或其他显著视觉转译，镜头功能、动作节奏、关键姿态和服装轮廓锚点可以进入 `allowed_inheritance` 或 `must_keep`；`forbidden_inheritance` / `must_avoid` 应约束“无转译照搬”和身份绑定，而不是机械禁止镜头或服装参考。
 
 ## `reference_boundary` 结构
 
@@ -146,7 +147,7 @@ stage: scene-reference-decider
 version: 1
 status: completed
 updated_at: 2026-06-01
-summary: 本次以86版西游记为主参考，允许继承母题级角色和剧情骨架，但避免直接复刻具体表演与镜头。
+summary: 本次以86版西游记为主参考，允许继承母题级角色、剧情骨架、镜头功能和服装轮廓锚点，但必须做动画电影化转译。
 board_updates:
   state:
     project_status: reference_decided
@@ -179,11 +180,11 @@ data:
       selection_note: 本项目保留原始剧情方向，不使用视频改写方向候选。
     downstream_rule: 下游各阶段围绕原始剧情/桥段保留进行设计和标准化，不重新发散改写方向。
   reference_type: hybrid_reference
-  decision_summary: 以86版西游记为主参考，辅以西游记母题边界，按高认知锚点保留、具体影视表达降继承执行。
+  decision_summary: 以86版西游记为主参考，辅以西游记母题边界，按高认知锚点保留、具体影视表达转成动画电影化执行。
   reference_boundary:
     primary_reference: 86版西游记
     secondary_reference: 西游记原著母题
-    boundary_rule: 角色身份、关系和剧情骨架优先继承母题与大众认知，避免直接复刻86版具体镜头和表演表达。
+    boundary_rule: 角色身份、关系和剧情骨架优先继承母题与大众认知；镜头功能、动作节奏和服装轮廓可作为锚点继承，但需转成动画电影化调度、造型和表演，不照搬真人演员身份与完整镜头组合。
     allowed_inheritance:
       - 角色身份
       - 角色关系
@@ -191,9 +192,10 @@ data:
       - 情绪核心
       - 剧情骨架
       - 世界观母题
-    forbidden_inheritance:
       - 镜头动势
       - 服装轮廓
+    forbidden_inheritance:
+      - 角色身份
   must_keep:
     - category: 角色身份
       note: 必须保留孙悟空、唐僧、白骨精之间的基础身份关系和冲突结构。
@@ -201,10 +203,12 @@ data:
       note: 必须保留忠诚与误解并存的核心戏剧张力。
   must_avoid:
     - category: 镜头动势
-      note: 避免直接复刻86版的经典机位切换、走位和表演调度。
+      note: 避免逐镜照搬86版完整机位组合；允许继承镜头功能和动作节奏，并改为动画电影化调度。
     - category: 服装轮廓
-      note: 避免过度贴近86版真人戏服造型，改为动画电影化转译。
+      note: 避免直接复刻真人戏服细节和演员识别点；允许保留轮廓锚点，并改为动画角色造型。
+    - category: 角色身份
+      note: 避免绑定真实演员身份，改为角色母题和动画表演重构。
   risk_notes:
-    - 若角色外观参考强度过高，容易滑向具体影视版本复刻。
+    - 若镜头、服装和演员表演三者同时高度贴近，容易滑向具体影视版本复刻，需要明确动画化转译层。
   next_action: 进入 scene-story-development，先围绕参考边界建立轻量故事骨架，再判断角色和场景资产。
 ```

@@ -145,17 +145,17 @@ source_intake:
 项目已创建时写入：
 
 ```text
-projects/<project>/inputs/source_intake/source_video_analysis_v1.md
-projects/<project>/inputs/source_intake/source_video_timeline_v1.md
 projects/<project>/inputs/source_intake/source_video_priority_map_v1.md
 projects/<project>/inputs/source_intake/adaptation_ideas_v1.md
 projects/<project>/inputs/source_intake/topic_gate_handoff_v1.md
 projects/<project>/inputs/source_intake/source_intake_index_v1.md
 ```
 
-可按复杂度额外拆分：
+仅在复杂项目、用户明确要求复盘源视频、或剧本/分镜必须核对具体动作链时，才额外生成：
 
 ```text
+projects/<project>/inputs/source_intake/source_video_analysis_v1.md
+projects/<project>/inputs/source_intake/source_video_timeline_v1.md
 projects/<project>/inputs/source_intake/source_video_dialogue_v1.md
 projects/<project>/inputs/source_intake/source_video_audio_v1.md
 projects/<project>/inputs/source_intake/source_video_camera_v1.md

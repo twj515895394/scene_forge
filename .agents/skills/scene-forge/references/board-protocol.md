@@ -2,7 +2,7 @@
 
 本文件定义 `scene-forge` 总控和各子 Skill 共享的 `PROJECT_BOARD.md` 运行时协议。
 
-`PROJECT_BOARD.md` 仍然是项目唯一状态源，但从 v8 起只承担：
+`PROJECT_BOARD.md` 是创作黑板、路由摘要和阶段索引源；SOP CLI 的执行中 / 已完成状态以 `PROJECT_STATE.json` 为准。从 v8 起黑板只承担：
 
 1. 状态机
 2. 路由表
@@ -388,6 +388,11 @@ audio
 video_prompts
 publish
 ```
+
+说明：
+
+- 黑板阶段键使用 `publish`；CLI / `PROJECT_STATE.json` 阶段名使用 `publish_review`。读取、校验和 artifact 同步必须把二者视为同一发布阶段 alias。
+- `topic_gate` 是 CLI 阶段名；黑板阶段键使用 `topic`。读取、校验和 artifact 同步必须把二者视为同一选题阶段 alias。
 
 旧概念映射：
 

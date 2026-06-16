@@ -26,12 +26,15 @@
 
 ## 细节文件
 
-必须真实落盘并注册：
+旧版完整 details 草稿不再是强制交付。正式设计细节必须并入一体化 outputs：
 
-- `details/design/character_design_*_v*.md` 或 `details/角色说明书_*_v*.md`
-- `details/design/scene_design_v*.md`
-- `details/design/prop_design_v*.md`
-- `details/design/space_continuity_seed_v*.md`
+- 角色身份、轮廓、配色、材质、表情系统、动作姿态、道具交互和边界约束并入 `outputs/design_prompts/角色说明书图片提示词_v*.md`。
+- 场景视觉、空间结构、道具外观和材质细节并入 `outputs/design_prompts/全场景资产总参考图提示词_v*.md`。
+- 道具状态机、空间连续性和 blocking 基线并入 `outputs/design.md`。
+
+可选追溯文件：
+
+- `details/design/design_notes_v*.md`
 
 ## Prompt 输出
 
@@ -67,7 +70,8 @@
 
 - 英文主导的角色 prompt。
 - `single portrait`、`cinematic portrait`、`hero poster`、`character poster` 等海报/肖像导向 prompt。
-- 只写 `outputs/design.md`，但缺角色、场景、道具、空间连续性细节文件。
+- 只写 `outputs/design.md`，但缺角色说明书 prompt 或全场景资产总参考图 prompt。
+- `outputs/design.md` 缺 `space_continuity_seed`、`prop_state_machines` 或 `blocking_map`。
 - 文件存在但未进入 `artifacts.manifest.yaml`。
 - `PROJECT_BOARD.md stage_index.design.files` 缺 primary / outputs / details。
 
@@ -82,10 +86,7 @@ outputs:
   - outputs/design_prompts/角色说明书图片提示词_v*.md
   - outputs/design_prompts/全场景资产总参考图提示词_v*.md
 details:
-  - details/design/character_design_*_v*.md
-  - details/design/scene_design_v*.md
-  - details/design/prop_design_v*.md
-  - details/design/space_continuity_seed_v*.md
+  - details/design/design_notes_v*.md   # 可选
 ```
 
 ## 下游交接

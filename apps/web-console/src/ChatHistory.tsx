@@ -5,9 +5,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface SessionInfo {
   id: string;
+  sessionId?: string;
   preview: string;
   timestamp: string;
   messageCount: number;
+  scope?: 'project' | 'workspace';
+  scopeLabel?: string;
 }
 
 interface ChatHistoryProps {
@@ -50,6 +53,9 @@ export default function ChatHistory({ sessions, loading, currentSessionId, onSel
               >
                 <div className="history-item-top">
                   <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+                  <span className={`history-item-scope ${s.scope === 'workspace' ? 'workspace' : 'project'}`}>
+                    {s.scopeLabel || (s.scope === 'workspace' ? 'Workspace Root' : 'Project')}
+                  </span>
                   <span className="history-item-date">
                     {new Date(s.timestamp).toLocaleDateString()} {new Date(s.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>

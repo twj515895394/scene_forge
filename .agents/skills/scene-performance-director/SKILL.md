@@ -71,7 +71,7 @@ assets/animation-stylization/contrast-comedy-library.md
 9. 对轻中度卡通伤害，必须说明可见伤害、表演反应、喜剧化方式和禁止的写实痛苦表达。
 10. 明确每个角色至少一个 `signature_gesture`。
 11. 明确关键 Beat 的 `pause_or_hold`，尤其是喜剧反应、情绪犹豫、反差 reveal 和情绪释放点。
-12. 除完整表演表外，同步写出 `details/performance/action_continuity_chains_v*.md` 和 `details/performance/emotion_continuity_chains_v*.md`，把跨 Beat / Segment 延续的动作链和情绪链单独沉淀出来。
+12. 在完整表演表内同步写出 `action_continuity_chains` 与 `emotion_continuity_chains` section，把跨 Beat / Segment 延续的动作链和情绪链沉淀到同一个文件。
 13. 将完整表演表写入 `details/performance_sheet_v*.md`。
 14. 黑板只记录摘要、路径、角色表演概要、Beat 表演重点、表现力扩展表演设计和连续性规则。
 15. 输出单个 YAML 补丁块，并将状态推进到 `performance_ready`，下一阶段为 `scene-storyboard-director`。

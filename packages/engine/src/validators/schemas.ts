@@ -38,8 +38,11 @@ export const DesignFrontmatterSchema = CommonFrontmatterSchema.extend({
   language: z.string().optional()
 });
 
-export const TopicGateFrontmatterSchema = CommonFrontmatterSchema.extend({
-  version: z.string().optional()
+export const TopicGateFrontmatterSchema = z.object({
+  schema: z.string().optional(),
+  patch_type: z.string().optional(),
+  stage: z.string(),
+  version: z.union([z.string(), z.number()]).optional()
 });
 
 export const PublishReviewFrontmatterSchema = CommonFrontmatterSchema.extend({

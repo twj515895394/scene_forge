@@ -55,6 +55,9 @@ test('Artifact System Tests', async (t) => {
     // Valid details write
     assert.ok(registry.validateWritePath('storyboard', 'details/storyboard/preview_storyboard.md'));
     assert.ok(registry.validateWritePath('storyboard', 'details/storyboard/draft_notes.md'));
+    assert.ok(registry.validateWritePath('performance', 'details/performance_sheet_v1.md'));
+    assert.ok(registry.validateWritePath('audio', 'details/audio_plan_v1.md'));
+    assert.ok(registry.validateWritePath('script', 'details/script_v1.md'));
     // Valid special files write
     assert.ok(registry.validateWritePath('storyboard', 'PROJECT_STATE.json'));
 

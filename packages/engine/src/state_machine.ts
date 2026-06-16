@@ -270,7 +270,7 @@ export class StateMachine {
       throw new Error(`Unknown stage: ${stage}`);
     }
 
-    if (stageState.status !== 'in_progress' && stageState.status !== 'review_failed') {
+    if (stageState.status !== 'in_progress' && stageState.status !== 'review_failed' && stageState.status !== 'validated') {
       throw new Error(`Cannot complete stage '${stage}': stage is not in progress.`);
     }
 
@@ -342,6 +342,43 @@ export class StateMachine {
       state.current_stage = undefined;
     }
 
+    this.writeState(state);
+    return stageState;
+  }
+
+  // Record validation result without completing the stage.
+  public recordValidationResult(stage: string, validatorSuccess: boolean, errors: string[] = []): StageState {
+    const state = this.readState();
+    const stageState = state.stages[stage];
+    if (!stageState) {
+      throw new Error(`Unknown stage: ${stage}`);
+    }
+
+    if (stageState.status !== 'in_progress' && stageState.status !== 'review_failed' && stageState.status !== 'validated') {
+      throw new Error(`Cannot validate stage '${stage}': stage is not in progress.`);
+    }
+
+    const now = new Date().toISOString();
+    const validationPath = path.join(this.project.projectPath, 'runtime', `validation_result.${stage}.json`);
+    fs.mkdirSync(path.dirname(validationPath), { recursive: true });
+    fs.writeFileSync(validationPath, JSON.stringify({
+      project: this.project.projectSlug,
+      stage,
+      status: validatorSuccess ? 'passed' : 'failed',
+      validated_at: now,
+      errors
+    }, null, 2), 'utf8');
+
+    stageState.validation_result_path = path.relative(this.project.projectPath, validationPath);
+    stageState.status = validatorSuccess ? 'validated' : 'review_failed';
+    stageState.updated_at = now;
+    stageState.history.push({
+      status: stageState.status,
+      timestamp: now,
+      message: validatorSuccess ? 'Validation passed' : `Validation failed: ${errors.join(', ')}`
+    });
+
+    state.current_stage = stage;
     this.writeState(state);
     return stageState;
   }

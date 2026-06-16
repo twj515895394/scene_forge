@@ -10,17 +10,22 @@ Video Prompts 阶段完成时，以下文件必须真实存在、写入 manifest
 
 ```text
 outputs/video_prompts/视频提示词_第01包_中文_v*.md
-outputs/video_prompts/视频提示词_第01包_英文_v*.md
 ```
 
 多包时按 pack 递增：
 
 ```text
 outputs/video_prompts/视频提示词_第02包_中文_v*.md
+```
+
+英文 pack 只在用户明确要求、目标平台需要英文或发布策略要求海外投放时生成：
+
+```text
+outputs/video_prompts/视频提示词_第01包_英文_v*.md
 outputs/video_prompts/视频提示词_第02包_英文_v*.md
 ```
 
-每个 pack 文件必须包含：
+每个已生成的 pack 文件必须包含：
 
 - `video_prompt_pack_plan`
 - `pack_audio_execution_plan`
@@ -92,7 +97,6 @@ stage_index:
       primary: outputs/video_prompts/视频提示词_第01包_中文_v*.md
       outputs:
         - outputs/video_prompts/视频提示词_第01包_中文_v*.md
-        - outputs/video_prompts/视频提示词_第01包_英文_v*.md
       details:
         - details/video_prompts/video_prompt_review_v*.md
       quality_check: details/video_prompts/video_prompt_review_v*.md
@@ -102,7 +106,9 @@ stage_index:
 
 不得把以下情况标记为 completed：
 
-- 只生成中文或只生成英文 pack。
+- 缺少中文 pack。
+- 用户明确要求英文版但未生成英文 pack。
+- 英文 pack 已生成但缺少四层强结构或可直接复制使用块。
 - 文件存在但未注册 manifest。
 - board 没有索引 outputs / details / quality_check。
 - pack 文件缺少四层强结构。

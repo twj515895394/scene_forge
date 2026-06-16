@@ -127,7 +127,7 @@ script_strategy:
 16. 用户确认后，选择本次改编档位，并在继承已确认导演风格包的前提下最终确认 `performance_style`。
 17. 若用户明确要求改风格，本阶段可以提出新的导演风格包候选，但只有在用户再次确认后，才允许覆盖黑板中的正式风格字段。
 18. 输出适合后续表演导演和分镜使用的剧本摘要、Story Beat、场次拆分建议、表现力扩展机会点和改编说明。
-19. 同步产出 `details/script/beat_table_v*.md` 和 `details/script/video_generation_unit_plan_v*.md`，把标准化 Beat 摘要、视频生成单元初步规划、动作连续性焦点和情绪连续性焦点先写出来。
+19. 同步产出 `details/script/beat_table_v*.md`，并在其中加入 `video_generation_unit_plan`、动作连续性焦点和情绪连续性焦点 section；不再默认独立生成 `video_generation_unit_plan_v*.md`。
 20. 将完整剧本正文写入 `details/script_v*.md`；黑板只记录摘要、档位、演绎风格、导演风格包、Story Beat、关键镜头提示、source intake 继承说明、表现力扩展机会点和路径引用。
 21. 输出单个 YAML 补丁块；`summary` 使用中文，必要时附英文参数值。
 22. 将状态推进建议交回总控 Skill，进入 `scene-performance-director`。
@@ -185,7 +185,7 @@ source_intake_script_use:
 - 反差喜剧必须服务人物、故事、情绪转折或视觉 payoff；不得把随机梗堆进剧本。
 - `story_beats` 必须与 `scene-story-development` 已确认的故事骨架一致，只允许做剧本级细化，不允许重开前置故事方向会。
 - Story Beat 不是 Segment；不得用 10 秒技术分段直接替代叙事节拍。
-- 剧本阶段应先给出 `beat_table_v*.md` 和 `video_generation_unit_plan_v*.md` 的初步结构，后续表演与分镜阶段在此基础上细化，而不是从零发明控制单元。
+- 剧本阶段应先给出 `beat_table_v*.md`，并在其中包含 `video_generation_unit_plan` 初步结构；后续表演与分镜阶段在此基础上细化，而不是从零发明控制单元。
 - 必须把潜在 Hero Moment 作为 `storyboard_hints.shot_priority_note` 的输入，供分镜阶段明确标记。
 - 完整剧本落盘，黑板只保留可供后续阶段消费的摘要信息。
 - 本阶段完成后不直接进入分镜，而是先进入 `scene-performance-director`。

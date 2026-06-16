@@ -123,12 +123,16 @@ program
   .option('--json', 'Output result in JSON format')
   .action((options) => {
     try {
-      const { validator } = getInstances();
+      const { project, stateMachine, validator } = getInstances();
+      syncStageArtifactIndex(project, options.stage);
       const report = validator.validate(options.stage);
       
       if (report.status === 'failed') {
+        stateMachine.recordValidationResult(options.stage, false, report.errors.map(e => e.message));
         throw new Error(`Validation failed for stage '${options.stage}': ${report.errors.map(e => e.message).join('; ')}`);
       }
+
+      stateMachine.recordValidationResult(options.stage, true);
       
       handleSuccess(
         report,
@@ -149,6 +153,9 @@ program
   .action((options) => {
     try {
       const { project, stateMachine, validator } = getInstances();
+
+      // Sync disk artifacts before validation so stage agents only need to write files.
+      syncStageArtifactIndex(project, options.stage);
       
       // Perform validation
       const report = validator.validate(options.stage);
@@ -157,7 +164,7 @@ program
 
       // Trigger completeStage
       const stageState = stateMachine.completeStage(options.stage, isSuccess, errors);
-      const syncedArtifacts = syncStageArtifactIndex(project, options.stage);
+      const syncedArtifacts = syncStageArtifactIndex(project, options.stage, { boardStatus: stageState.status });
       
       handleSuccess(
         {

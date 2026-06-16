@@ -53,11 +53,11 @@ description: 当用户要为 SceneForge 项目生成角色与场景的风格化�
 reference / story / assets / style profile
 -> design direction preview
 -> visual_language baseline
--> character design bible files
--> scene design file
--> prop design file
--> space_continuity_seed
--> design prompt files
+-> 对话内完整设计预览
+-> 用户确认
+-> outputs/design.md
+-> 一体化 design prompt files
+-> 可选 design_notes
 -> design review
 ```
 
@@ -81,18 +81,24 @@ reference / story / assets / style profile
 正式完成前必须真实落盘并注册以下文件，不能只在主文件中声明路径：
 
 - `outputs/design.md`
-- `details/design/character_design_*_v*.md` 或 `details/角色说明书_*_v*.md`
-- `details/design/scene_design_v*.md`
-- `details/design/prop_design_v*.md`
-- `details/design/space_continuity_seed_v*.md`
 - `outputs/design_prompts/角色说明书图片提示词_v*.md`
 - `outputs/design_prompts/全场景资产总参考图提示词_v*.md`
+
+以下文件可选，默认只在复杂项目、用户要求或需要追溯关键取舍时生成：
+
+- `details/design/design_notes_v*.md`
 
 多角色、复杂空间或高漂移风险项目还应产出：
 
 - `outputs/design_prompts/空间站位图提示词_v*.md`
 
 角色说明书图片 prompt 必须中文主导，目标是角色说明书板，不是单张海报式角色图。
+
+旧版完整 details 草稿不再默认独立落盘：
+
+- 角色完整设定并入 `角色说明书图片提示词_v*.md`。
+- 场景视觉、道具外观并入 `全场景资产总参考图提示词_v*.md`。
+- 道具状态机、空间连续性和 blocking 基线并入 `outputs/design.md`。
 
 ## 完成前 review
 

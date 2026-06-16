@@ -23,17 +23,16 @@ outputs/design.md
 ## 细节文件
 
 ```text
-details/design/character_design_*_v*.md
-details/design/scene_design_v*.md
-details/design/prop_design_v*.md
-details/design/space_continuity_seed_v*.md
+details/design/design_notes_v*.md
 ```
 
-兼容中文角色说明书路径：
+`design_notes` 是可选追溯文件，默认只记录关键设计决策、取舍理由和用户确认点，不承载完整角色/场景/道具草稿。
 
-```text
-details/角色说明书_*_v*.md
-```
+旧版完整 details 草稿不再默认生成。其内容必须并入正式 outputs：
+
+- character design bible → `outputs/design_prompts/角色说明书图片提示词_v*.md`
+- scene design + prop visual design → `outputs/design_prompts/全场景资产总参考图提示词_v*.md`
+- prop state machine + space continuity seed + blocking → `outputs/design.md`
 
 ## 设计 Prompt 输出
 
@@ -66,10 +65,7 @@ stage_index:
     files:
       primary: outputs/design.md
       details:
-        - details/design/character_design_*_v*.md
-        - details/design/scene_design_v*.md
-        - details/design/prop_design_v*.md
-        - details/design/space_continuity_seed_v*.md
+        - details/design/design_notes_v*.md   # 可选
       outputs:
         - outputs/design.md
         - outputs/design_prompts/角色说明书图片提示词_v*.md
@@ -82,7 +78,8 @@ stage_index:
 
 - 角色说明书图片 prompt 英文主导。
 - 角色 prompt 是单张海报式图，而不是角色说明书板。
-- 缺少角色、场景、道具或空间连续性文件。
+- 缺少角色说明书 prompt 或全场景资产总参考图 prompt。
+- `outputs/design.md` 缺少空间连续性、道具状态机或 blocking 基线。
 - 文件存在但未注册 manifest。
 - board 没有索引 details / outputs。
 - 快速模式下用户尚未确认 design 方案。

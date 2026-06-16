@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Folder, Plus, Sparkles, ArrowRight, Loader2, Film, Clapperboard, Rocket, Zap } from 'lucide-react';
+import { Folder, Plus, Sparkles, ArrowRight, Loader2, Film, Clapperboard, Rocket, Zap, Save, RotateCcw, Settings, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,14 @@ interface ProjectInfo {
 
 interface LobbyProps {
   onSelectProject: (slug: string) => void;
+}
+
+interface ProjectsRootConfig {
+  workspaceRoot: string;
+  projectsRoot: string;
+  defaultProjectsRoot: string;
+  configuredProjectsRoot: string;
+  isDefault: boolean;
 }
 
 const STYLE_POSTERS = [
@@ -65,10 +73,28 @@ export default function Lobby({ onSelectProject }: LobbyProps) {
   const [selectedStyle, setSelectedStyle] = useState('disney_3d');
   const [wizardError, setWizardError] = useState('');
   const [creating, setCreating] = useState(false);
+  const [projectsRootConfig, setProjectsRootConfig] = useState<ProjectsRootConfig | null>(null);
+  const [projectsRootInput, setProjectsRootInput] = useState('');
+  const [projectsRootSaving, setProjectsRootSaving] = useState(false);
+  const [projectsRootMessage, setProjectsRootMessage] = useState('');
+  const [showProjectsRootSettings, setShowProjectsRootSettings] = useState(false);
 
   useEffect(() => {
+    fetchProjectsRootConfig();
     fetchProjects();
   }, []);
+
+  const fetchProjectsRootConfig = async () => {
+    try {
+      const res = await fetch('/api/config/projects-root');
+      if (!res.ok) return;
+      const data = await res.json();
+      setProjectsRootConfig(data);
+      setProjectsRootInput(data.projectsRoot || '');
+    } catch (err) {
+      console.error('Failed to load projects root config:', err);
+    }
+  };
 
   const fetchProjects = async () => {
     try {
@@ -87,6 +113,48 @@ export default function Lobby({ onSelectProject }: LobbyProps) {
 
   const handleCardClick = (slug: string) => setSelectedSlug(slug);
   const handleCardDoubleClick = (slug: string) => onSelectProject(slug);
+
+  const saveProjectsRoot = async (projectsRoot: string) => {
+    setProjectsRootSaving(true);
+    setProjectsRootMessage('');
+    try {
+      const res = await fetch('/api/config/projects-root', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectsRoot })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setProjectsRootMessage(data.error || '项目目录保存失败');
+        return;
+      }
+      setProjectsRootConfig(data);
+      setProjectsRootInput(data.projectsRoot || '');
+      setSelectedSlug('');
+      setProjectsRootMessage('项目目录已保存，项目列表已刷新');
+      setShowProjectsRootSettings(false);
+      await fetchProjects();
+    } catch (err) {
+      setProjectsRootMessage(`项目目录保存失败: ${(err as Error).message}`);
+    } finally {
+      setProjectsRootSaving(false);
+    }
+  };
+
+  const handleProjectsRootSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await saveProjectsRoot(projectsRootInput);
+  };
+
+  const handleResetProjectsRoot = async () => {
+    await saveProjectsRoot('');
+  };
+
+  const openProjectsRootSettings = () => {
+    setProjectsRootInput(projectsRootConfig?.projectsRoot || '');
+    setProjectsRootMessage('');
+    setShowProjectsRootSettings(true);
+  };
 
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -156,10 +224,35 @@ export default function Lobby({ onSelectProject }: LobbyProps) {
       }}
     >
       <div className="w-full max-w-7xl">
-        <div className="flex items-center gap-3 mb-8">
-          <Sparkles className="h-6 w-6 text-blue-400" />
-          <h1 className="text-2xl font-semibold tracking-tight text-white">SceneForge Lobby</h1>
-          <Badge variant="secondary" className="ml-2 text-white bg-white/10">{projects.length} 个项目</Badge>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5 mb-8">
+          <div className="flex items-center gap-3">
+            <Sparkles className="h-6 w-6 text-blue-400" />
+            <h1 className="text-2xl font-semibold tracking-tight text-white">SceneForge Lobby</h1>
+            <Badge variant="secondary" className="ml-2 text-white bg-white/10">{projects.length} 个项目</Badge>
+          </div>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="min-w-0 max-w-[620px] rounded-full border border-white/10 bg-white/[0.035] px-4 py-2 shadow-lg shadow-black/20">
+              <div className="flex items-center gap-2 min-w-0">
+                <Folder className="h-4 w-4 text-blue-300 shrink-0" />
+                <span className="text-xs text-white/45 shrink-0">当前项目目录</span>
+                <span className="truncate text-sm font-medium text-white/82">
+                  {projectsRootConfig?.projectsRoot || '加载中'}
+                </span>
+                {projectsRootConfig?.isDefault && (
+                  <span className="rounded-full bg-white/8 px-2 py-0.5 text-[10px] text-white/45 shrink-0">默认</span>
+                )}
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={openProjectsRootSettings}
+              className="h-10 rounded-full border-white/10 bg-white/[0.035] px-4 text-white/80 hover:bg-white/10 hover:text-white"
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              设置
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-6">
@@ -351,6 +444,80 @@ export default function Lobby({ onSelectProject }: LobbyProps) {
           </Card>
         </div>
       </div>
+
+      {showProjectsRootSettings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 px-6 backdrop-blur-md">
+          <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-[#0d0f15] shadow-2xl shadow-black/50">
+            <div className="flex items-start justify-between gap-6 border-b border-white/10 px-6 py-5">
+              <div>
+                <h2 className="text-lg font-semibold text-white">项目目录设置</h2>
+                <p className="mt-1 text-sm text-white/50">首页项目列表、新建项目和会话记录都会从这个目录读取。</p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowProjectsRootSettings(false)}
+                className="h-8 w-8 rounded-full text-white/50 hover:bg-white/10 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <form onSubmit={handleProjectsRootSubmit} className="space-y-5 px-6 py-6">
+              <div className="space-y-2">
+                <label htmlFor="projectsRoot" className="text-sm font-medium text-white/90">
+                  项目总目录
+                </label>
+                <Input
+                  id="projectsRoot"
+                  value={projectsRootInput}
+                  onChange={(e) => setProjectsRootInput(e.target.value)}
+                  placeholder={projectsRootConfig?.defaultProjectsRoot || '<workspaceRoot>/projects'}
+                  className="h-12 bg-white/[0.045] border-white/10 text-white focus:border-blue-400/70 focus:ring-2 focus:ring-blue-400/20"
+                />
+                <div className="rounded-xl border border-white/8 bg-white/[0.025] px-4 py-3 text-xs leading-6 text-white/48">
+                  <div className="truncate">当前扫描：{projectsRootConfig?.projectsRoot || '加载中'}</div>
+                  <div className="truncate">默认目录：{projectsRootConfig?.defaultProjectsRoot || '<workspaceRoot>/projects'}</div>
+                </div>
+                {projectsRootMessage && (
+                  <p className="text-sm text-blue-300/90">{projectsRootMessage}</p>
+                )}
+              </div>
+              <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleResetProjectsRoot}
+                  disabled={projectsRootSaving}
+                  className="text-white/60 hover:bg-white/8 hover:text-white"
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  恢复默认目录
+                </Button>
+                <div className="flex items-center gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowProjectsRootSettings(false)}
+                    disabled={projectsRootSaving}
+                    className="border-white/10 bg-transparent text-white/70 hover:bg-white/8 hover:text-white"
+                  >
+                    取消
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={projectsRootSaving}
+                    className="bg-white text-black hover:bg-white/90"
+                  >
+                    {projectsRootSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                    保存设置
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

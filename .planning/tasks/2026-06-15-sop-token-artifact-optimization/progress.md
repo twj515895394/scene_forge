@@ -1,0 +1,42 @@
+# Progress
+
+## 2026-06-15
+
+- 已读取用户指定的三个交接/设计材料。
+- 已读取 `scene-forge`、`to-issues`、`karpathy-guidelines`、`brainstorming`、`writing-plans`、`planning-with-files`。
+- 已检查 `.scratch`、`.planning`、现有 issue 格式和 git 工作区状态。
+- 已创建统一专题目录 `.scratch/sop-flow-optimization/`。
+- 已创建实施计划 `.scratch/sop-flow-optimization/implementation_plan_20260615.md`。
+- 已创建 9 个 draft issue 文件，等待用户确认后进入代码执行。
+- 用户确认开始实施，并要求每个 issue 都要有 Review 标准。
+- 已将 9 个 issue 切换为 `ready-for-agent`，并为每个 issue 补充 `Review 标准`。
+- Issue 01 已完成：新增 Claude args 构造模块和单测，服务端接入 `ClaudeContextMode` 与 `set_context_mode`。
+- Issue 01 验证通过：`pnpm --filter @scene-forge/web-console exec tsc -p tsconfig.server.json`。
+- Issue 01 验证通过：`node --test apps/web-console/dist/server/tests/claude_args.test.js`。
+- Issue 01 验证通过：`pnpm --filter @scene-forge/web-console build`。
+- 运行完整 `pnpm --filter @scene-forge/web-console test` 时，初版新增断言失败已修复；后续整套测试卡在既有 watcher 测试，已中断并记录。
+- Issue 02 已完成：Web Console 默认 `stage_light`，前端新增“轻量阶段 / 完整续聊”切换，并同步服务端。
+- Issue 02 验证通过：`pnpm --filter @scene-forge/web-console exec tsc -p tsconfig.server.json`。
+- Issue 02 验证通过：`pnpm --filter @scene-forge/web-console build`。
+- Issue 02 浏览器检查：当前页面停在 Lobby，未激活项目；为避免副作用，没有创建或激活项目。
+- Issue 04 已完成：design 阶段取消旧 4 个 details 草稿必交，改为一体化 outputs + 可选 design_notes。
+- Issue 04 验证通过：`pnpm --filter @scene-forge/engine build`。
+- Issue 04 验证通过：`pnpm --filter @scene-forge/engine test`，57 passed。
+- Issue 05 已完成：video_prompts 默认只强制中文 pack + review；英文 pack 按需，但存在时仍会校验。
+- Issue 05 验证通过：`pnpm --filter @scene-forge/engine build`。
+- Issue 05 验证通过：`pnpm --filter @scene-forge/engine test`，58 passed。
+- Issue 06 已完成：performance/audio/script/assets 低风险派生产物默认并入主文件 section。
+- Issue 06 验证通过：`pnpm --filter @scene-forge/engine build`。
+- Issue 06 验证通过：`pnpm --filter @scene-forge/engine test`，58 passed。
+- Issue 07 已完成：video_intake 长解析按需化，storyboard 推荐文件默认并入主包。
+- Issue 07 验证通过：`pnpm --filter @scene-forge/engine build`。
+- Issue 07 验证通过：`pnpm --filter @scene-forge/engine test`，58 passed。
+- Issue 08 已完成评审：暂不合并 storyboard 三个强制 detail 文件，保持 SF-SB-201/202/203 文件级定位。
+- Issue 09 已完成：reference/story/assets 补充轻量单文件结构校验，不增加默认产物数量。
+- Issue 09 验证通过：`pnpm --filter @scene-forge/engine build`。
+- Issue 09 验证通过：`pnpm --filter @scene-forge/engine test`，62 passed。
+- Issue 03 工程实现已完成：新增阶段 session metadata、complete 成功后的下游 session 准备、UI session 展示和 usage mode/session 信息。
+- Issue 03 验证通过：`pnpm --filter @scene-forge/web-console exec tsc -p tsconfig.server.json`。
+- Issue 03 验证通过：`pnpm --filter @scene-forge/web-console build`。
+- Issue 03 验证通过：`node --test apps/web-console/dist/server/tests/claude_args.test.js`，4 passed。
+- Issue 03 剩余手工验证：未伪造真实 token A/B 数据；需要在已激活长 session 项目里用同一提示词分别采样 `stage_light` 与 `resume_full` 的 usage contextTokens。

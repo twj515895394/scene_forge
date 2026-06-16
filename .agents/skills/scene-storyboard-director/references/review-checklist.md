@@ -10,8 +10,8 @@
 ## 结构检查
 
 - `beat_skeleton` 已生成。
-- `storyboard_content_breakdown` 已生成。
-- `cinematic_language_plan` 已生成。
+- `storyboard_content_breakdown` 已在主包中生成；独立文件按需。
+- `cinematic_language_plan` 已在主包中生成；独立文件按需。
 - `video_generation_units` 已生成。
 - `shot_continuity_plan` 已生成。
 - `continuity_control_system` 已生成。

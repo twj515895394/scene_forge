@@ -1,18 +1,28 @@
 import React, { useRef, useEffect } from 'react';
-import { Home, History, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, ChevronRight, RefreshCw } from 'lucide-react';
+import { Home, History, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, ChevronRight, RefreshCw, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ChatHistory from './ChatHistory';
 import { isChatContentRenderable, stripChatNoiseLines } from './lib/chatSanitizer';
 
 interface ChatBubble {
   id: string;
-  type: 'thought' | 'tool_call' | 'text' | 'system' | 'prompt_ui';
+  type: 'thought' | 'tool_call' | 'text' | 'system' | 'prompt_ui' | 'usage';
   content: string;
   timestamp: string;
   answered?: boolean;
   selectedOptionLabel?: string;
   thoughtStatus?: 'streaming' | 'resolved';
   durationMs?: number;
+  usage?: {
+    contextTokens: number;
+    contextWindow: number;
+    percentage: number;
+    inputTokens?: number;
+    cacheCreationInputTokens?: number;
+    cacheReadInputTokens?: number;
+    contextMode?: ClaudeContextMode;
+    sessionId?: string;
+  };
 }
 
 interface StageState {
@@ -30,6 +40,8 @@ interface ProjectState {
   current_stage?: string;
   stages: Record<string, StageState>;
 }
+
+type ClaudeContextMode = 'stage_light' | 'resume_full';
 
 interface VariantProps {
   projectState: ProjectState | null;
@@ -59,6 +71,8 @@ interface VariantProps {
   onReturnLobby?: () => void;
   bypassPermissions: boolean;
   setBypassPermissions: (v: boolean) => void;
+  claudeContextMode: ClaudeContextMode;
+  onClaudeContextModeChange: (mode: ClaudeContextMode) => void;
   chatEndRef: React.RefObject<HTMLDivElement>;
   hasPendingPrompt: boolean;
   onPromptSubmit: (bubbleId: string, optionId: string, optionLabel: string) => void;
@@ -177,6 +191,8 @@ export default function VariantB(props: VariantProps) {
     onReturnLobby,
     bypassPermissions,
     setBypassPermissions,
+    claudeContextMode,
+    onClaudeContextModeChange,
     chatEndRef,
     hasPendingPrompt,
     onPromptSubmit,
@@ -202,6 +218,7 @@ export default function VariantB(props: VariantProps) {
   const [expandedStages, setExpandedStages] = React.useState<Record<string, boolean>>({});
   const [stageArtifacts, setStageArtifacts] = React.useState<Record<string, any[]>>({});
   const [isRefreshingArtifacts, setIsRefreshingArtifacts] = React.useState(false);
+  const [copiedBubbleId, setCopiedBubbleId] = React.useState<string | null>(null);
   const executionMode = getExecutionMode(boardState);
   const fullAutoUnlocked = isFullAutoUnlocked(boardState);
 
@@ -335,6 +352,26 @@ export default function VariantB(props: VariantProps) {
   const normalizeThoughtContent = (content: string) => stripChatNoiseLines(content).trim();
   const formatBubbleTime = (timestamp: string) =>
     new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const formatTokenCount = (value?: number) => {
+    if (typeof value !== 'number' || !Number.isFinite(value)) return '';
+    if (value >= 1000) return `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}k`;
+    return String(value);
+  };
+  const formatUsageLabel = (usage?: ChatBubble['usage']) => {
+    if (!usage) return '';
+    return `${formatTokenCount(usage.contextTokens)} tokens`;
+  };
+  const formatUsageTitle = (usage?: ChatBubble['usage']) => {
+    if (!usage) return '';
+    const details = [
+      `contextTokens: ${usage.contextTokens}`,
+      `contextWindow: ${usage.contextWindow}`,
+      `usage: ${usage.percentage}%`,
+      usage.contextMode ? `mode: ${usage.contextMode}` : '',
+      usage.sessionId ? `session: ${usage.sessionId}` : '',
+    ].filter(Boolean);
+    return details.join('\n');
+  };
 
   const formatThoughtDuration = (durationMs?: number) => {
     if (typeof durationMs !== 'number' || !Number.isFinite(durationMs) || durationMs <= 0) {
@@ -349,12 +386,58 @@ export default function VariantB(props: VariantProps) {
     return `${seconds}s`;
   };
 
-  const handleCopyText = async (text: string) => {
+  const copyTextToClipboard = async (text: string): Promise<boolean> => {
     try {
-      await navigator.clipboard.writeText(text);
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (error) {
+      console.warn('Clipboard API failed; falling back to textarea copy', error);
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.top = '-9999px';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    textarea.setSelectionRange(0, textarea.value.length);
+    try {
+      return document.execCommand('copy');
     } catch (error) {
       console.error('Failed to copy bubble content', error);
+      return false;
+    } finally {
+      document.body.removeChild(textarea);
     }
+  };
+
+  const handleCopyText = async (text: string, bubbleId: string) => {
+    const copied = await copyTextToClipboard(text);
+    if (!copied) return;
+    setCopiedBubbleId(bubbleId);
+    window.setTimeout(() => {
+      setCopiedBubbleId((current) => current === bubbleId ? null : current);
+    }, 1200);
+  };
+
+  const renderCopyButton = (text: string, bubbleId: string) => {
+    const copied = copiedBubbleId === bubbleId;
+    const Icon = copied ? Check : Copy;
+    return (
+      <button
+        type="button"
+        className={`bubble-copy-btn icon-only ${copied ? 'copied' : ''}`}
+        onClick={() => handleCopyText(text, bubbleId)}
+        title={copied ? '已复制' : '复制内容'}
+        aria-label={copied ? '已复制' : '复制内容'}
+      >
+        <Icon className="bubble-copy-icon" aria-hidden="true" />
+      </button>
+    );
   };
 
   useEffect(() => {
@@ -408,7 +491,7 @@ export default function VariantB(props: VariantProps) {
     return SCENE_TO_UI_STAGE_MAP[value] || value;
   };
 
-  const currentRouteStage = normalizeBoardRouteStage(boardState?.routing?.current_stage) || activeStage;
+  const currentRouteStage = activeStage || normalizeBoardRouteStage(boardState?.routing?.current_stage);
   const lastCompletedRouteStage = normalizeBoardRouteStage(boardState?.routing?.last_completed_stage);
   const furthestReachedStageIndex = Math.max(
     STAGES.indexOf(currentRouteStage),
@@ -416,10 +499,17 @@ export default function VariantB(props: VariantProps) {
   );
 
   const getDisplayStageStatus = (stg: string): UiStageStatus => {
+    if (stg === lastCompletedRouteStage) {
+      return 'completed';
+    }
+    if (stg === currentRouteStage) {
+      return 'in_progress';
+    }
+
     const cliStageKey = CLI_STAGE_MAP[stg];
     const boardStatus = boardState?.stage_index?.[stg]?.status;
     const cliStatus = cliStageKey ? projectState?.stages?.[cliStageKey]?.status : undefined;
-    const rawStatus = (!boardStatus || boardStatus === 'pending') ? cliStatus || boardStatus : boardStatus;
+    const rawStatus = cliStatus || boardStatus;
 
     if (rawStatus === 'skipped') {
       return 'skipped';
@@ -752,6 +842,7 @@ export default function VariantB(props: VariantProps) {
                     return false;
                   }
                 }
+                if (b.type === 'usage') return false;
                 // Skip thought bubbles whose content normalizes to empty
                 if (b.type === 'thought' && !normalizeThoughtContent(b.content)) return false;
                 // Skip non-user text bubbles that aren't renderable after sanitization
@@ -834,13 +925,15 @@ export default function VariantB(props: VariantProps) {
                       <div className="flex items-center gap-3 ml-2 flex-shrink-0">
                         {toolInfo.result && (
                           <button
-                            className="tool-inline-action"
+                            className="tool-inline-action tool-copy-action"
+                            title={copiedBubbleId === `tool-${b.id}` ? '已复制' : '复制工具结果'}
+                            aria-label={copiedBubbleId === `tool-${b.id}` ? '已复制' : '复制工具结果'}
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigator.clipboard.writeText(toolInfo.result || '');
+                              handleCopyText(toolInfo.result || '', `tool-${b.id}`);
                             }}
                           >
-                            Copy
+                            {copiedBubbleId === `tool-${b.id}` ? <Check className="tool-copy-icon" /> : <Copy className="tool-copy-icon" />}
                           </button>
                         )}
                         <span className="tool-collapse-indicator">{isCollapsed ? '展开 ▼' : '收起 ▲'}</span>
@@ -867,7 +960,7 @@ export default function VariantB(props: VariantProps) {
                     </div>
                     <div className="bubble-meta-row user-message-meta">
                       <span className="bubble-time">{formatBubbleTime(b.timestamp)}</span>
-                      <button className="bubble-copy-btn" onClick={() => handleCopyText(userContent)}>复制</button>
+                      {renderCopyButton(userContent, b.id)}
                     </div>
                   </div>
                 );
@@ -944,7 +1037,12 @@ export default function VariantB(props: VariantProps) {
                   </div>
                   <div className="bubble-meta-row ai-message-meta">
                     <span className="bubble-time">{formatBubbleTime(b.timestamp)}</span>
-                    <button className="bubble-copy-btn" onClick={() => handleCopyText(b.content)}>复制</button>
+                    {b.usage && (
+                      <span className="bubble-token-usage" title={formatUsageTitle(b.usage)}>
+                        {formatUsageLabel(b.usage)}
+                      </span>
+                    )}
+                    {renderCopyButton(b.content, b.id)}
                   </div>
                 </div>
               );
@@ -1001,7 +1099,30 @@ export default function VariantB(props: VariantProps) {
                   重载 Claude
                 </Button>
               </div>
-              <span className="label-done">通过对话驱动 Claude 推进管线</span>
+              <div className="context-mode-control" aria-label="Claude 上下文模式">
+                <span className="context-mode-label">上下文</span>
+                <button
+                  type="button"
+                  className={`context-mode-option ${claudeContextMode === 'stage_light' ? 'active' : ''}`}
+                  onClick={() => onClaudeContextModeChange('stage_light')}
+                  title="轻量阶段：新 Claude session + 项目文件上下文，不携带历史 tool/thought/raw assistant。"
+                >
+                  轻量阶段
+                </button>
+                <button
+                  type="button"
+                  className={`context-mode-option ${claudeContextMode === 'resume_full' ? 'active' : ''}`}
+                  onClick={() => onClaudeContextModeChange('resume_full')}
+                  title="完整续聊：使用 Claude CLI --resume 保留完整历史，适合排错但 token 消耗高。"
+                >
+                  完整续聊
+                </button>
+                {currentSessionId && (
+                  <span className="context-session-chip" title={currentSessionId}>
+                    session {currentSessionId.slice(0, 8)}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 

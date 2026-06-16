@@ -32,27 +32,25 @@
 
 ## 4. 正式生成
 
-用户确认后，按以下顺序生成：
+用户确认前，完整设计只在对话内预览，不独立落盘完整草稿。用户确认后，按以下顺序一次性生成最终产物：
 
 1. `visual_language` baseline
 2. `expressive_animation_design`
-3. character design bible files
-4. scene design file
-5. prop design file
-6. space continuity seed
-7. character bible sheet prompt
-8. scene / prop / master reference prompts
-9. design review
+3. `outputs/design.md`，包含 `space_continuity_seed`、`prop_state_machines`、`blocking_map`
+4. `outputs/design_prompts/角色说明书图片提示词_v*.md`，作为完整角色设定存档 + 可投喂 prompt
+5. `outputs/design_prompts/全场景资产总参考图提示词_v*.md`，作为完整场景/道具视觉存档 + 可投喂 prompt
+6. 可选 `details/design/design_notes_v*.md`
+7. design review
 
 ## 5. 落盘与注册
 
 正式完成前必须：
 
 - 写入 `outputs/design.md`。
-- 写入 `details/design/*`。
 - 写入 `outputs/design_prompts/*`。
+- 复杂项目可写入 `details/design/design_notes_v*.md`。
 - 在 `artifacts.manifest.yaml` 注册上述文件。
-- 在 `PROJECT_BOARD.md stage_index.design.files` 注册 primary、details、outputs。
+- 在 `PROJECT_BOARD.md stage_index.design.files` 注册 primary、outputs，以及可选 details。
 
 ## 6. 完成前校验
 

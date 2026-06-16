@@ -10,10 +10,10 @@
 ## 文件检查
 
 - 中文 pack 文件存在。
-- 英文 pack 文件存在。
+- 若用户明确要求英文版、目标平台需要英文或发布策略要求海外投放，则英文 pack 文件存在。
 - `details/video_prompts/video_prompt_review_v*.md` 存在。
 - 所有文件已进入 manifest。
-- `PROJECT_BOARD.md stage_index.video_prompts.files.outputs` 包含中文和英文 pack。
+- `PROJECT_BOARD.md stage_index.video_prompts.files.outputs` 包含中文 pack；英文 pack 仅在生成时进入 outputs。
 - `PROJECT_BOARD.md stage_index.video_prompts.files.quality_check` 指向 review 文件。
 
 ## Pack 正文

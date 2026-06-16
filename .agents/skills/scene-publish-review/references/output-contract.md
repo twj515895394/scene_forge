@@ -199,3 +199,5 @@ data:
 
 - 发布完成后可推进到 `published`
 - 复盘完成后可推进到 `reviewed`
+- CLI / `PROJECT_STATE.json` 阶段名为 `publish_review`；`PROJECT_BOARD.md stage_index` 阶段键为 `publish`。二者是同一发布阶段的 alias。
+- 发布阶段主交付默认位于 `outputs/publish_copy/*.md`；兼容旧汇总文件 `outputs/publish_review.md`。`complete --stage publish_review` 应能发现并注册 `outputs/publish_copy/` 下的发布文案文件。

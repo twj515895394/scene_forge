@@ -441,8 +441,8 @@ anticipation → impact → deformation → hold → recovery / settle
 
 ```text
 details/performance_sheet_v*.md
-details/performance/action_continuity_chains_v*.md
-details/performance/emotion_continuity_chains_v*.md
 ```
+
+`action_continuity_chains` 与 `emotion_continuity_chains` 默认作为 `performance_sheet` 内部 section，不再独立落盘。
 
 黑板只保留摘要和路径，不直接塞完整表演表正文。

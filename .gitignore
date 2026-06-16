@@ -2,3 +2,5 @@
 node_modules/
 dist/
 pnpm-debug.log
+runtime/logs/
+runtime/web-console.pid

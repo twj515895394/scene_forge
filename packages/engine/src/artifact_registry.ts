@@ -46,6 +46,20 @@ export class ArtifactRegistry {
       return true;
     }
 
+    // 部分执行型阶段的正式主交付是轻量 details 文件，而不是 outputs 包。
+    const normalizedRelativePath = relativePath.split(path.sep).join('/');
+    const stagePrimaryDetailPatterns: Record<string, RegExp[]> = {
+      reference: [/^details\/reference\/reference_boundary_v[^/]+\.md$/i],
+      story: [/^details\/story\/story_development_v[^/]+\.md$/i],
+      assets: [/^details\/assets\/asset_check_v[^/]+\.md$/i],
+      script: [/^details\/script_v[^/]+\.md$/i],
+      performance: [/^details\/performance_sheet_v[^/]+\.md$/i],
+      audio: [/^details\/audio_plan_v[^/]+\.md$/i],
+    };
+    if ((stagePrimaryDetailPatterns[stage] ?? []).some((pattern) => pattern.test(normalizedRelativePath))) {
+      return true;
+    }
+
     // Preview / Draft / Review 产物目录锁定：只允许写入 details/<stage>/
     const expectedDetailPrefix = `details${path.sep}${stage}${path.sep}`;
     const expectedDetailPrefixSlash = `details/${stage}/`;

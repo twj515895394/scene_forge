@@ -37,8 +37,8 @@
 用户确认后，按以下顺序生成：
 
 1. `beat_skeleton`
-2. `storyboard_content_breakdown`
-3. `cinematic_language_plan`
+2. `storyboard_content_breakdown`，默认写入主包 section，复杂项目才独立落盘
+3. `cinematic_language_plan`，默认写入主包 section，复杂项目才独立落盘
 4. `video_generation_units`
 5. `shot_continuity_plan`
 6. anchor frames / continuity chains / continuity control system

@@ -295,7 +295,7 @@ data:
 - `bridge_need`：该 Beat 是否需要在进入下一个 Beat 或 Segment 时设计桥接。
 - `hero_moment_candidates`：候选看点，不绑定具体样例，应根据当前项目剧情动态生成。
 - `beat_table_file`：写入 `details/script/beat_table_v*.md` 的标准化 Beat 表路径。
-- `video_generation_unit_plan_file`：写入 `details/script/video_generation_unit_plan_v*.md` 的视频生成单元规划路径。
+- `video_generation_unit_plan_file`：兼容旧字段；默认指向 `beat_table_file`，并由该文件内的 `video_generation_unit_plan` section 承载视频生成单元规划。
 - `beat_table`：供表演、分镜和视频提示词阶段快速读取的标准化 Beat 摘要。
 - `video_generation_unit_plan`：剧本阶段对后续视频生成单元的初步规划，供分镜阶段细化而不是从零重建。
 - `script_file`：完整剧本正文路径。
@@ -475,7 +475,7 @@ creative_direction_context:
 - 最终改编档位和演绎风格
 - 最终导演风格包（Director Style Package）与风格大类（Style Family）
 - Story Beat 数量和核心节奏
-- 是否已产出 `beat_table_v*.md` 与 `video_generation_unit_plan_v*.md`
+- 是否已产出 `beat_table_v*.md`，且其中包含 `video_generation_unit_plan` section
 - 是否启用 `expressive_animation`
 - 识别了哪些 `stylized_action_opportunities`
 - 识别了哪些 `contrast_opportunities`
@@ -493,7 +493,6 @@ creative_direction_context:
 ```text
 details/script_v*.md
 details/script/beat_table_v*.md
-details/script/video_generation_unit_plan_v*.md
 ```
 
 黑板只保留摘要、Story Beat、表现力扩展机会点和路径引用，不直接塞完整剧本文本。

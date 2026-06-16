@@ -17,6 +17,12 @@ const STAGE_EXTRA_PREFIXES: Record<string, string[]> = {
   storyboard: [
     'outputs/storyboard_prompts/',
   ],
+  publish_review: [
+    'outputs/publish_copy/',
+  ],
+  publish: [
+    'outputs/publish_copy/',
+  ],
 };
 
 function getStageAliases(stage: string): string[] {
@@ -81,30 +87,31 @@ function inferArtifact(stage: string, relativePath: string): Artifact {
   const normalized = normalizePath(relativePath);
   const inDetails = normalized.startsWith('details/');
   const inHandoffs = normalized.startsWith('handoffs/');
+  const isExpectedFinal = getExpectedFinalPathPattern(stage)?.test(normalized) ?? false;
 
   return {
     id: makeArtifactId(stage, normalized),
     stage,
-    kind: inHandoffs ? 'review' : inDetails ? 'draft' : 'final',
+    kind: isExpectedFinal ? 'final' : inHandoffs ? 'review' : inDetails ? 'draft' : 'final',
     role: inHandoffs ? 'handoff' : inDetails ? 'detail' : 'output',
     path: normalized,
-    readable_by_downstream: !inDetails,
+    readable_by_downstream: isExpectedFinal || !inDetails,
   };
 }
 
 function getExpectedFinalPathPattern(stage: string): RegExp | undefined {
   const patterns: Record<string, RegExp> = {
     topic_gate: /^outputs\/topic\.md$/,
-    reference: /^outputs\/reference\.md$/,
-    story: /^outputs\/story\.md$/,
-    assets: /^outputs\/assets\.md$/,
+    reference: /^details\/reference\/reference_boundary_v[^/]+\.md$/i,
+    story: /^details\/story\/story_development_v[^/]+\.md$/i,
+    assets: /^details\/assets\/asset_check_v[^/]+\.md$/i,
     design: /^outputs\/design\.md$/,
-    script: /^outputs\/script\.md$/,
-    performance: /^outputs\/performance_pack_\d+(_\w+)?\.md$/,
-    audio: /^outputs\/audio_pack_\d+(_\w+)?\.md$/,
+    script: /^(outputs\/script\.md|details\/script_v[^/]+\.md)$/i,
+    performance: /^(outputs\/performance_pack_\d+(_\w+)?\.md|details\/performance_sheet_v[^/]+\.md)$/i,
+    audio: /^(outputs\/audio_pack_\d+(_\w+)?\.md|details\/audio_plan_v[^/]+\.md)$/i,
     storyboard: /^outputs\/storyboard_pack_\d+(_\w+)?\.md$/,
     video_prompts: /^(outputs\/video_prompts_pack_\d+(_\w+)?\.md|outputs\/video_prompts\/视频提示词_第\d+包_(中文|英文)_v[^/]+\.md)$/,
-    publish_review: /^outputs\/publish_review\.md$/,
+    publish_review: /^(outputs\/publish_review\.md|outputs\/publish_copy\/.+\.md)$/i,
   };
   return patterns[stage];
 }
@@ -183,7 +190,11 @@ function chooseBoardStageKey(boardState: Record<string, any>, stage: string): st
   return stage;
 }
 
-function syncBoard(project: Project, stage: string, artifacts: Artifact[]) {
+interface SyncStageArtifactIndexOptions {
+  boardStatus?: string;
+}
+
+function syncBoard(project: Project, stage: string, artifacts: Artifact[], options: SyncStageArtifactIndexOptions = {}) {
   const boardPath = path.join(project.projectPath, 'PROJECT_BOARD.md');
   if (!fs.existsSync(boardPath)) {
     return;
@@ -213,7 +224,7 @@ function syncBoard(project: Project, stage: string, artifacts: Artifact[]) {
 
   boardState.stage_index[boardStageKey] = {
     ...existingStageIndex,
-    status: 'completed',
+    status: options.boardStatus ?? existingStageIndex.status ?? 'in_progress',
     active_version: existingStageIndex.active_version || 'v1',
     updated_at: new Date().toISOString(),
     files: {
@@ -229,7 +240,7 @@ function syncBoard(project: Project, stage: string, artifacts: Artifact[]) {
   fs.writeFileSync(boardPath, yaml.dump(boardState, { lineWidth: 120 }), 'utf8');
 }
 
-export function syncStageArtifactIndex(project: Project, stage: string): Artifact[] {
+export function syncStageArtifactIndex(project: Project, stage: string, options: SyncStageArtifactIndexOptions = {}): Artifact[] {
   const artifacts = discoverStageArtifacts(project, stage);
   const syncableArtifacts = artifacts.map(normalizeArtifactForManifest);
   if (syncableArtifacts.length === 0) {
@@ -237,6 +248,6 @@ export function syncStageArtifactIndex(project: Project, stage: string): Artifac
   }
 
   syncManifest(project, syncableArtifacts);
-  syncBoard(project, stage, syncableArtifacts);
+  syncBoard(project, stage, syncableArtifacts, options);
   return syncableArtifacts;
 }

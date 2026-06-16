@@ -50,7 +50,9 @@ scene-storyboard-director
 details/audio_plan_v*.md
 ```
 
-独立音频提示与混音计划写入：
+独立音频提示与混音计划默认并入 `details/audio_plan_v*.md` 的 `music_design`、`foley_design` 和 `segment_audio_plan` section。
+
+仅在用户明确需要独立复制到音频平台时，才额外导出：
 
 ```text
 outputs/audio/music_prompt_v*.md

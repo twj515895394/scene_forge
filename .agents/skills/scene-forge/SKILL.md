@@ -365,8 +365,9 @@ stage_patches:
 
 ## 关键规则
 
-- 只承认一个唯一状态源：`PROJECT_BOARD.md`
-- 只执行 `state.next_stage`
+- SOP CLI 阶段推进以 `PROJECT_STATE.json` 为准；`PROJECT_BOARD.md` 负责创作黑板、阶段索引、路由摘要和确认记录。
+- 当 `PROJECT_STATE.json.current_stage` 存在且未完成时，Web Console 和 Agent 必须优先处理该 active CLI 阶段，避免黑板提前写入的 `routing.current_stage` 造成阶段漂移。
+- 创作路由只执行 `PROJECT_BOARD.md.state.next_stage` 指向的一个 SceneForge 阶段；执行 CLI 命令时先映射成对应 CLI 阶段名。
 - 视频源项目先走 `scene-video-intake`
 - `docs/` 与 `.handoff/` 不进入运行时上下文
 - 子 Skill 只输出轻量补丁，不直接重写整份黑板

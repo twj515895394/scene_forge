@@ -35,6 +35,8 @@ next_action:
 
 下文结构用于阶段正式产物文件，例如 `details/`、`outputs/` 或 `inputs/` 中的 primary/handoff 文件；不得直接作为黑板正文回写。黑板只写 `board_updates`、文件索引和摘要。
 
+`topic_gate` 的 validator 认可的正式产物路径是 `outputs/topic.md`。`inputs/` 目录只能保存用户输入、源材料或 source intake handoff，不得把 `inputs/topic_decision.md` 当作 final artifact。
+
 ```yaml
 data:
   topic_name:

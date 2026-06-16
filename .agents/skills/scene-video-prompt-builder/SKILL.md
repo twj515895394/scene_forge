@@ -7,7 +7,7 @@ description: 当用户要根据 SceneForge 分镜、表演表、声音导演结�
 
 把分镜、表演设计、声音方案和 source intake 继承约束转成最终可用于外部视频生成平台的提示词交付包。SceneForge 只输出提示词和制作说明，不声称已经生成视频。
 
-执行期通用约束见仓库根 `AGENTS.md`。本技能只定义 video_prompts 阶段的路由、读取边界、执行顺序和强制交付。中文 pack 是主交付，英文 pack 是翻译/模型适配版。
+执行期通用约束见仓库根 `AGENTS.md`。本技能只定义 video_prompts 阶段的路由、读取边界、执行顺序和强制交付。中文 pack 是默认主交付，英文 pack 只在用户明确要求、目标平台需要英文或发布策略要求海外投放时生成。
 
 ## 必读参考
 
@@ -26,7 +26,7 @@ description: 当用户要根据 SceneForge 分镜、表演表、声音导演结�
 
 - 总控发现当前项目 `state.next_stage` 为 `scene-video-prompt-builder`。
 - 已完成 storyboard 和 audio，项目可进入 video_prompts。
-- 需要按故事板 pack 生成中文 / 英文导演长版视频提示词。
+- 需要按故事板 pack 生成中文导演长版视频提示词；英文版按需生成。
 - 需要把 Beat、VGU、shot continuity、表演、声音、Blocking、道具状态和模型适配写进最终提示词。
 
 如果 storyboard、audio、时长、分段策略、风格包或视频提示词方案尚未确认，先阻塞并返回上游确认。
@@ -40,8 +40,8 @@ description: 当用户要根据 SceneForge 分镜、表演表、声音导演结�
 - `outputs/storyboard_pack_*.md`
 - `details/storyboard/*` 中与 Beat Skeleton、VGU、Shot Continuity、Quality Check 相关的文件
 - `outputs/storyboard_prompts/*`
-- `outputs/audio_pack_*.md`
-- `outputs/performance_pack_*.md`
+- `details/audio_plan_v*.md` 或兼容旧路径 `outputs/audio_pack_*.md`
+- `details/performance_sheet_v*.md` 或兼容旧路径 `outputs/performance_pack_*.md`
 - `outputs/design.md`
 - 当前风格包中与视觉、镜头、光影和负向约束直接相关的文件
 
@@ -62,7 +62,8 @@ storyboard / performance / audio / design inputs
 -> segment_sound_execution
 -> prompt_trace
 -> video_prompt_review
--> zh/en pack-aligned final files
+-> 中文 pack-aligned final files
+-> optional English pack files
 ```
 
 ## 确认闸门
@@ -87,8 +88,11 @@ storyboard / performance / audio / design inputs
 正式完成前必须真实落盘并注册以下文件，不能只在主文件中声明路径：
 
 - `outputs/video_prompts/视频提示词_第01包_中文_v*.md`
-- `outputs/video_prompts/视频提示词_第01包_英文_v*.md`
 - `details/video_prompts/video_prompt_review_v*.md`
+
+用户明确要求英文版、目标平台需要英文或发布策略要求海外投放时，才额外写入：
+
+- `outputs/video_prompts/视频提示词_第01包_英文_v*.md`
 
 如用户明确需要整片汇编版，才额外写入：
 

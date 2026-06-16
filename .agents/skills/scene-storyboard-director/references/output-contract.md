@@ -40,7 +40,7 @@
 - `details/storyboard/storyboard_quality_check_v*.md`
 - `details/storyboard/design_reconciliation_review_v*.md`
 
-推荐但不强制：
+按需生成；默认并入 `outputs/storyboard_pack_*.md` 的对应 section：
 
 - `details/storyboard/storyboard_content_breakdown_v*.md`
 - `details/storyboard/cinematic_language_plan_v*.md`

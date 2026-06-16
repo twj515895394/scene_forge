@@ -6,13 +6,23 @@ import { isChatContentRenderable, stripChatNoiseLines, summarizeChatNoise } from
 
 interface ChatBubble {
   id: string;
-  type: 'thought' | 'tool_call' | 'text' | 'system' | 'prompt_ui';
+  type: 'thought' | 'tool_call' | 'text' | 'system' | 'prompt_ui' | 'usage';
   content: string;
   timestamp: string;
   answered?: boolean;
   selectedOptionLabel?: string;
   thoughtStatus?: 'streaming' | 'resolved';
   durationMs?: number;
+  usage?: {
+    contextTokens: number;
+    contextWindow: number;
+    percentage: number;
+    inputTokens?: number;
+    cacheCreationInputTokens?: number;
+    cacheReadInputTokens?: number;
+    contextMode?: ClaudeContextMode;
+    sessionId?: string;
+  };
 }
 
 interface StageState {
@@ -31,6 +41,8 @@ interface ProjectState {
   stages: Record<string, StageState>;
 }
 
+type ClaudeContextMode = 'stage_light' | 'resume_full';
+
 const CLI_TO_UI_STAGE_MAP: Record<string, string> = {
   topic_gate: 'topic',
   script: 'script',
@@ -39,6 +51,20 @@ const CLI_TO_UI_STAGE_MAP: Record<string, string> = {
   storyboard: 'storyboard',
   video_prompts: 'video_prompts',
   publish_review: 'publish'
+};
+
+const SCENE_TO_UI_STAGE_MAP: Record<string, string> = {
+  'scene-topic-gate': 'topic',
+  'scene-reference-decider': 'reference',
+  'scene-story-development': 'story',
+  'scene-asset-checker': 'assets',
+  'scene-design-builder': 'design',
+  'scene-script-adapter': 'script',
+  'scene-performance-director': 'performance',
+  'scene-storyboard-director': 'storyboard',
+  'scene-audio-director': 'audio',
+  'scene-video-prompt-builder': 'video_prompts',
+  'scene-publish-review': 'publish',
 };
 
 function previewDebugContent(value: string, length = 80): string {
@@ -135,6 +161,29 @@ function resolveThoughtBubbles(items: ChatBubble[], resolvedAt = Date.now()): Ch
   });
 }
 
+function attachUsageToLatestAssistantBubble(items: ChatBubble[]): ChatBubble[] {
+  const next = [...items];
+  const usageBubbles = next.filter((bubble) => bubble.type === 'usage' && bubble.usage);
+  if (usageBubbles.length === 0) {
+    return next;
+  }
+
+  for (const usageBubble of usageBubbles) {
+    for (let index = next.indexOf(usageBubble) - 1; index >= 0; index -= 1) {
+      const candidate = next[index];
+      if (candidate?.type === 'text' && !candidate.content.trim().startsWith('>')) {
+        next[index] = {
+          ...candidate,
+          usage: usageBubble.usage,
+        };
+        break;
+      }
+    }
+  }
+
+  return next.filter((bubble) => bubble.type !== 'usage');
+}
+
 
 function summarizeChatRenderableArtifacts(value: string) {
   return summarizeChatNoise(value);
@@ -179,8 +228,9 @@ export default function App() {
   // activeStage 自动跟随项目状态，不允许手动选择
   const rawStage = projectState?.current_stage
     || (projectState ? Object.entries(projectState.stages).find(([,s]) => s.status !== 'completed')?.[0] : null)
+    || boardState?.routing?.current_stage
     || 'topic_gate';
-  const activeStage = CLI_TO_UI_STAGE_MAP[rawStage] || rawStage || 'topic';
+  const activeStage = SCENE_TO_UI_STAGE_MAP[rawStage] || CLI_TO_UI_STAGE_MAP[rawStage] || rawStage || 'topic';
 
   const activeStageRef = useRef(activeStage);
   useEffect(() => {
@@ -200,6 +250,7 @@ export default function App() {
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [claudeContextMode, setClaudeContextMode] = useState<ClaudeContextMode>('stage_light');
 
   // Permission bypass preference
   const [bypassPermissions, setBypassPermissions] = useState<boolean>(() => {
@@ -277,7 +328,7 @@ export default function App() {
         setBubbles(normalizeIncomingHistoryBubbles(data.bubbles));
       }
 
-      setCurrentSessionId(sessionId);
+      setCurrentSessionId(data.id || sessionId);
       setShowHistory(false);
 
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
@@ -414,6 +465,7 @@ export default function App() {
       console.log('WS Connection Open');
       // Sync dynamic settings on connect
       ws.send(JSON.stringify({ bypassPermissions: bypassPermissionsRef.current }));
+      ws.send(JSON.stringify({ type: 'set_context_mode', mode: claudeContextMode }));
     };
 
     ws.onmessage = (event) => {
@@ -422,6 +474,14 @@ export default function App() {
 
         if (payload.type === 'session_init') {
           setCurrentSessionId(payload.sessionId);
+        } else if (payload.type === 'stage_session') {
+          if (typeof payload.sessionId === 'string') {
+            setCurrentSessionId(payload.sessionId);
+          }
+        } else if (payload.type === 'context_mode') {
+          if (payload.mode === 'stage_light' || payload.mode === 'resume_full') {
+            setClaudeContextMode(payload.mode);
+          }
         } else if (payload.type === 'history') {
           if (payload.bubbles) {
             logRenderableBubbleDiagnostics('history', payload.bubbles);
@@ -455,7 +515,9 @@ export default function App() {
               const bubbleMap = new Map(prev.map(b => [b.id, b]));
               incomingBubbles.forEach((b: ChatBubble) => bubbleMap.set(b.id, b));
               const merged = Array.from(bubbleMap.values());
-              const next = dedupeConsecutiveTextBubbles(hasFinalText ? resolveThoughtBubbles(merged) : merged);
+              const next = attachUsageToLatestAssistantBubble(
+                dedupeConsecutiveTextBubbles(hasFinalText ? resolveThoughtBubbles(merged) : merged)
+              );
               debugChatEvent('ws.output.after_merge', {
                 nextCount: next.length,
                 duplicatesByContent: next
@@ -542,6 +604,13 @@ export default function App() {
       ws.close();
     };
   }, [activeProject]);
+
+  const handleClaudeContextModeChange = (mode: ClaudeContextMode) => {
+    setClaudeContextMode(mode);
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'set_context_mode', mode }));
+    }
+  };
 
   // Scroll chat bottom
   useEffect(() => {
@@ -903,6 +972,8 @@ export default function App() {
     onReturnLobby: handleReturnToLobby,
     bypassPermissions,
     setBypassPermissions,
+    claudeContextMode,
+    onClaudeContextModeChange: handleClaudeContextModeChange,
     chatEndRef,
     hasPendingPrompt,
     onPromptSubmit: handlePromptSubmit,

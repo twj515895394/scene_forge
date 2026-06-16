@@ -76,7 +76,7 @@ assets/animation-stylization/contrast-comedy-library.md
 12. 设计音乐主题、情绪曲线和静默点，避免音乐全程铺满。
 13. 为每个 Segment 写明 `audio_continuity`，尤其是 Bridge Shot 需要承接的动作余音、环境底噪、台词气口或音乐尾音。
 14. 生成音频计划并写入 `details/audio_plan_v*.md`。
-15. 生成独立音乐提示词、拟音提示词和混音计划，写入 `outputs/audio/`。
+15. 默认把音乐提示词、拟音提示词和混音计划作为 `audio_plan` 内部 section；仅在用户明确需要独立复制到音频平台时，才额外导出 `outputs/audio/*`。
 16. 黑板只记录摘要、版本、路径、关键声音策略和后续视频提示词需要继承的内容。
 17. 输出单个 YAML 补丁块，并将状态推进到 `audio_ready`，下一阶段为 `scene-video-prompt-builder`。
 

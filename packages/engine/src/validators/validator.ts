@@ -206,30 +206,6 @@ interface DesignRequiredArtifact {
 
 const DESIGN_REQUIRED_ARTIFACTS: DesignRequiredArtifact[] = [
   {
-    rule_id: 'SF-DG-201',
-    label: 'character design or character bible file',
-    pattern: /^(details\/design\/character_design_[^/]+_v[^/]+\.md|details\/角色说明书_[^/]+_v[^/]+\.md)$/i,
-    suggestion: 'Write and register a character design bible file under details/design/ or details/角色说明书_*_v*.md.'
-  },
-  {
-    rule_id: 'SF-DG-202',
-    label: 'scene design file',
-    pattern: /^details\/design\/scene_design_v[^/]+\.md$/i,
-    suggestion: 'Write and register details/design/scene_design_v*.md.'
-  },
-  {
-    rule_id: 'SF-DG-203',
-    label: 'prop design file',
-    pattern: /^details\/design\/prop_design_v[^/]+\.md$/i,
-    suggestion: 'Write and register details/design/prop_design_v*.md.'
-  },
-  {
-    rule_id: 'SF-DG-204',
-    label: 'space continuity seed file',
-    pattern: /^details\/design\/space_continuity_seed_v[^/]+\.md$/i,
-    suggestion: 'Write and register details/design/space_continuity_seed_v*.md.'
-  },
-  {
     rule_id: 'SF-DG-205',
     label: 'character bible sheet prompt',
     pattern: /^outputs\/design_prompts\/角色说明书图片提示词_v[^/]+\.md$/i,
@@ -273,11 +249,44 @@ const DESIGN_FORBIDDEN_POSTER_MARKERS = [
   'character poster',
 ];
 
+interface LightStageContract {
+  artifactPattern: RegExp;
+  requiredMarkers: string[];
+  ruleId: string;
+  label: string;
+  suggestion: string;
+}
+
+const LIGHT_STAGE_CONTRACTS: Record<string, LightStageContract> = {
+  reference: {
+    artifactPattern: /^details\/reference\/reference_boundary_v[^/]+\.md$/i,
+    requiredMarkers: ['reference_boundary', 'allowed_inheritance', 'forbidden_inheritance', 'creative_direction_context'],
+    ruleId: 'SF-REF-101',
+    label: 'reference boundary',
+    suggestion: 'Add reference_boundary with allowed/forbidden inheritance and creative_direction_context.'
+  },
+  story: {
+    artifactPattern: /^details\/story\/story_development_v[^/]+\.md$/i,
+    requiredMarkers: ['story_beats', 'emotional_arc'],
+    ruleId: 'SF-ST-101',
+    label: 'story development',
+    suggestion: 'Add story_beats with 4-8 beat_id entries and emotional_arc.'
+  },
+  assets: {
+    artifactPattern: /^details\/assets\/asset_check_v[^/]+\.md$/i,
+    requiredMarkers: ['asset_lock', 'locked_assets', 'downstream_constraints'],
+    ruleId: 'SF-AS-101',
+    label: 'asset check',
+    suggestion: 'Add asset_lock with locked_assets and downstream_constraints.'
+  }
+};
+
 interface VideoPromptsRequiredArtifact {
   rule_id: string;
   label: string;
   pattern: RegExp;
   suggestion: string;
+  optional?: boolean;
 }
 
 const VIDEO_PROMPTS_REQUIRED_ARTIFACTS: VideoPromptsRequiredArtifact[] = [
@@ -291,7 +300,8 @@ const VIDEO_PROMPTS_REQUIRED_ARTIFACTS: VideoPromptsRequiredArtifact[] = [
     rule_id: 'SF-VP-202',
     label: 'English pack-aligned video prompt file',
     pattern: /^outputs\/video_prompts\/视频提示词_第\d+包_英文_v[^/]+\.md$/i,
-    suggestion: 'Write and register outputs/video_prompts/视频提示词_第01包_英文_v*.md.'
+    suggestion: 'Write and register outputs/video_prompts/视频提示词_第01包_英文_v*.md only when English delivery is requested.',
+    optional: true
   },
   {
     rule_id: 'SF-VP-203',
@@ -361,10 +371,22 @@ const VIDEO_PROMPTS_DIRECTOR_PROMPT_REQUIRED_MARKERS = [
 export const DEFAULT_STAGE_RULES: Record<string, StageRule> = {
   topic_gate: {
     expected_file_pattern: '^outputs/topic\\.md$',
-    required_headers: ['topic_ideas']
+    required_headers: []
+  },
+  reference: {
+    expected_file_pattern: '^details/reference/reference_boundary_v[^/]+\\.md$',
+    required_headers: []
+  },
+  story: {
+    expected_file_pattern: '^details/story/story_development_v[^/]+\\.md$',
+    required_headers: []
+  },
+  assets: {
+    expected_file_pattern: '^details/assets/asset_check_v[^/]+\\.md$',
+    required_headers: []
   },
   script: {
-    expected_file_pattern: '^outputs/script\\.md$',
+    expected_file_pattern: '^(outputs/script\\.md|details/script_v[^/]+\\.md)$',
     required_headers: ['story_beats']
   },
   design: {
@@ -372,11 +394,11 @@ export const DEFAULT_STAGE_RULES: Record<string, StageRule> = {
     required_headers: ['visual_language']
   },
   performance: {
-    expected_file_pattern: '^outputs/performance_pack_\\d+(_\\w+)?\\.md$',
+    expected_file_pattern: '^(outputs/performance_pack_\\d+(_\\w+)?\\.md|details/performance_sheet_v[^/]+\\.md)$',
     required_headers: ['performance_beats']
   },
   audio: {
-    expected_file_pattern: '^outputs/audio_pack_\\d+(_\\w+)?\\.md$',
+    expected_file_pattern: '^(outputs/audio_pack_\\d+(_\\w+)?\\.md|details/audio_plan_v[^/]+\\.md)$',
     required_headers: ['audio_execution_plan']
   },
   storyboard: {
@@ -388,8 +410,8 @@ export const DEFAULT_STAGE_RULES: Record<string, StageRule> = {
     required_headers: ['pack_audio_execution_plan', 'segment_sound_execution']
   },
   publish_review: {
-    expected_file_pattern: '^outputs/publish_review\\.md$',
-    required_headers: ['publish_checklist']
+    expected_file_pattern: '^(outputs/publish_review\\.md|outputs/publish_copy/.+\\.md)$',
+    required_headers: []
   }
 };
 
@@ -893,19 +915,6 @@ export class Validator {
     const boardDetails = Array.isArray(boardFiles.details) ? boardFiles.details : [];
     const boardOutputs = Array.isArray(boardFiles.outputs) ? boardFiles.outputs : [];
 
-    const missingBoardDetails = DESIGN_REQUIRED_ARTIFACTS
-      .filter((required) => required.pattern.source.startsWith('^details'))
-      .filter((required) => !boardDetails.some((detailPath: string) => required.pattern.test(detailPath)));
-    if (missingBoardDetails.length > 0) {
-      errors.push({
-        rule_id: 'SF-DG-211',
-        severity: 'error',
-        artifact: 'PROJECT_BOARD.md',
-        message: `PROJECT_BOARD.md stage_index.design.files.details is missing required detail entries: ${missingBoardDetails.map((item) => item.label).join(', ')}.`,
-        suggestion: 'Sync design detail files into PROJECT_BOARD.md stage_index.design.files.details before completing the stage.'
-      });
-    }
-
     const missingBoardOutputs = DESIGN_REQUIRED_ARTIFACTS
       .filter((required) => required.pattern.source.startsWith('^outputs'))
       .filter((required) => !boardOutputs.some((outputPath: string) => required.pattern.test(outputPath)));
@@ -946,6 +955,9 @@ export class Validator {
       const discoveredPath = [...discoveredPaths].find((artifactPath) => required.pattern.test(artifactPath));
 
       if (!registeredPath) {
+        if (required.optional) {
+          continue;
+        }
         errors.push({
           rule_id: required.rule_id,
           severity: 'error',
@@ -1062,6 +1074,7 @@ export class Validator {
 
     const missingBoardOutputs = VIDEO_PROMPTS_REQUIRED_ARTIFACTS
       .filter((required) => required.pattern.source.startsWith('^outputs'))
+      .filter((required) => !required.optional)
       .filter((required) => !boardOutputs.some((outputPath: string) => required.pattern.test(outputPath)));
 
     if (missingBoardOutputs.length > 0) {
@@ -1105,6 +1118,65 @@ export class Validator {
           artifact: 'PROJECT_BOARD.md',
           message: `PROJECT_BOARD.md references video prompt artifact '${requiredPath}' that is not registered in manifest.`,
           suggestion: `Register '${requiredPath}' in artifacts.manifest.yaml or remove the stale board reference.`
+        });
+      }
+    }
+  }
+
+  private addLightStageStructureErrors(
+    stage: string,
+    stageArtifacts: Artifact[],
+    errors: ValidationError[],
+  ) {
+    const contract = LIGHT_STAGE_CONTRACTS[stage];
+    if (!contract) return;
+
+    const artifact = stageArtifacts.find((item) => contract.artifactPattern.test(item.path));
+    if (!artifact) {
+      errors.push({
+        rule_id: contract.ruleId,
+        severity: 'error',
+        artifact: 'artifacts.manifest.yaml',
+        message: `${contract.label} artifact is missing for stage '${stage}'.`,
+        suggestion: contract.suggestion
+      });
+      return;
+    }
+
+    const fullPath = path.resolve(this.project.projectPath, artifact.path);
+    if (!fs.existsSync(fullPath)) {
+      errors.push({
+        rule_id: contract.ruleId,
+        severity: 'error',
+        artifact: artifact.path,
+        message: `${contract.label} artifact is registered but the file does not exist.`,
+        suggestion: contract.suggestion
+      });
+      return;
+    }
+
+    const content = fs.readFileSync(fullPath, 'utf8');
+    const missingMarkers = contract.requiredMarkers.filter((marker) => !content.includes(marker));
+    if (missingMarkers.length > 0) {
+      errors.push({
+        rule_id: contract.ruleId,
+        severity: 'error',
+        artifact: artifact.path,
+        message: `${contract.label} artifact is missing required marker(s): ${missingMarkers.join(', ')}.`,
+        suggestion: contract.suggestion
+      });
+    }
+
+    if (stage === 'story') {
+      const beatCount = (content.match(/\bbeat_id\s*:/gi) ?? []).length +
+        (content.match(/\bid\s*:\s*beat[_-]?\d+\b/gi) ?? []).length;
+      if (beatCount < 4 || beatCount > 8) {
+        errors.push({
+          rule_id: 'SF-ST-102',
+          severity: 'error',
+          artifact: artifact.path,
+          message: `story development must contain 4-8 story beats; found ${beatCount}.`,
+          suggestion: 'Add 4-8 story_beats entries with beat_id fields or id values such as beat_1.'
         });
       }
     }
@@ -1381,6 +1453,9 @@ export class Validator {
     }
     if (stage === 'design' && errors.length === errorCountBeforeDeepContract) {
       this.addDesignDeliveryErrors(stageArtifacts, parsedFiles, errors);
+    }
+    if ((stage === 'reference' || stage === 'story' || stage === 'assets') && errors.length === errorCountBeforeDeepContract) {
+      this.addLightStageStructureErrors(stage, stageArtifacts, errors);
     }
     this.addIndexConsistencyWarnings(stage, stageArtifacts, warnings);
 

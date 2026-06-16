@@ -109,7 +109,7 @@ data:
 - `scene_assets`：场景资产判断结果列表。
 - `prop_assets`：核心道具判断结果列表；普通道具可为空或只记录跳过结论。
 - `design_actions`：供 `scene-design-builder` 直接消费的设计动作清单。
-- `asset_lock_file`：写入 `details/assets/asset_lock_v*.md` 的资产锁定文件路径，供设计、剧本和分镜阶段读取。
+- `asset_lock_file`：兼容旧字段；默认指向 `details/assets/asset_check_v*.md`，由其中的 `asset_lock` section 承载资产锁定结果，供设计、剧本和分镜阶段读取。
 - `asset_lock_summary`：轻量资产锁定摘要，用于快速说明本项目哪些角色、场景和核心道具已经锁定，哪些必须新建或微调。
 - `story_function_summary`：本阶段读取到的关键角色/场景/道具剧情功能摘要，用于解释资产判断为什么成立。
 - `risk_notes`：风险提示列表。
@@ -174,7 +174,7 @@ data:
 - 命中的角色资产
 - 命中的场景资产
 - 是否存在需要单独沉淀的核心道具
-- `asset_lock_v*.md` 是否已生成
+- `asset_check_v*.md` 是否包含 `asset_lock` section
 - 后续设计阶段应复用或新建的对象清单
 
 ## 示例
@@ -194,10 +194,8 @@ board_updates:
     assets:
 files_created:
   - path: details/assets/asset_check_v1.md
-    purpose: 资产判断正文
+    purpose: 资产判断正文，包含 asset_lock section
     version: v1
-  - path: details/assets/asset_lock_v1.md
-    purpose: 资产锁定文件
     version: v1
 files_updated:
   - path: projects/<project>/PROJECT_BOARD.md
@@ -243,7 +241,7 @@ data:
       - 妖洞内部
     new_full_targets:
       - 白骨精
-  asset_lock_file: details/assets/asset_lock_v1.md
+  asset_lock_file: details/assets/asset_check_v1.md
   asset_lock_summary:
     locked_characters:
       - 孙悟空
@@ -267,4 +265,4 @@ data:
 - `board_updates.state.next_stage: scene-design-builder`
 - `board_updates.stage_index.assets`
 - 黑板不新增全局正文字段，只更新摘要、文件索引和下一步设计动作
-- `files_created` 应显式包含 `details/assets/asset_lock_v*.md`
+- `files_created` 应显式包含 `details/assets/asset_check_v*.md`

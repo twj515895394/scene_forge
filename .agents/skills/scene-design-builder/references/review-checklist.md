@@ -10,14 +10,11 @@
 ## 文件检查
 
 - `outputs/design.md` 存在。
-- 至少一个角色设计 / 角色说明书文件存在。
-- 场景设计文件存在。
-- 道具设计文件存在。
-- `space_continuity_seed` 文件存在。
 - 角色说明书图片 prompt 存在。
 - 全场景资产总参考图 prompt 存在。
 - 所有文件已进入 manifest。
-- `PROJECT_BOARD.md stage_index.design.files.details / outputs` 已同步。
+- `PROJECT_BOARD.md stage_index.design.files.outputs` 已同步。
+- 若存在 `details/design/design_notes_v*.md`，也必须进入 manifest 和 board details。
 
 ## 角色说明书板 Prompt
 
@@ -45,9 +42,9 @@
 
 ## 空间与道具连续性
 
-- `space_continuity_seed` 必须覆盖空间锚点、重复地标、出入口逻辑和轴线说明。
-- 核心道具必须有状态机或状态变化说明。
-- 多角色项目必须有 blocking / faction 设计摘要。
+- `outputs/design.md` 的 `space_continuity_seed` 必须覆盖空间锚点、重复地标、出入口逻辑和轴线说明。
+- `outputs/design.md` 的 `prop_state_machines` 必须说明核心道具状态机或状态变化。
+- `outputs/design.md` 的 `blocking_map` 必须说明多角色站位、运动轴线或 faction 关系。
 
 ## 自动修复规则
 

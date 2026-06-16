@@ -194,15 +194,20 @@ Segment 总时间轴：00:00-00:10。C01 [00:00-00:02] 镜头语言：使用中�
       path: 'outputs/video_prompts/视频提示词_第01包_中文_v1.md',
       readable_by_downstream: true,
       pack_id: '001'
-    },
+    }
+  ];
+  const englishVideoPromptPackArtifact = {
+    id: 'video-prompts-pack-001-en',
+    stage: 'video_prompts',
+    kind: 'final' as const,
+    role: 'translation',
+    path: 'outputs/video_prompts/视频提示词_第01包_英文_v1.md',
+    readable_by_downstream: true,
+    pack_id: '001'
+  };
+  const optionalVideoPromptPackArtifacts = [
     {
-      id: 'video-prompts-pack-001-en',
-      stage: 'video_prompts',
-      kind: 'final' as const,
-      role: 'primary_delivery',
-      path: 'outputs/video_prompts/视频提示词_第01包_英文_v1.md',
-      readable_by_downstream: true,
-      pack_id: '001'
+      ...englishVideoPromptPackArtifact
     }
   ];
   const videoPromptReviewArtifact = {
@@ -261,40 +266,6 @@ blocking_map`;
 
 ## 物理与安全边界区
 说明边界约束、轻喜剧动作尺度和不可改变的角色锚点。`;
-  const designDetailArtifacts = [
-    {
-      id: 'design-character-v1',
-      stage: 'design',
-      kind: 'final' as const,
-      role: 'character_design',
-      path: 'details/design/character_design_主角_v1.md',
-      readable_by_downstream: true
-    },
-    {
-      id: 'design-scene-v1',
-      stage: 'design',
-      kind: 'final' as const,
-      role: 'scene_design',
-      path: 'details/design/scene_design_v1.md',
-      readable_by_downstream: true
-    },
-    {
-      id: 'design-prop-v1',
-      stage: 'design',
-      kind: 'final' as const,
-      role: 'prop_design',
-      path: 'details/design/prop_design_v1.md',
-      readable_by_downstream: true
-    },
-    {
-      id: 'design-space-v1',
-      stage: 'design',
-      kind: 'final' as const,
-      role: 'space_continuity_seed',
-      path: 'details/design/space_continuity_seed_v1.md',
-      readable_by_downstream: true
-    }
-  ];
   const designPromptArtifacts = [
     {
       id: 'design-character-prompt-v1',
@@ -382,14 +353,20 @@ stage_index:
     });
   }
 
-  function writeVideoPromptDeliveryFiles(packBody = validVideoPromptPackBody) {
+  function writeVideoPromptDeliveryFiles(packBody = validVideoPromptPackBody, includeEnglish = false) {
     for (const artifact of videoPromptPackArtifacts) {
       writeProjectFile(artifact.path, packBody);
+    }
+    if (includeEnglish) {
+      writeProjectFile(englishVideoPromptPackArtifact.path, packBody);
     }
     writeProjectFile(videoPromptReviewArtifact.path, '# video_prompt_review\nfinal_delivery_ready: true\n');
   }
 
-  function writeVideoPromptBoard(confirmationStatus: 'confirmed' | 'pending' = 'confirmed') {
+  function writeVideoPromptBoard(confirmationStatus: 'confirmed' | 'pending' = 'confirmed', includeEnglish = false) {
+    const englishOutput = includeEnglish
+      ? '        - outputs/video_prompts/视频提示词_第01包_英文_v1.md\n'
+      : '';
     fs.writeFileSync(path.resolve(testDir, 'PROJECT_BOARD.md'), `
 confirmations:
   video_prompt_plan_confirmed:
@@ -403,14 +380,14 @@ stage_index:
       primary: outputs/video_prompts/视频提示词_第01包_中文_v1.md
       outputs:
         - outputs/video_prompts/视频提示词_第01包_中文_v1.md
-        - outputs/video_prompts/视频提示词_第01包_英文_v1.md
+${englishOutput.trimEnd()}
       details:
         - details/video_prompts/video_prompt_review_v1.md
       quality_check: details/video_prompts/video_prompt_review_v1.md
 `, 'utf8');
   }
 
-  function writeValidVideoPromptManifest() {
+  function writeValidVideoPromptManifest(includeEnglish = false) {
     project.writeManifest({
       version: 1,
       project: 'temp_test_validator_project',
@@ -425,6 +402,7 @@ stage_index:
           pack_id: '001'
         },
         ...videoPromptPackArtifacts,
+        ...(includeEnglish ? optionalVideoPromptPackArtifacts : []),
         videoPromptReviewArtifact
       ]
     });
@@ -432,9 +410,6 @@ stage_index:
 
   function writeDesignDeliveryFiles(characterPromptBody = validDesignPromptBody) {
     writeProjectFile('outputs/design.md', validDesignBody);
-    for (const artifact of designDetailArtifacts) {
-      writeProjectFile(artifact.path, `# ${artifact.id}\nvisual_language\nprop_state_machines\nblocking_map\n`);
-    }
     writeProjectFile('outputs/design_prompts/角色说明书图片提示词_v1.md', characterPromptBody);
     writeProjectFile('outputs/design_prompts/全场景资产总参考图提示词_v1.md', '# 全场景资产总参考图提示词\n主场景空间布局\n角色默认站位\n核心道具位置\n道具状态矩阵\n');
   }
@@ -455,11 +430,7 @@ stage_index:
         - outputs/design.md
         - outputs/design_prompts/角色说明书图片提示词_v1.md
         - outputs/design_prompts/全场景资产总参考图提示词_v1.md
-      details:
-        - details/design/character_design_主角_v1.md
-        - details/design/scene_design_v1.md
-        - details/design/prop_design_v1.md
-        - details/design/space_continuity_seed_v1.md
+      details: []
 `, 'utf8');
   }
 
@@ -476,7 +447,6 @@ stage_index:
           path: 'outputs/design.md',
           readable_by_downstream: true
         },
-        ...designDetailArtifacts,
         ...designPromptArtifacts
       ]
     });
@@ -998,8 +968,8 @@ stage_index:
     const report = validator.validate('video_prompts');
     assert.strictEqual(report.status, 'failed');
     assert.ok(report.errors.some(e => e.rule_id === 'SF-VP-201'));
-    assert.ok(report.errors.some(e => e.rule_id === 'SF-VP-202'));
     assert.ok(report.errors.some(e => e.rule_id === 'SF-VP-203'));
+    assert.strictEqual(report.errors.some(e => e.rule_id === 'SF-VP-202'), false);
   });
 
   await t.test('16. Video prompts delivery contract rejects pack files without required runtime sections', () => {
@@ -1128,7 +1098,23 @@ continuity_out: 下一段
     assert.strictEqual(report.errors.length, 0);
   });
 
-  await t.test('19. Design delivery contract rejects missing required design artifacts', () => {
+  await t.test('18b. Video prompts delivery contract still validates optional English pack when present', () => {
+    writeVideoPromptDeliveryFiles();
+    writeProjectFile(englishVideoPromptPackArtifact.path, `---
+schema: video_prompts.v1
+stage: video_prompts
+pack_id: "001"
+---
+# English shallow pack`);
+    writeVideoPromptBoard('confirmed', true);
+    writeValidVideoPromptManifest(true);
+
+    const report = validator.validate('video_prompts');
+    assert.strictEqual(report.status, 'failed');
+    assert.ok(report.errors.some(e => e.artifact === englishVideoPromptPackArtifact.path));
+  });
+
+  await t.test('19. Design delivery contract rejects missing required design prompt artifacts', () => {
     writeProjectFile('outputs/design.md', validDesignBody);
     project.writeManifest({
       version: 1,
@@ -1146,8 +1132,30 @@ continuity_out: 下一段
 
     const report = validator.validate('design');
     assert.strictEqual(report.status, 'failed');
-    assert.ok(report.errors.some(e => e.rule_id === 'SF-DG-201'));
     assert.ok(report.errors.some(e => e.rule_id === 'SF-DG-205'));
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-DG-206'));
+    assert.strictEqual(report.errors.some(e => e.rule_id === 'SF-DG-201'), false);
+  });
+
+  await t.test('19b. Design delivery contract rejects missing primary state and space markers', () => {
+    writeDesignDeliveryFiles();
+    writeDesignBoard('confirmed');
+    writeValidDesignManifest();
+    writeProjectFile('outputs/design.md', `---
+schema: design.v1
+stage: design
+---
+## visual_language
+character_designs
+scene_designs
+prop_designs`);
+
+    const report = validator.validate('design');
+    assert.strictEqual(report.status, 'failed');
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-DG-101'));
+    assert.ok(report.errors.some(e => e.message.includes('space_continuity_seed')));
+    assert.ok(report.errors.some(e => e.message.includes('prop_state_machines')));
+    assert.ok(report.errors.some(e => e.message.includes('blocking_map')));
   });
 
   await t.test('20. Design delivery contract rejects English-dominant poster-style character prompt', () => {
@@ -1196,6 +1204,197 @@ front view, side view`);
     const report = validator.validate('design');
     assert.strictEqual(report.status, 'passed');
     assert.strictEqual(report.errors.length, 0);
+  });
+
+  await t.test('23. Reference lightweight contract rejects missing inheritance boundary fields', () => {
+    writeProjectFile('details/reference/reference_boundary_v1.md', '# reference_boundary\nallowed_inheritance\n');
+    project.writeManifest({
+      version: 1,
+      project: 'temp_test_validator_project',
+      artifacts: [{
+        id: 'reference-boundary-v1',
+        stage: 'reference',
+        kind: 'final',
+        role: 'reference_boundary',
+        path: 'details/reference/reference_boundary_v1.md',
+        readable_by_downstream: true
+      }]
+    });
+
+    const report = validator.validate('reference');
+    assert.strictEqual(report.status, 'failed');
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-REF-101'));
+  });
+
+  await t.test('24. Story lightweight contract enforces beat count and emotional arc', () => {
+    writeProjectFile('details/story/story_development_v1.md', `# story_development
+story_beats
+beat_id: B01
+beat_id: B02
+beat_id: B03
+emotional_arc`);
+    project.writeManifest({
+      version: 1,
+      project: 'temp_test_validator_project',
+      artifacts: [{
+        id: 'story-development-v1',
+        stage: 'story',
+        kind: 'final',
+        role: 'story_development',
+        path: 'details/story/story_development_v1.md',
+        readable_by_downstream: true
+      }]
+    });
+
+    const report = validator.validate('story');
+    assert.strictEqual(report.status, 'failed');
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-ST-102'));
+  });
+
+  await t.test('24b. Story lightweight contract accepts YAML beat ids', () => {
+    writeProjectFile('details/story/story_development_v1.md', `# story_development
+story_beats
+beats:
+  - id: beat_1
+  - id: beat_2
+  - id: beat_3
+  - id: beat_4
+emotional_arc`);
+    project.writeManifest({
+      version: 1,
+      project: 'temp_test_validator_project',
+      artifacts: [{
+        id: 'story-development-v1',
+        stage: 'story',
+        kind: 'final',
+        role: 'story_development',
+        path: 'details/story/story_development_v1.md',
+        readable_by_downstream: true
+      }]
+    });
+
+    const report = validator.validate('story');
+    assert.strictEqual(report.status, 'passed');
+  });
+
+  await t.test('25. Assets lightweight contract rejects missing lock constraints', () => {
+    writeProjectFile('details/assets/asset_check_v1.md', '# asset_check\nasset_lock\nlocked_assets\n');
+    project.writeManifest({
+      version: 1,
+      project: 'temp_test_validator_project',
+      artifacts: [{
+        id: 'asset-check-v1',
+        stage: 'assets',
+        kind: 'final',
+        role: 'asset_check',
+        path: 'details/assets/asset_check_v1.md',
+        readable_by_downstream: true
+      }]
+    });
+
+    const report = validator.validate('assets');
+    assert.strictEqual(report.status, 'failed');
+    assert.ok(report.errors.some(e => e.rule_id === 'SF-AS-101'));
+  });
+
+  await t.test('26. Lightweight contracts pass with required single-file structures', () => {
+    writeProjectFile('details/reference/reference_boundary_v1.md', '# reference_boundary\nallowed_inheritance\nforbidden_inheritance\ncreative_direction_context\n');
+    project.writeManifest({
+      version: 1,
+      project: 'temp_test_validator_project',
+      artifacts: [{
+        id: 'reference-boundary-v1',
+        stage: 'reference',
+        kind: 'final',
+        role: 'reference_boundary',
+        path: 'details/reference/reference_boundary_v1.md',
+        readable_by_downstream: true
+      }]
+    });
+    assert.strictEqual(validator.validate('reference').status, 'passed');
+
+    writeProjectFile('details/story/story_development_v1.md', `# story_development
+story_beats
+beat_id: B01
+beat_id: B02
+beat_id: B03
+beat_id: B04
+emotional_arc`);
+    project.writeManifest({
+      version: 1,
+      project: 'temp_test_validator_project',
+      artifacts: [{
+        id: 'story-development-v1',
+        stage: 'story',
+        kind: 'final',
+        role: 'story_development',
+        path: 'details/story/story_development_v1.md',
+        readable_by_downstream: true
+      }]
+    });
+    assert.strictEqual(validator.validate('story').status, 'passed');
+
+    writeProjectFile('details/assets/asset_check_v1.md', '# asset_check\nasset_lock\nlocked_assets\ndownstream_constraints\n');
+    project.writeManifest({
+      version: 1,
+      project: 'temp_test_validator_project',
+      artifacts: [{
+        id: 'asset-check-v1',
+        stage: 'assets',
+        kind: 'final',
+        role: 'asset_check',
+        path: 'details/assets/asset_check_v1.md',
+        readable_by_downstream: true
+      }]
+    });
+    assert.strictEqual(validator.validate('assets').status, 'passed');
+  });
+
+  await t.test('27. Protocol detail primary artifacts pass final artifact validation', () => {
+    writeProjectFile('details/performance_sheet_v1.md', '---\nschema: performance.v1\nstage: performance\n---\n## performance_beats\n');
+    project.writeManifest({
+      version: 1,
+      project: 'temp_test_validator_project',
+      artifacts: [{
+        id: 'performance-sheet-v1',
+        stage: 'performance',
+        kind: 'final',
+        role: 'detail',
+        path: 'details/performance_sheet_v1.md',
+        readable_by_downstream: true
+      }]
+    });
+    assert.strictEqual(validator.validate('performance').status, 'passed');
+
+    writeProjectFile('details/audio_plan_v1.md', '---\nschema: audio.v1\nstage: audio\n---\n## audio_execution_plan\n');
+    project.writeManifest({
+      version: 1,
+      project: 'temp_test_validator_project',
+      artifacts: [{
+        id: 'audio-plan-v1',
+        stage: 'audio',
+        kind: 'final',
+        role: 'detail',
+        path: 'details/audio_plan_v1.md',
+        readable_by_downstream: true
+      }]
+    });
+    assert.strictEqual(validator.validate('audio').status, 'passed');
+
+    writeProjectFile('details/script_v1.md', '---\nschema: script.v1\nstage: script\n---\n## story_beats\n');
+    project.writeManifest({
+      version: 1,
+      project: 'temp_test_validator_project',
+      artifacts: [{
+        id: 'script-v1',
+        stage: 'script',
+        kind: 'final',
+        role: 'detail',
+        path: 'details/script_v1.md',
+        readable_by_downstream: true
+      }]
+    });
+    assert.strictEqual(validator.validate('script').status, 'passed');
   });
 
   // Cleanup

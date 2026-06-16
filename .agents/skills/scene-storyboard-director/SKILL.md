@@ -36,10 +36,9 @@ description: 当用户要把 SceneForge 剧本节拍、source_intake 视频源�
 
 - 当前项目 `PROJECT_BOARD.md`
 - 本技能和上述 references
-- `outputs/script.md`
+- `details/script_v*.md` 或兼容旧路径 `outputs/script.md`
 - `details/script/beat_table_v*.md`
-- `details/script/video_generation_unit_plan_v*.md`
-- `outputs/performance_pack_*.md`
+- `details/performance_sheet_v*.md` 或兼容旧路径 `outputs/performance_pack_*.md`
 - `outputs/design.md`
 - 与当前风格包直接相关的 `profile.md`、`camera_language.md`、`rhythm_language.md`、`lighting_language.md`
 - 黑板中明确索引的 source_intake 摘要文件

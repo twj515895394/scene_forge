@@ -25,7 +25,7 @@ description: 当用户要为 SceneForge 项目整理发布标题、平台文案�
 2. 读取 `stage_index.video_prompts.files`、对应 review 文件、提示词输出、项目定位和参考边界，确认发布表达不要越界。
 3. 读取 `references/output-contract.md`，确认发布物分类、复盘字段和落盘路径。
 4. 生成标题、封面文案、平台发布文案、评论区引导、字幕或配音文案。
-5. 将最终可发布文本写入 `outputs/publish_copy/`；黑板里只保留摘要、版本和路径。
+5. 将最终可发布文本写入 `outputs/publish_copy/`；黑板里只保留摘要、版本和路径。CLI 阶段名为 `publish_review`，黑板阶段键为 `publish`，二者是同一阶段 alias。
 6. 在发布后补充数据复盘摘要，并给出资产沉淀建议。
 7. 输出单个 YAML 补丁块；`summary` 使用中文，必要时附英文参数值。
 8. 将状态推进建议交回总控 Skill，推进到 `published` 或 `reviewed`。

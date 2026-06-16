@@ -1,6 +1,6 @@
 # 视频提示词 Pack 模板
 
-`outputs/video_prompts/视频提示词_第XX包_中文_v*.md` 与英文版必须使用 pack-aligned director prompt 体裁。
+`outputs/video_prompts/视频提示词_第XX包_中文_v*.md` 必须使用 pack-aligned director prompt 体裁；英文版如按需生成，也必须使用同一体裁。
 
 ## 必须使用的章节
 

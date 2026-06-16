@@ -40,8 +40,10 @@ description: 当用户提供候选片段、影视桥段、热点内容、原著�
 12. `decision=go` 时填写 `production_level`。
 13. 若 `decision=go`，必须基于 `style_profiles/style_registry.md` 先给出风格大类判断，再给出导演风格候选列表、推荐项、候选差异说明、成熟度分层标记和当前风格确认状态；在用户明确确认前，不得推进到 `scene-reference-decider` 或后续设计阶段。
 14. 用户确认导演风格包前，必须先确认本项目采用的 `style_family`；若用户一次性同时确认家族与风格包，可在同一轮回写。
-15. 用户确认导演风格包后，回写 `project_config.director_style_id`、`director_style_version`、`style_family`、`style_profile_path`，并同时写入 `confirmations.style_family_confirmed.status = confirmed` 与 `confirmations.style_confirmed.status = confirmed`。
-16. 输出 YAML 补丁并返回黑板索引更新建议。
+15. 如果用户原始需求已明确指定风格家族或导演风格包（例如“使用皮克斯电影风格”“用 pixar_like”“3D 动画”），视为本轮已确认对应风格；不得再次询问“是否确认/是否继续”，应直接回写 `confirmations.style_family_confirmed.status = confirmed` 和/或 `confirmations.style_confirmed.status = confirmed`。
+16. 用户确认导演风格包后，回写 `project_config.director_style_id`、`director_style_version`、`style_family`、`style_profile_path`，并同时写入 `confirmations.style_family_confirmed.status = confirmed` 与 `confirmations.style_confirmed.status = confirmed`。
+17. 输出 YAML 补丁并返回黑板索引更新建议。
+18. 正式阶段产物必须写入 `outputs/topic.md`；`inputs/` 只用于用户需求、源材料或 source intake 输入，不得作为 `topic_gate` final artifact。
 
 ## adaptation selection 规则
 

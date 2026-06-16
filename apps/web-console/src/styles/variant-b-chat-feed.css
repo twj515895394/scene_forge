@@ -148,6 +148,13 @@
   color: var(--sf-text-faint);
 }
 
+.bubble-token-usage {
+  font-family: var(--sf-font-mono);
+  font-size: var(--sf-text-micro);
+  color: rgba(117, 210, 255, 0.72);
+  white-space: nowrap;
+}
+
 .bubble-copy-btn {
   border: none;
   background: transparent;
@@ -160,8 +167,49 @@
   transition: color 0.16s ease;
 }
 
+.bubble-copy-btn.icon-only {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: rgba(211, 220, 231, 0.72);
+  transition: color 0.16s ease, background 0.16s ease, transform 0.16s ease;
+}
+
+.bubble-copy-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.9;
+}
+
 .bubble-copy-btn:hover {
   color: var(--sf-text-primary);
+}
+
+.bubble-copy-btn.icon-only:hover {
+  background: rgba(255, 255, 255, 0.07);
+  transform: translateY(-1px);
+}
+
+.bubble-copy-btn.icon-only.copied {
+  color: var(--accent-green);
+  background: rgba(84, 197, 142, 0.12);
+}
+
+.tool-copy-action {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.tool-copy-icon {
+  width: 15px;
+  height: 15px;
 }
 
 .markdown-body-b {
@@ -437,6 +485,25 @@
 .history-item-date {
   flex: 1;
   opacity: 0.6;
+}
+
+.history-item-scope {
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: var(--sf-text-micro);
+  border: 1px solid rgba(117, 210, 255, 0.16);
+  background: rgba(117, 210, 255, 0.08);
+  color: rgba(117, 210, 255, 0.92);
+}
+
+.history-item-scope.workspace {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(224, 230, 237, 0.7);
 }
 
 .history-item-count {

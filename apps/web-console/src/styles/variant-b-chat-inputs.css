@@ -103,6 +103,59 @@
   opacity: 0.75;
 }
 
+.context-mode-control {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.context-mode-label {
+  padding: 0 6px;
+  font-family: var(--sf-font-mono);
+  font-size: var(--sf-text-micro);
+  color: var(--text-muted-b);
+}
+
+.context-mode-option {
+  height: 24px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted-b);
+  font-family: var(--sf-font-mono);
+  font-size: var(--sf-text-micro);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.context-mode-option:hover {
+  color: var(--sf-text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.context-mode-option.active {
+  color: var(--accent-cyan);
+  background: rgba(117, 210, 255, 0.12);
+}
+
+.context-session-chip {
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 7px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-muted-b);
+  font-family: var(--sf-font-mono);
+  font-size: var(--sf-text-micro);
+  white-space: nowrap;
+}
+
 /* ==========================================
    Input Block (B)
    ========================================== */

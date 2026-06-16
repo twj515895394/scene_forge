@@ -31,7 +31,7 @@
 - 每段 sound execution 样例
 - 每段如何继承 audio 阶段声音设计
 - 每段可直接复制使用块样例
-- 中英交付范围
+- 是否需要英文 pack；默认只交付中文 pack
 
 ## 4. 正式生成
 
@@ -46,7 +46,7 @@
 7. `segment_sound_execution`：继承 audio 阶段的 BGM、Foley-SFX、Ambience、Silence 和跨段声音钩子
 8. `prompt_trace`
 9. 中文 pack 文件
-10. 英文 pack 文件
+10. 按需英文 pack 文件
 11. `video_prompt_review`
 
 ## 5. 落盘与注册
@@ -54,7 +54,7 @@
 正式完成前必须：
 
 - 写入 `outputs/video_prompts/*中文_v*.md`。
-- 写入 `outputs/video_prompts/*英文_v*.md`。
+- 仅在用户明确要求、目标平台需要英文或发布策略要求海外投放时写入 `outputs/video_prompts/*英文_v*.md`。
 - 写入 `details/video_prompts/video_prompt_review_v*.md`。
 - 在 `artifacts.manifest.yaml` 注册上述文件。
 - 在 `PROJECT_BOARD.md stage_index.video_prompts.files` 注册 primary、outputs、details、quality_check。
