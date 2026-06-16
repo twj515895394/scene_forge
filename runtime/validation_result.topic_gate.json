@@ -1,0 +1,9 @@
+{
+  "project": "scene_forge",
+  "stage": "topic_gate",
+  "status": "failed",
+  "validated_at": "2026-06-11T02:30:37.350Z",
+  "errors": [
+    "No final artifacts registered in manifest for stage 'topic_gate'."
+  ]
+}

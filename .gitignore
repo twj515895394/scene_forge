@@ -4,3 +4,5 @@ dist/
 pnpm-debug.log
 runtime/logs/
 runtime/web-console.pid
+projects/
+temp_debug_validator_project/

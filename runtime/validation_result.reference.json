@@ -1,0 +1,9 @@
+{
+  "project": "scene_forge",
+  "stage": "reference",
+  "status": "failed",
+  "validated_at": "2026-06-13T12:50:43.359Z",
+  "errors": [
+    "Artifact file not found at path: 'outputs/reference/reference_boundary_v1.yaml' (id: 'reference_final_001')."
+  ]
+}

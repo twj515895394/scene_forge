@@ -1,0 +1,86 @@
+{
+  "project": "scene_forge",
+  "current_stage": "story",
+  "stages": {
+    "topic_gate": {
+      "stage": "topic_gate",
+      "status": "completed",
+      "updated_at": "2026-06-13T20:39:00.000Z",
+      "history": [
+        { "status": "ready", "timestamp": "2026-06-13T12:24:38.481Z", "message": "Initialized" },
+        { "status": "in_progress", "timestamp": "2026-06-13T20:35:00.000Z", "message": "Started" },
+        { "status": "validated", "timestamp": "2026-06-13T20:39:00.000Z", "message": "Validation passed" },
+        { "status": "completed", "timestamp": "2026-06-13T20:39:00.000Z", "message": "Completed" }
+      ]
+    },
+    "reference": {
+      "stage": "reference",
+      "status": "completed",
+      "updated_at": "2026-06-13T20:50:00.000Z",
+      "history": [
+        { "status": "ready", "timestamp": "2026-06-13T12:24:38.481Z", "message": "Initialized" },
+        { "status": "in_progress", "timestamp": "2026-06-13T20:49:00.000Z", "message": "Started" },
+        { "status": "validated", "timestamp": "2026-06-13T20:50:00.000Z", "message": "Validation passed" },
+        { "status": "completed", "timestamp": "2026-06-13T20:50:00.000Z", "message": "Completed" }
+      ]
+    },
+    "story": {
+      "stage": "story",
+      "status": "in_progress",
+      "started_at": "2026-06-13T22:55:00.000Z",
+      "updated_at": "2026-06-13T22:55:00.000Z",
+      "history": [
+        { "status": "ready", "timestamp": "2026-06-13T12:24:38.481Z", "message": "Initialized" },
+        { "status": "in_progress", "timestamp": "2026-06-13T22:55:00.000Z", "message": "Started stage story" }
+      ]
+    },
+    "assets": {
+      "stage": "assets",
+      "status": "ready",
+      "updated_at": "2026-06-13T12:24:38.481Z",
+      "history": [{ "status": "ready", "timestamp": "2026-06-13T12:24:38.481Z", "message": "Initialized" }]
+    },
+    "design": {
+      "stage": "design",
+      "status": "ready",
+      "updated_at": "2026-06-13T12:24:38.481Z",
+      "history": [{ "status": "ready", "timestamp": "2026-06-13T12:24:38.481Z", "message": "Initialized" }]
+    },
+    "script": {
+      "stage": "script",
+      "status": "ready",
+      "updated_at": "2026-06-13T12:24:38.481Z",
+      "history": [{ "status": "ready", "timestamp": "2026-06-13T12:24:38.481Z", "message": "Initialized" }]
+    },
+    "performance": {
+      "stage": "performance",
+      "status": "ready",
+      "updated_at": "2026-06-13T12:24:38.481Z",
+      "history": [{ "status": "ready", "timestamp": "2026-06-13T12:24:38.481Z", "message": "Initialized" }]
+    },
+    "storyboard": {
+      "stage": "storyboard",
+      "status": "ready",
+      "updated_at": "2026-06-13T12:24:38.481Z",
+      "history": [{ "status": "ready", "timestamp": "2026-06-13T12:24:38.481Z", "message": "Initialized" }]
+    },
+    "audio": {
+      "stage": "audio",
+      "status": "ready",
+      "updated_at": "2026-06-13T12:24:38.481Z",
+      "history": [{ "status": "ready", "timestamp": "2026-06-13T12:24:38.481Z", "message": "Initialized" }]
+    },
+    "video_prompts": {
+      "stage": "video_prompts",
+      "status": "ready",
+      "updated_at": "2026-06-13T12:24:38.481Z",
+      "history": [{ "status": "ready", "timestamp": "2026-06-13T12:24:38.481Z", "message": "Initialized" }]
+    },
+    "publish_review": {
+      "stage": "publish_review",
+      "status": "ready",
+      "updated_at": "2026-06-13T12:24:38.481Z",
+      "history": [{ "status": "ready", "timestamp": "2026-06-13T12:24:38.481Z", "message": "Initialized" }]
+    }
+  }
+}

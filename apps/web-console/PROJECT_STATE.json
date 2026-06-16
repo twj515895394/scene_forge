@@ -1,0 +1,89 @@
+{
+  "project": "web-console",
+  "stages": {
+    "topic_gate": {
+      "stage": "topic_gate",
+      "status": "ready",
+      "updated_at": "2026-06-08T14:01:09.755Z",
+      "history": [
+        {
+          "status": "ready",
+          "timestamp": "2026-06-08T14:01:09.756Z",
+          "message": "Initialized stage status"
+        }
+      ]
+    },
+    "script": {
+      "stage": "script",
+      "status": "ready",
+      "updated_at": "2026-06-08T14:01:09.756Z",
+      "history": [
+        {
+          "status": "ready",
+          "timestamp": "2026-06-08T14:01:09.756Z",
+          "message": "Initialized stage status"
+        }
+      ]
+    },
+    "performance": {
+      "stage": "performance",
+      "status": "ready",
+      "updated_at": "2026-06-08T14:01:09.756Z",
+      "history": [
+        {
+          "status": "ready",
+          "timestamp": "2026-06-08T14:01:09.756Z",
+          "message": "Initialized stage status"
+        }
+      ]
+    },
+    "audio": {
+      "stage": "audio",
+      "status": "ready",
+      "updated_at": "2026-06-08T14:01:09.756Z",
+      "history": [
+        {
+          "status": "ready",
+          "timestamp": "2026-06-08T14:01:09.756Z",
+          "message": "Initialized stage status"
+        }
+      ]
+    },
+    "storyboard": {
+      "stage": "storyboard",
+      "status": "ready",
+      "updated_at": "2026-06-08T14:01:09.756Z",
+      "history": [
+        {
+          "status": "ready",
+          "timestamp": "2026-06-08T14:01:09.756Z",
+          "message": "Initialized stage status"
+        }
+      ]
+    },
+    "video_prompts": {
+      "stage": "video_prompts",
+      "status": "ready",
+      "updated_at": "2026-06-08T14:01:09.756Z",
+      "history": [
+        {
+          "status": "ready",
+          "timestamp": "2026-06-08T14:01:09.756Z",
+          "message": "Initialized stage status"
+        }
+      ]
+    },
+    "publish_review": {
+      "stage": "publish_review",
+      "status": "ready",
+      "updated_at": "2026-06-08T14:01:09.756Z",
+      "history": [
+        {
+          "status": "ready",
+          "timestamp": "2026-06-08T14:01:09.756Z",
+          "message": "Initialized stage status"
+        }
+      ]
+    }
+  }
+}

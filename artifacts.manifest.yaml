@@ -1,0 +1,66 @@
+version: 1
+project: scene_forge
+artifacts:
+  - id: topic_gate_final_001
+    stage: topic_gate
+    kind: final
+    role: primary_delivery
+    path: outputs/topic_gate/topic_gate_output_v1.yaml
+    readable_by_downstream: true
+    pack_id: "001"
+  - id: reference_final_001
+    stage: reference
+    kind: final
+    role: primary_delivery
+    path: outputs/reference/reference_boundary_v1.yaml
+    readable_by_downstream: true
+    pack_id: "001"
+  - id: story_final_001
+    stage: story
+    kind: final
+    role: primary_delivery
+    path: outputs/story/story_development_v1.yaml
+    readable_by_downstream: true
+    pack_id: "001"
+  - id: script_final_001
+    stage: script
+    kind: final
+    role: primary_delivery
+    path: outputs/script.md
+    readable_by_downstream: true
+    pack_id: "001"
+  - id: performance_final_001
+    stage: performance
+    kind: final
+    role: primary_delivery
+    path: outputs/performance_pack_001.md
+    readable_by_downstream: true
+    pack_id: "001"
+  - id: audio_final_001
+    stage: audio
+    kind: final
+    role: primary_delivery
+    path: outputs/audio_pack_001.md
+    readable_by_downstream: true
+    pack_id: "001"
+  - id: storyboard_final_001
+    stage: storyboard
+    kind: final
+    role: primary_delivery
+    path: outputs/storyboard_pack_001.md
+    readable_by_downstream: true
+    pack_id: "001"
+  - id: video_prompts_final_001
+    stage: video_prompts
+    kind: final
+    role: primary_delivery
+    path: outputs/video_prompts_pack_001.md
+    readable_by_downstream: true
+    pack_id: "001"
+  - id: publish_review_final_001
+    stage: publish_review
+    kind: final
+    role: primary_delivery
+    path: outputs/publish_review.md
+    readable_by_downstream: true
+    pack_id: "001"

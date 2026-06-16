@@ -11,7 +11,7 @@
 ```yaml
 project_registry:
   version: v1
-  updated_at: 2026-06-07T12:05:00+08:00
+  updated_at: 2026-06-16T05:53:15+08:00
   entries:
     - project_slug: huafei-wall-crash
       project_name: 士兰撞墙未遂事件
@@ -226,4 +226,139 @@ project_registry:
         - active
       project_index_path: projects/huaqiang-watermelon/PROJECT_INDEX.md
       project_board_path: projects/huaqiang-watermelon/PROJECT_BOARD.md
+    - project_slug: worldcup
+      project_name: worldcup
+      updated_at: 2026-06-14T04:35:14.389Z
+      lifecycle_flag: active
+      project_status: draft
+      next_stage: scene-topic-gate
+      current_stage: scene-topic-gate
+      topic_summary: >
+        世界杯决赛宣传片
+      style_summary: realist_cinematic_3d
+      aliases:
+        - worldcup
+      tags:
+        - active
+        - scene-topic-gate
+      project_index_path: projects/worldcup/PROJECT_INDEX.md
+      project_board_path: projects/worldcup/PROJECT_BOARD.md
+    - project_slug: worldcup002
+      project_name: worldcup002
+      updated_at: 2026-06-14T08:26:35.553Z
+      lifecycle_flag: active
+      project_status: draft
+      next_stage: scene-topic-gate
+      current_stage: scene-topic-gate
+      topic_summary: >
+        世界杯宣传片，中国队进角色
+      style_summary: realist_cinematic_3d
+      aliases:
+        - worldcup002
+      tags:
+        - active
+        - scene-topic-gate
+      project_index_path: projects/worldcup002/PROJECT_INDEX.md
+      project_board_path: projects/worldcup002/PROJECT_BOARD.md
+    - project_slug: worldcup003
+      project_name: worldcup003
+      updated_at: 2026-06-14T12:40:32.630Z
+      lifecycle_flag: active
+      project_status: draft
+      next_stage: scene-topic-gate
+      current_stage: scene-topic-gate
+      topic_summary: >
+
+      style_summary: pixar_like
+      aliases:
+        - worldcup003
+      tags:
+        - active
+        - scene-topic-gate
+      project_index_path: projects/worldcup003/PROJECT_INDEX.md
+      project_board_path: projects/worldcup003/PROJECT_BOARD.md
+    - project_slug: test001
+      project_name: test001
+      updated_at: 2026-06-15T06:51:29.682Z
+      lifecycle_flag: active
+      project_status: draft
+      next_stage: scene-topic-gate
+      current_stage: scene-topic-gate
+      topic_summary: >
+
+      style_summary: pixar_like
+      aliases:
+        - test001
+      tags:
+        - active
+        - scene-topic-gate
+      project_index_path: projects/test001/PROJECT_INDEX.md
+      project_board_path: projects/test001/PROJECT_BOARD.md
+    - project_slug: test061501
+      project_name: test061501
+      updated_at: 2026-06-15T09:36:18.470Z
+      lifecycle_flag: active
+      project_status: draft
+      next_stage: scene-topic-gate
+      current_stage: scene-topic-gate
+      topic_summary: >
+
+      style_summary: realist_cinematic_3d
+      aliases:
+        - test061501
+      tags:
+        - active
+        - scene-topic-gate
+      project_index_path: projects/test061501/PROJECT_INDEX.md
+      project_board_path: projects/test061501/PROJECT_BOARD.md
+    - project_slug: test0616
+      project_name: test0616
+      updated_at: 2026-06-16T03:26:47.541Z
+      lifecycle_flag: active
+      project_status: draft
+      next_stage: scene-topic-gate
+      current_stage: scene-topic-gate
+      topic_summary: >
+
+      style_summary: dreamworks_like
+      aliases:
+        - test0616
+      tags:
+        - active
+        - scene-topic-gate
+      project_index_path: projects/test0616/PROJECT_INDEX.md
+      project_board_path: projects/test0616/PROJECT_BOARD.md
+    - project_slug: test061602
+      project_name: test061602
+      updated_at: 2026-06-16T04:16:10.590Z
+      lifecycle_flag: active
+      project_status: draft
+      next_stage: scene-topic-gate
+      current_stage: scene-topic-gate
+      topic_summary: >
+
+      style_summary: dreamworks_like
+      aliases:
+        - test061602
+      tags:
+        - active
+        - scene-topic-gate
+      project_index_path: projects/test061602/PROJECT_INDEX.md
+      project_board_path: projects/test061602/PROJECT_BOARD.md
+    - project_slug: test061603
+      project_name: test061603
+      updated_at: 2026-06-16T05:53:15.439Z
+      lifecycle_flag: active
+      project_status: draft
+      next_stage: scene-topic-gate
+      current_stage: scene-topic-gate
+      topic_summary: ""
+      style_summary: dreamworks_like
+      aliases:
+        - test061603
+      tags:
+        - active
+        - scene-topic-gate
+      project_index_path: projects/test061603/PROJECT_INDEX.md
+      project_board_path: projects/test061603/PROJECT_BOARD.md
 ```
